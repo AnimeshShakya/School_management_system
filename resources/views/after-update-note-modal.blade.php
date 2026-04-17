@@ -2,7 +2,7 @@
     $var = getSettings('update_warning_modal')['update_warning_modal'] ?? 0;
 @endphp
 <div class="show-update-note-modal">
-    @if(getSettings('system_version')['system_version'] == '1.0.7' && $var != 1)
+    @if((getSettings('system_version')['system_version'] ?? null) == '1.0.7' && $var != 1)
         <!-- Button trigger modal -->
         <button type="button" class="btn btn-primary d-none" id="UpdateDetailsModalButton" data-toggle="modal" data-target="#UpdateDetails">
             Launch static backdrop modal

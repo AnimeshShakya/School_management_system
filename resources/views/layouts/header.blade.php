@@ -10,10 +10,6 @@
                 src="{{ asset('storage/' . env('FAVICON')) }}" alt="logo"> </a>
     </div>
     <div class="navbar-menu-wrapper d-flex align-items-stretch">
-        <button class="navbar-toggler navbar-toggler align-self-center" type="button" data-toggle="minimize">
-            <span class="fa fa-bars"></span>
-        </button>
-
         @php
             $email_config_verify_value = DB::table('settings')
                 ->select('message')
@@ -24,6 +20,13 @@
             } else {
                 $message = 0;
             }
+
+            $current_version = getSettings('system_version')['system_version'] ?? 'N/A';
+            $current_session_id = getSettings('session_year')['session_year'] ?? null;
+            $current_session = $current_session_id
+                ? DB::table('session_years')->select('name')->where('id', $current_session_id)->first()
+                : null;
+            $current_session_name = $current_session->name ?? 'N/A';
         @endphp
         @if ($message == 0)
             @can('email-setting-create')
@@ -36,12 +39,6 @@
                 </div>
             @endcan
         @endif
-        @php
-            $current_version = getSettings('system_version');
-            $current_version = $current_version['system_version'];
-            $current_session_id = getSettings('session_year')['session_year'];
-            $current_session = DB::table('session_years')->select('name')->where('id', $current_session_id)->first();
-        @endphp
         <ul class="navbar-nav navbar-nav-left">
             <li class="nav-item">
                 <a class="nav-link" href="#" aria-expanded="false">

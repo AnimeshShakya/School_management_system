@@ -17,6 +17,11 @@ function getSettings($type = '')
     foreach ($setting as $row) {
         $settingList[$row->type] = $row->message;
     }
+
+    if ($type !== '' && !array_key_exists($type, $settingList)) {
+        $settingList[$type] = null;
+    }
+
     return $settingList;
 }
 

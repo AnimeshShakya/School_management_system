@@ -13,6 +13,10 @@ class DatabaseSeeder extends Seeder
      * @return void
      */
     public function run(){
-        //
+        $this->call([
+            DummyDataSeeder::class,
+            InstallationSeeder::class,
+            DemoUsersSeeder::class,
+        ]);
     }
 }

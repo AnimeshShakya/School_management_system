@@ -1127,7 +1127,10 @@ class StudentController extends Controller
             $tempRow['last_name'] = $row->user->last_name;
             $tempRow['gender'] = $row->user->gender;
             $tempRow['email'] = $row->user->email;
-            $tempRow['dob'] = date($data['date_formate'], strtotime(is_object($row->user->dob) ? $row->user->dob->toDateString() : $row->user->dob));
+            $userDob = $row->user->dob ?? null;
+            $tempRow['dob'] = !empty($userDob)
+                ? date($data['date_formate'], strtotime(is_object($userDob) ? $userDob->toDateString() : (string) $userDob))
+                : '';
             $tempRow['mobile'] = $row->user->mobile;
             $tempRow['image'] = $row->user->image;
             $tempRow['image_link'] = $row->user->image;
@@ -1140,7 +1143,9 @@ class StudentController extends Controller
             $tempRow['roll_number'] = $row->roll_number;
             $tempRow['caste'] = $row->caste;
             $tempRow['religion'] = $row->religion;
-            $tempRow['admission_date'] = date($data['date_formate'], strtotime($row->admission_date->toDateString()));
+            $tempRow['admission_date'] = !empty($row->admission_date)
+                ? date($data['date_formate'], strtotime(is_object($row->admission_date) ? $row->admission_date->toDateString() : (string) $row->admission_date))
+                : '';
             $tempRow['blood_group'] = $row->blood_group;
             $tempRow['height'] = $row->height;
             $tempRow['weight'] = $row->weight;
