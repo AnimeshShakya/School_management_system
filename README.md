@@ -153,6 +153,12 @@ After seeding the database, you can use these default credentials:
    - Email: `superadmin@gmail.com`
    - Password: `superadmin`
 
+Super Admin: superadmin@gmail.com / superadmin
+Admin: admin@gmail.com / admin123
+Teacher: teacher@gmail.com / teacher123
+Student: student@gmail.com / student123
+Parent: parent@gmail.com / parent123
+
 If installer shows **"Invalid code supplied!"** on the purchase-code step, complete the install purchase verification first. Until installation is completed, admin login may not proceed to the dashboard.
 
 ### User Roles
