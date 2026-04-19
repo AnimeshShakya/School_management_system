@@ -184,15 +184,23 @@ class Students extends Model
 
         $includesSemesters = $class->include_semesters == 1 && $currentSemester;
 
-        $core_subjects = $includesSemesters
-            ? $this->class_section->class->coreSubject?->where('semester_id', $currentSemester->id)->values()->toArray() ?? []
-            : $this->class_section->class->coreSubject?->toArray() ?? [];
+        $coreSubjectsQuery = $includesSemesters
+            ? $this->class_section->class->coreSubject?->where('semester_id', $currentSemester->id)->values()
+            : $this->class_section->class->coreSubject;
+
+        $core_subjects = $coreSubjectsQuery
+            ? $coreSubjectsQuery
+                ->filter(fn($classSubject) => $classSubject->subject !== null)
+                ->values()
+                ->toArray()
+            : [];
 
         $electiveSubjectQuery = StudentSubject::where('student_id', $this->id)
             ->where('class_section_id', $class_section_id)
             ->where('session_year_id', $session_year_id)
             ->select("subject_id")
-            ->with('subject');
+            ->with('subject')
+            ->whereHas('subject');
 
         if ($includesSemesters) {
             $electiveSubjectQuery->where('semester_id', $currentSemester->id);
@@ -202,7 +210,9 @@ class Students extends Model
             $elective_subject_count = $this->class_section->class->electiveSubjectGroup->count();
         }
 
-        $elective_subjects = $electiveSubjectQuery->get();
+        $elective_subjects = $electiveSubjectQuery->get()
+            ->filter(fn($studentSubject) => $studentSubject->subject !== null)
+            ->values();
 
         return [
             'core_subject' => $core_subjects,
@@ -224,15 +234,39 @@ class Students extends Model
 
         if ($includesSemesters) {
             $core_subjects = $this->class_section->class->coreSubject
-                ->where('semester_id', $currentSemester->id)->values();
+                ->where('semester_id', $currentSemester->id)
+                ->filter(fn($classSubject) => $classSubject->subject !== null)
+                ->values();
+
             $elective_subjects = $this->class_section->class->electiveSubjectGroup
                 ->where('semester_id', $currentSemester->id)
                 ->values()
-                ->load('electiveSubjects.subject');
+                ->load('electiveSubjects.subject')
+                ->map(function ($subjectGroup) {
+                    $subjectGroup->setRelation(
+                        'electiveSubjects',
+                        $subjectGroup->electiveSubjects
+                            ->filter(fn($classSubject) => $classSubject->subject !== null)
+                            ->values()
+                    );
+                    return $subjectGroup;
+                });
         } else {
-            $core_subjects = $this->class_section->class->coreSubject;
+            $core_subjects = $this->class_section->class->coreSubject
+                ->filter(fn($classSubject) => $classSubject->subject !== null)
+                ->values();
+
             $elective_subjects = $this->class_section->class->electiveSubjectGroup
-                ->load('electiveSubjects.subject');
+                ->load('electiveSubjects.subject')
+                ->map(function ($subjectGroup) {
+                    $subjectGroup->setRelation(
+                        'electiveSubjects',
+                        $subjectGroup->electiveSubjects
+                            ->filter(fn($classSubject) => $classSubject->subject !== null)
+                            ->values()
+                    );
+                    return $subjectGroup;
+                });
         }
 
         return [

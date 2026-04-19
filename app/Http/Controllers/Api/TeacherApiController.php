@@ -320,7 +320,9 @@ class TeacherApiController extends Controller
             if ($request->subject_id) {
                 $subjects = $subjects->where('subject_id', $request->subject_id);
             }
-            $subjects = $subjects->with('subject', 'class_section')->get();
+            $subjects = $subjects->with('subject', 'class_section')->get()
+                ->filter(fn($teacherSubject) => $teacherSubject->subject !== null)
+                ->values();
             ResponseService::successResponse('Teacher Subject Fetched Successfully.', $subjects);
         } catch (\Exception $e) {
             ResponseService::errorResponse('error_occurred', null, 103, $e);
