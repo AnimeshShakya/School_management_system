@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             DummyDataSeeder::class,
             InstallationSeeder::class,
             DemoUsersSeeder::class,
+            AddSuperAdminSeeder::class,
         ]);
     }
 }
