@@ -516,13 +516,21 @@ class InstallationSeeder extends Seeder
         //Change system version here
         Settings::updateOrCreate(['type' => 'system_version'], ['message' => '3.3.6']);
 
-        //clear cache
-        $compiledViewPath = storage_path('framework/views');
+        // Ensure framework runtime directories exist before clearing caches.
+        $frameworkPaths = [
+            storage_path('framework/cache/data'),
+            storage_path('framework/sessions'),
+            storage_path('framework/testing'),
+            storage_path('framework/views'),
+        ];
 
-        if (!is_dir($compiledViewPath)) {
-            mkdir($compiledViewPath, 0755, true);
+        foreach ($frameworkPaths as $path) {
+            if (!is_dir($path)) {
+                mkdir($path, 0755, true);
+            }
         }
 
+        $compiledViewPath = storage_path('framework/views');
         config(['view.compiled' => realpath($compiledViewPath) ?: $compiledViewPath]);
 
         Artisan::call('view:clear');
