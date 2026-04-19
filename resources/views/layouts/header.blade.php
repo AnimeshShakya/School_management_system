@@ -7,7 +7,7 @@
         <a class="navbar-brand brand-logo" href="{{ URL::to('/home') }}"> <img
                 src="{{ env('LOGO1') ? url(Storage::url(env('LOGO1'))) : url('assets/logo.svg') }}" alt="logo"> </a>
         <a class="navbar-brand brand-logo-mini" href="{{ URL::to('/') }}"> <img
-                src="{{ asset('storage/' . env('FAVICON')) }}" alt="logo"> </a>
+        src="{{ env('FAVICON') ? asset('storage/' . env('FAVICON')) : asset('assets/logo2.svg') }}" alt="logo"> </a>
     </div>
     <div class="navbar-menu-wrapper d-flex align-items-stretch">
         @php

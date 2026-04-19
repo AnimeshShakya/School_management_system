@@ -9,6 +9,7 @@ use App\Models\SessionYear;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Services\MailService;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -272,14 +273,22 @@ class SettingController extends Controller
             return redirect(route('home'))->withErrors($response);
         }
         $request->validate([
-            'mail_mailer' => 'required',
-            'mail_host' => 'required',
-            'mail_port' => 'required',
-            'mail_username' => 'required',
-            'mail_password' => 'required',
-            'mail_encryption' => 'required',
+            'mail_mailer' => 'required|in:smtp,mailgun,sendmail,postmark,ses,log',
+            'mail_host' => 'required_if:mail_mailer,smtp|nullable|string',
+            'mail_port' => 'required_if:mail_mailer,smtp|nullable|integer',
+            'mail_username' => 'required_if:mail_mailer,smtp|nullable|string',
+            'mail_password' => 'required_if:mail_mailer,smtp|nullable|string',
+            'mail_encryption' => 'nullable|in:tls,ssl',
             'mail_send_from' => 'required|email',
         ]);
+
+        $mailPassword = (string) $request->mail_password;
+        $mailUsername = (string) $request->mail_username;
+
+        // Gmail app passwords are shown with spaces; SMTP expects contiguous token.
+        if (str_contains(strtolower($mailUsername), '@gmail.com')) {
+            $mailPassword = preg_replace('/\s+/', '', $mailPassword) ?? $mailPassword;
+        }
 
         $settings = [
             'mail_mailer',
@@ -296,13 +305,13 @@ class SettingController extends Controller
                 if (Settings::where('type', $row)->exists()) {
 
                     $data = [
-                        'message' => $request->$row
+                        'message' => $row === 'mail_password' ? $mailPassword : $request->$row
                     ];
                     Settings::where('type', $row)->update($data);
                 } else {
                     $setting = new Settings();
                     $setting->type = $row;
-                    $setting->message = $request->$row;
+                    $setting->message = $row === 'mail_password' ? $mailPassword : $request->$row;
                     $setting->save();
                 }
                 Settings::updateOrInsert(
@@ -315,12 +324,14 @@ class SettingController extends Controller
                 'MAIL_HOST' => $request->mail_host,
                 'MAIL_PORT' => $request->mail_port,
                 'MAIL_USERNAME' => $request->mail_username,
-                'MAIL_PASSWORD' => $request->mail_password,
+                'MAIL_PASSWORD' => $mailPassword,
                 'MAIL_ENCRYPTION' => $request->mail_encryption,
                 'MAIL_FROM_ADDRESS' => $request->mail_send_from
 
             ]);
             if ($env_update) {
+                Artisan::call('config:clear');
+
                 $response = array(
                     'error' => false,
                     'message' => trans('data_update_successfully'),
@@ -387,9 +398,16 @@ class SettingController extends Controller
                 );
             } else {
                 // Sending failed (sendWithFallback returned falsy)
+                $mailError = MailService::getLastError();
+                $message = trans('email_send_failed');
+
+                if ($mailError && str_contains(strtolower($mailError), 'authentication failed')) {
+                    $message = 'SMTP authentication failed. Please recheck MAIL_USERNAME and MAIL_PASSWORD (for Gmail, use App Password without spaces).';
+                }
+
                 $response = array(
                     'error' => true,
-                    'message' => trans('email_send_failed'),
+                    'message' => $message,
                 );
             }
         } catch (Throwable $e) {

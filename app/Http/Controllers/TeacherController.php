@@ -11,11 +11,13 @@ use App\Models\FormField;
 use App\Models\ClassTeacher;
 use Illuminate\Http\Request;
 use App\Models\SubjectTeacher;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Services\MailService;
 use Exception;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -32,7 +34,7 @@ class TeacherController extends Controller {
             );
             return redirect(route('home'))->withErrors($response);
         }
-        $teacherFields = FormField::where('for', 3)->orderBy('rank', 'ASC')->get();
+        $teacherFields = $this->getTeacherFields();
         return view('teacher.index', compact('teacherFields'));
     }
 
@@ -43,8 +45,23 @@ class TeacherController extends Controller {
             );
             return redirect(route('home'))->withErrors($response);
         }
-        $teacherFields = FormField::where('for', 3)->orderBy('rank', 'ASC')->get();
+        $teacherFields = $this->getTeacherFields();
         return view('teacher.details', compact('teacherFields'));
+    }
+
+    private function getTeacherFields(): Collection
+    {
+        if (!Schema::hasTable('form_fields') || !Schema::hasColumn('form_fields', 'for')) {
+            return collect();
+        }
+
+        $query = FormField::where('for', 3);
+
+        if (Schema::hasColumn('form_fields', 'rank')) {
+            $query->orderBy('rank', 'ASC');
+        }
+
+        return $query->get();
     }
 
     /**
