@@ -517,6 +517,14 @@ class InstallationSeeder extends Seeder
         Settings::updateOrCreate(['type' => 'system_version'], ['message' => '3.3.6']);
 
         //clear cache
+        $compiledViewPath = storage_path('framework/views');
+
+        if (!is_dir($compiledViewPath)) {
+            mkdir($compiledViewPath, 0755, true);
+        }
+
+        config(['view.compiled' => realpath($compiledViewPath) ?: $compiledViewPath]);
+
         Artisan::call('view:clear');
         Artisan::call('route:clear');
         Artisan::call('config:clear');
