@@ -27,7 +27,15 @@ function getSettings($type = '')
 
 function get_language()
 {
-    return Language::get();
+    try {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('languages')) {
+            return collect();
+        }
+
+        return Language::get();
+    } catch (Throwable) {
+        return collect();
+    }
 }
 
 
