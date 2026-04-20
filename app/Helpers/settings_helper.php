@@ -27,7 +27,15 @@ function getSettings($type = '')
 
 function get_language()
 {
-    return Language::get();
+    try {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('languages')) {
+            return collect();
+        }
+
+        return Language::get();
+    } catch (Throwable) {
+        return collect();
+    }
 }
 
 
@@ -121,36 +129,58 @@ function changeEnv($data = array())
 {
     if (count($data) > 0) {
 
+        $normalizeEnvValue = static function ($value): string {
+            if ($value === null) {
+                return '';
+            }
+
+            $value = (string) $value;
+
+            // keep common unquoted scalar values as-is
+            if (
+                $value === '' ||
+                preg_match('/^(true|false|null)$/i', $value) ||
+                preg_match('/^-?\d+(\.\d+)?$/', $value)
+            ) {
+                return $value;
+            }
+
+            // quote values that contain spaces, hash, equals, or quotes
+            if (preg_match('/[\s#="\"]/u', $value) || str_contains($value, "'")) {
+                $value = str_replace(['\\', '"'], ['\\\\', '\\"'], $value);
+                return '"' . $value . '"';
+            }
+
+            return $value;
+        };
+
         // Read .env-file
         $env = file_get_contents(base_path() . '/.env');
         // Split string on every " " and write into array
         $env = explode(PHP_EOL, $env);
         // $env = preg_split('/\s+/', $env);
+        $temp_env_keys = [];
         foreach ($env as $env_key => $env_value) {
-            $entry = explode("=", $env_value);
+            $entry = explode("=", $env_value, 2);
             $temp_env_keys[] = $entry[0];
 
         }
         // Loop through given data
         foreach ((array)$data as $key => $value) {
-            $key_value = $key . "=" . $value;
+            $formattedValue = $normalizeEnvValue($value);
+            $key_value = $key . "=" . $formattedValue;
 
             if (in_array($key, $temp_env_keys)) {
                 // Loop through .env-data
                 foreach ($env as $env_key => $env_value) {
                     // Turn the value into an array and stop after the first split
                     // So it's not possible to split e.g. the App-Key by accident
-                    $entry = explode("=", $env_value);
+                    $entry = explode("=", $env_value, 2);
                     // // Check, if new key fits the actual .env-key
                     if ($entry[0] == $key) {
 
                         // If yes, overwrite it with the new one
-
-                        if($key != 'APP_NAME'){
-                            $env[$env_key] = $key . "=" . str_replace('"', '', $value);
-                        }else{
-                            $env[$env_key] = $key . "=" . $value;
-                        }
+                        $env[$env_key] = $key . "=" . $formattedValue;
 
                     } else {
                         // If not, keep the old one

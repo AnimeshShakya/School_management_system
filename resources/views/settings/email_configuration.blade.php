@@ -31,7 +31,7 @@
                                     <option {{env('MAIL_MAILER')=='mailgun' ?'selected':''}} value="mailgun">Mailgun</option>
                                     <option {{env('MAIL_MAILER')=='sendmail' ?'selected':''}} value="sendmail">sendmail</option>
                                     <option {{env('MAIL_MAILER')=='postmark' ?'selected':''}} value="postmark">Postmark</option>
-                                    <option {{env('MAIL_MAILER')=='amazon_ses' ?'selected':''}} value="amazon_ses">Amazon SES</option>
+                                    <option {{env('MAIL_MAILER')=='ses' ?'selected':''}} value="ses">Amazon SES</option>
                                 </select>
                             </div>
                             <div class="form-group col-md-4 col-sm-12">
@@ -61,7 +61,7 @@
                             </div>
                             <div class="form-group col-md-4 col-sm-12">
                                 <label>{{__('mail_encryption')}}</label>
-                                <input name="mail_encryption" value="{{!env('DEMO_MODE') ? (env('MAIL_ENCRYPTION') ? env('MAIL_ENCRYPTION') : "" ) : 'xxxxxxxxxxxxxxxxxxxx' }}" type="text" required placeholder="{{__('mail_encryption')}}" class="form-control" />
+                                <input name="mail_encryption" value="{{!env('DEMO_MODE') ? (env('MAIL_ENCRYPTION') ? env('MAIL_ENCRYPTION') : "" ) : 'xxxxxxxxxxxxxxxxxxxx' }}" type="text" placeholder="{{__('mail_encryption')}} (tls/ssl)" class="form-control" />
                             </div>
                         </div>
                         <div class="row">

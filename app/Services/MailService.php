@@ -10,15 +10,20 @@ use Exception;
 
 class MailService
 {
+    private static ?string $lastError = null;
+
     /**
      * Send email with error handling
      */
     public static function send($view, $data, $callback)
     {
+        self::$lastError = null;
+
         try {
             Mail::send($view, $data, $callback);
             return true;
         } catch (Exception $e) {
+            self::$lastError = $e->getMessage();
             Log::error('Email sending failed: ' . $e->getMessage());
             
             // Log the email content for debugging
@@ -30,6 +35,11 @@ class MailService
             
             return false;
         }
+    }
+
+    public static function getLastError(): ?string
+    {
+        return self::$lastError;
     }
 
     /**

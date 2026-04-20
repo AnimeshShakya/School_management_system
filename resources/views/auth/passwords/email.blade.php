@@ -72,7 +72,8 @@
                             <div class="brand-logo text-center">
                                 {{-- <img src="{{asset(config('global.LOGO1')) }}" alt="logo"> --}}
                                 {{-- <img src="{{ asset('logo.svg') }}" alt="logo"> --}}
-                                <img src="{{asset('storage/'.env('LOGO1')) }}" alt="logo">
+                                <img src="{{ env('LOGO1') ? asset('storage/' . env('LOGO1')) : asset('assets/logo.svg') }}"
+                                    alt="logo">
                             </div>
                             @if (session('status'))
                                 <div class="alert alert-success" role="alert">

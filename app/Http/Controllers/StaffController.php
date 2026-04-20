@@ -13,10 +13,14 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Services\MailService;
 use App\Services\ResponseService;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class StaffController extends Controller {
+    private array $userColumns = [];
+
     /**
      * Display a listing of the resource.
      *
@@ -29,8 +33,29 @@ class StaffController extends Controller {
             );
             return redirect(route('home'))->withErrors($response);
         }
-        $roles = Role::where('custom_role', 1)->orderBy('id', 'DESC')->paginate(5);
+        $roles = $this->getAssignableRoles();
         return view('staff.index', compact('roles'));
+    }
+
+    private function getAssignableRoles(): Collection
+    {
+        $query = Role::query();
+
+        if (Schema::hasColumn('roles', 'custom_role')) {
+            $customRoles = (clone $query)
+                ->where('custom_role', 1)
+                ->orderBy('id', 'DESC')
+                ->get();
+
+            if ($customRoles->isNotEmpty()) {
+                return $customRoles;
+            }
+        }
+
+        // Fallback for fresh/legacy setups with no custom roles yet.
+        return Role::whereNotIn('name', ['Super Admin', 'Teacher', 'Student', 'Parent'])
+            ->orderBy('id', 'DESC')
+            ->get();
     }
 
     /**
@@ -102,24 +127,18 @@ class StaffController extends Controller {
                 }
 
                 $staff_plain_text_password = str_replace('-', '', date('d-m-Y', strtotime($request->dob)));
-                $user->password = Hash::make($staff_plain_text_password);
-
-                $user->first_name = $request->first_name;
-                $user->last_name = $request->last_name;
-                $user->email = $request->email;
-                $user->gender = $request->gender;
-                $user->mobile = $request->mobile;
-                $user->dob = date('Y-m-d', strtotime($request->dob));
-                $user->current_address = $request->address;
+                $this->fillUserFromRequest($user, $request, $staff_plain_text_password);
                 $user->save();
 
-                $check_staff = DB::table('staffs')->where('user_id', $user->id)->whereNotNull('deleted_at');
-                if ($check_staff->count()) {
-                    $staff_exists = $check_staff->first();
-                    DB::table('staffs')->where('id', $staff_exists->id)->update(['deleted_at' => null]);
-                    $staff = Staff::findOrFail($staff_exists->id);
-                    $staff->user_id = $user->id;
-                    $staff->update();
+                if ($this->hasStaffTable()) {
+                    $check_staff = DB::table('staffs')->where('user_id', $user->id)->whereNotNull('deleted_at');
+                    if ($check_staff->count()) {
+                        $staff_exists = $check_staff->first();
+                        DB::table('staffs')->where('id', $staff_exists->id)->update(['deleted_at' => null]);
+                        $staff = Staff::findOrFail($staff_exists->id);
+                        $staff->user_id = $user->id;
+                        $staff->update();
+                    }
                 }
 
                 $user->assignRole($role);
@@ -160,22 +179,16 @@ class StaffController extends Controller {
                 }
 
                 $staff_plain_text_password = str_replace('-', '', date('d-m-Y', strtotime($request->dob)));
-                $user->password = Hash::make($staff_plain_text_password);
-
-                $user->first_name = $request->first_name;
-                $user->last_name = $request->last_name;
-                $user->email = $request->email;
-                $user->gender = $request->gender;
-                $user->mobile = $request->mobile;
-                $user->dob = date('Y-m-d', strtotime($request->dob));
-                $user->current_address = $request->address;
+                $this->fillUserFromRequest($user, $request, $staff_plain_text_password);
                 $user->save();
 
                 $user->assignRole($role);
 
-                $staff = new Staff;
-                $staff->user_id = $user->id;
-                $staff->save();
+                if ($this->hasStaffTable()) {
+                    $staff = new Staff;
+                    $staff->user_id = $user->id;
+                    $staff->save();
+                }
 
                 $school_name = getSettings('school_name');
                 $data = [
@@ -229,18 +242,34 @@ class StaffController extends Controller {
             $order = $_GET['order'];
 
 
+        if (!$this->hasStaffTable()) {
+            return response()->json([
+                'total' => 0,
+                'rows' => [],
+            ]);
+        }
+
         $sql = Staff::with('user', 'user.roles');
         if (isset($_GET['search']) && !empty($_GET['search'])) {
             $search = $_GET['search'];
             $sql->where('id', 'LIKE', "%$search%")
                 ->orwhere('user_id', 'LIKE', "%$search%")
                 ->orWhereHas('user', function ($q) use ($search) {
-                    $q->where('first_name', 'LIKE', "%$search%")
-                        ->orwhere('last_name', 'LIKE', "%$search%")
-                        ->orwhere('gender', 'LIKE', "%$search%")
-                        ->orwhere('email', 'LIKE', "%$search%")
-                        // ->orwhere('dob', 'LIKE', "%" . date('Y-m-d', strtotime($search)) . "%")
-                        ->orwhere('current_address', 'LIKE', "%$search%");
+                    $searchColumns = ['first_name', 'last_name', 'name', 'gender', 'email', 'current_address'];
+                    $first = true;
+
+                    foreach ($searchColumns as $column) {
+                        if (!$this->hasUserColumn($column)) {
+                            continue;
+                        }
+
+                        if ($first) {
+                            $q->where($column, 'LIKE', "%$search%");
+                            $first = false;
+                        } else {
+                            $q->orWhere($column, 'LIKE', "%$search%");
+                        }
+                    }
                 });
         }
         $total = $sql->count();
@@ -263,13 +292,13 @@ class StaffController extends Controller {
             $tempRow['user_id'] = $row->user_id;
             $tempRow['role_id'] = $row->user->roles->pluck('id')->implode(', ');
             $tempRow['roles'] = $row->user->roles->pluck('name')->implode(', ');
-            $tempRow['first_name'] = $row->user->first_name;
-            $tempRow['last_name'] = $row->user->last_name;
-            $tempRow['gender'] = $row->user->gender;
-            $tempRow['address'] = $row->user->current_address;
-            $tempRow['email'] = $row->user->email;
-            $tempRow['dob'] = date($data['date_formate'], strtotime($row->user->dob));
-            $tempRow['mobile'] = $row->user->mobile;
+            $tempRow['first_name'] = $this->resolveFirstName($row->user);
+            $tempRow['last_name'] = $this->resolveLastName($row->user);
+            $tempRow['gender'] = $row->user->gender ?? '';
+            $tempRow['address'] = $row->user->current_address ?? '';
+            $tempRow['email'] = $row->user->email ?? '';
+            $tempRow['dob'] = !empty($row->user->dob) ? date($data['date_formate'], strtotime($row->user->dob)) : '';
+            $tempRow['mobile'] = $row->user->mobile ?? '';
             $tempRow['image'] =  $row->user->image;
             $tempRow['operate'] = $operate;
             $rows[] = $tempRow;
@@ -351,13 +380,7 @@ class StaffController extends Controller {
                 $user->image = $file_path;
             }
 
-            $user->first_name = $request->first_name;
-            $user->last_name = $request->last_name;
-            $user->email = $request->email;
-            $user->gender = $request->gender;
-            $user->mobile = $request->mobile;
-            $user->dob = date('Y-m-d', strtotime($request->dob));
-            $user->current_address = $request->address;
+            $this->fillUserFromRequest($user, $request);
             $user->save();
 
             $user->syncRoles($role);
@@ -387,11 +410,90 @@ class StaffController extends Controller {
             }
             $user->delete();
 
-            $staff = Staff::where('user_id', $id);
-            $staff->delete();
+            if ($this->hasStaffTable()) {
+                $staff = Staff::where('user_id', $id);
+                $staff->delete();
+            }
             ResponseService::successResponse(trans('data_delete_successfully'));
         } catch (\Throwable $e) {
             ResponseService::errorResponse(trans('error_occurred'), null, null, $e);
         }
+    }
+
+    private function hasStaffTable(): bool
+    {
+        return Schema::hasTable((new Staff())->getTable());
+    }
+
+    private function hasUserColumn(string $column): bool
+    {
+        if (empty($this->userColumns)) {
+            $this->userColumns = Schema::getColumnListing('users');
+        }
+
+        return in_array($column, $this->userColumns, true);
+    }
+
+    private function fillUserFromRequest(User $user, Request $request, ?string $plainPassword = null): void
+    {
+        $firstName = trim((string) $request->first_name);
+        $lastName = trim((string) $request->last_name);
+
+        if ($plainPassword !== null && $this->hasUserColumn('password')) {
+            $user->password = Hash::make($plainPassword);
+        }
+
+        if ($this->hasUserColumn('first_name')) {
+            $user->first_name = $firstName;
+        }
+        if ($this->hasUserColumn('last_name')) {
+            $user->last_name = $lastName;
+        }
+        if ($this->hasUserColumn('name')) {
+            $user->name = trim($firstName . ' ' . $lastName);
+        }
+
+        if ($this->hasUserColumn('email')) {
+            $user->email = $request->email;
+        }
+        if ($this->hasUserColumn('gender')) {
+            $user->gender = $request->gender;
+        }
+        if ($this->hasUserColumn('mobile')) {
+            $user->mobile = $request->mobile;
+        }
+        if ($this->hasUserColumn('dob')) {
+            $user->dob = date('Y-m-d', strtotime((string) $request->dob));
+        }
+        if ($this->hasUserColumn('current_address')) {
+            $user->current_address = $request->address;
+        }
+    }
+
+    private function resolveFirstName(User $user): string
+    {
+        if (!empty($user->first_name)) {
+            return (string) $user->first_name;
+        }
+
+        if (!empty($user->name)) {
+            return explode(' ', (string) $user->name)[0] ?? '';
+        }
+
+        return '';
+    }
+
+    private function resolveLastName(User $user): string
+    {
+        if (!empty($user->last_name)) {
+            return (string) $user->last_name;
+        }
+
+        if (!empty($user->name)) {
+            $nameParts = explode(' ', (string) $user->name, 2);
+            return $nameParts[1] ?? '';
+        }
+
+        return '';
     }
 }

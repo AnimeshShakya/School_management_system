@@ -28,6 +28,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\JsonResponse;
@@ -130,37 +131,79 @@ class HomeController extends Controller
 
         // Common data for all users
         $data['date_format'] = "d-m-Y H:i:s";
-        $data['announcement'] = Announcement::where('table_type', "")
-            ->where('session_year_id', $session_year['session_year'])
-            ->latest()
-            ->limit(3)
-            ->get();
+        $data['announcement'] = collect();
+        if (Schema::hasTable('announcements')) {
+            $announcementQuery = Announcement::query();
 
-        $data['attendance'] = Attendance::with('class_section')
-            ->select('class_section_id', 'type', 'date', 
-                DB::raw('COUNT(*) as total_attendance'),
-                DB::raw('SUM(CASE WHEN type = 1 THEN 1 ELSE 0 END) as total_present')
-            )
-            ->groupBy('class_section_id')
-            ->get();
+            if (Schema::hasColumn('announcements', 'table_type')) {
+                $announcementQuery->where('table_type', '');
+            }
 
-        $data['leaves'] = $this->getUpcomingLeaves((int) $session_year['session_year']);
+            if (Schema::hasColumn('announcements', 'session_year_id') && isset($session_year['session_year'])) {
+                $announcementQuery->where('session_year_id', $session_year['session_year']);
+            }
+
+            if (Schema::hasColumn('announcements', 'created_at')) {
+                $announcementQuery->latest();
+            } elseif (Schema::hasColumn('announcements', 'id')) {
+                $announcementQuery->orderByDesc('id');
+            }
+
+            $data['announcement'] = $announcementQuery->limit(3)->get();
+        }
+
+        $data['attendance'] = collect();
+        if (
+            Schema::hasTable('attendances') &&
+            Schema::hasColumn('attendances', 'class_section_id') &&
+            Schema::hasColumn('attendances', 'type') &&
+            Schema::hasColumn('attendances', 'date')
+        ) {
+            $data['attendance'] = Attendance::with('class_section')
+                ->select(
+                    'class_section_id',
+                    'type',
+                    'date',
+                    DB::raw('COUNT(*) as total_attendance'),
+                    DB::raw('SUM(CASE WHEN type = 1 THEN 1 ELSE 0 END) as total_present')
+                )
+                ->groupBy('class_section_id')
+                ->get();
+        }
+
+        $data['leaves'] = $this->getUpcomingLeaves((int) ($session_year['session_year'] ?? 0));
 
         return view('home', $data);
     }
 
     private function getSuperAdminData(): array
     {
-        $teacher = Teacher::count();
-        $student = Students::count();
-        $parent = Parents::count();
+        $teacher = Schema::hasTable('teachers') ? Teacher::count() : 0;
+        $student = Schema::hasTable('students') ? Students::count() : 0;
+        $parent = Schema::hasTable('parents') ? Parents::count() : 0;
 
-        $teachers = Teacher::with('user:id,first_name,last_name,image')->get();
+        $teachers = collect();
+        if (Schema::hasTable('teachers') && Schema::hasTable('users')) {
+            $userSelect = ['id', 'image'];
+            if (Schema::hasColumn('users', 'first_name')) {
+                $userSelect[] = 'first_name';
+            }
+            if (Schema::hasColumn('users', 'last_name')) {
+                $userSelect[] = 'last_name';
+            }
+            if (Schema::hasColumn('users', 'name')) {
+                $userSelect[] = 'name';
+            }
+
+            $teachers = Teacher::with([
+                'user' => fn ($query) => $query->select(array_unique($userSelect))
+            ])->get();
+        }
         
         $boys = 0;
         $girls = 0;
         
-        if ($student > 0) {
+        if ($student > 0 && Schema::hasColumn('users', 'gender')) {
             $boys_count = Students::whereHas('user', fn($query) => $query->where('gender', 'male'))->count();
             $girls_count = Students::whereHas('user', fn($query) => $query->where('gender', 'female'))->count();
 
@@ -168,17 +211,30 @@ class HomeController extends Controller
             $girls = round(($girls_count * 100) / $student, 2);
         }
 
-        $rankers = ExamResult::with('student.user', 'class_section')
-            ->select('class_section_id', 'student_id', 'percentage', 'grade', DB::raw('MAX(percentage) as max_percentage'))
-            ->groupBy('class_section_id')
-            ->whereNot('grade', 'Fail')
-            ->get();
+        $rankers = collect();
+        if (Schema::hasTable('exam_results')) {
+            $rankers = ExamResult::with('student.user', 'class_section')
+                ->select('class_section_id', 'student_id', 'percentage', 'grade', DB::raw('MAX(percentage) as max_percentage'))
+                ->groupBy('class_section_id')
+                ->whereNot('grade', 'Fail')
+                ->get();
+        }
 
         return compact('teacher', 'student', 'parent', 'teachers', 'boys', 'girls', 'rankers');
     }
 
     private function getTeacherClassSections(int $teacher_id): ?Collection
     {
+        if (
+            $teacher_id <= 0 ||
+            !Schema::hasTable('class_teachers') ||
+            !Schema::hasTable('class_sections') ||
+            !Schema::hasColumn('class_teachers', 'class_section_id') ||
+            !Schema::hasColumn('class_teachers', 'class_teacher_id')
+        ) {
+            return collect();
+        }
+
         $class_section_ids = ClassTeacher::select('class_section_id')
             ->where('class_teacher_id', $teacher_id)
             ->pluck('class_section_id');
@@ -194,17 +250,37 @@ class HomeController extends Controller
 
     private function getUpcomingLeaves(int $session_year_id): ?Collection
     {
+        if (
+            $session_year_id <= 0 ||
+            !Schema::hasTable('leave_details') ||
+            !Schema::hasTable('leaves') ||
+            !Schema::hasTable('leave_masters') ||
+            !Schema::hasColumn('leave_details', 'leave_id') ||
+            !Schema::hasColumn('leave_details', 'date') ||
+            !Schema::hasColumn('leaves', 'id') ||
+            !Schema::hasColumn('leaves', 'leave_master_id') ||
+            !Schema::hasColumn('leaves', 'status') ||
+            !Schema::hasColumn('leave_masters', 'id') ||
+            !Schema::hasColumn('leave_masters', 'session_year_id')
+        ) {
+            return collect();
+        }
+
         $today_date = Carbon::now()->format('Y-m-d');
 
-        return LeaveDetail::whereHas('leave', function ($query) use ($today_date, $session_year_id) {
-                $query->where('status', 1)
-                    ->whereHas('leave_master', fn($q) => $q->where('session_year_id', $session_year_id));
-            })
-            ->with('leave.user')
-            ->whereDate('date', '>=', $today_date)
-            ->orderBy('date', 'ASC')
-            ->take(10)
-            ->get();
+        try {
+            return LeaveDetail::whereHas('leave', function ($query) use ($session_year_id) {
+                    $query->where('status', 1)
+                        ->whereHas('leave_master', fn($q) => $q->where('session_year_id', $session_year_id));
+                })
+                ->with('leave.user')
+                ->whereDate('date', '>=', $today_date)
+                ->orderBy('date', 'ASC')
+                ->take(10)
+                ->get();
+        } catch (Throwable) {
+            return collect();
+        }
     }
 
     public function logout(Request $request): RedirectResponse
