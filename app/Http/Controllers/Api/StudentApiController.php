@@ -516,6 +516,11 @@ class StudentApiController extends Controller
                 $starting_date = $starting_date_db['min(date)'];
                 $ending_date_db = ExamTimetable::select(DB::raw("max(date)"))->where(['exam_id' => $data->id, 'class_id' => $class_id])->first();
                 $ending_date = $ending_date_db['max(date)'];
+
+                if (empty($starting_date) || empty($ending_date)) {
+                    continue;
+                }
+
                 $currentTime = Carbon::now();
                 $current_date = date($currentTime->toDateString());
                 if ($current_date >= $starting_date && $current_date <= $ending_date) {
@@ -527,6 +532,10 @@ class StudentApiController extends Controller
                 }
 
                 foreach ($data->timetable as $item) {
+                    if (!$item->subject) {
+                        continue;
+                    }
+
                     // Fix: Compare current date with exam date instead of time
                     $exam_date = Carbon::parse($item->date);
                     if ($date->toDateString() <= $exam_date->toDateString()) {
