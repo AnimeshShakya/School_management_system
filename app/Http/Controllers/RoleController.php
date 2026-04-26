@@ -13,6 +13,17 @@ use Spatie\Permission\Models\Role;
 class RoleController extends Controller
 {
     /**
+     * Core roles seeded during installation/demo setup.
+     */
+    private array $seededRoleNames = [
+        'Super Admin',
+        'Admin',
+        'Teacher',
+        'Parent',
+        'Student',
+    ];
+
+    /**
      * Display a listing of the resource.
      */
     public function __construct()
@@ -28,7 +39,10 @@ class RoleController extends Controller
      */
     public function index(Request $request)
     {
-        $roles = Role::where('custom_role', 1)->orderBy('id', 'DESC')->paginate(5);
+        $roles = Role::where('custom_role', 1)
+            ->orWhereIn('name', $this->seededRoleNames)
+            ->orderBy('id', 'DESC')
+            ->paginate(5);
         $excludedPermissions = ['class-teacher', 'manage-online-exam', 'attendance-delete', 'attendance-edit', 'attendance-create', 'attendance-list'];
 
         $permission = Permission::whereNotIn('name', $excludedPermissions)
@@ -108,7 +122,8 @@ class RoleController extends Controller
             $order = $_GET['order'];
         }
 
-        $sql = Role::where('custom_role', '!=', 0);
+        $sql = Role::where('custom_role', '!=', 0)
+            ->orWhereIn('name', $this->seededRoleNames);
 
         if (isset($_GET['search']) && ! empty($_GET['search'])) {
             $search = $_GET['search'];
