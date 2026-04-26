@@ -6,8 +6,8 @@ use App\Models\Category;
 use App\Models\ClassSection;
 use App\Models\Parents;
 use App\Models\SessionYear;
-use App\Models\StudentSessions;
 use App\Models\Students;
+use App\Models\StudentSessions;
 use App\Models\Teacher;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -35,7 +35,117 @@ class DemoUsersSeeder extends Seeder
         $parentRole = $this->getRole('Parent');
         $studentRole = $this->getRole('Student');
 
-        $adminRole->syncPermissions(Permission::query()->pluck('name')->all());
+        $allPermissionNames = Permission::query()->pluck('name')->all();
+
+        // Super User: all permissions in the project.
+        $this->syncRolePermissions($superAdminRole, $allPermissionNames);
+
+        // Admin User: all permissions except web settings, system settings, system update and slider.
+        $webSettingsPermissions = [
+            'content-create',
+            'content-list',
+            'content-edit',
+            'program-create',
+            'program-list',
+            'program-edit',
+            'program-delete',
+            'media-create',
+            'media-list',
+            'media-edit',
+            'media-delete',
+            'faq-create',
+            'faq-list',
+            'faq-edit',
+            'faq-delete',
+            'privacy-policy',
+            'contact-us',
+            'about-us',
+            'terms-condition',
+        ];
+
+        $systemSettingsPermissions = [
+            'setting-create',
+            'fcm-setting-create',
+            'email-setting-create',
+        ];
+
+        $systemUpdatePermissions = [
+            'update-admin-profile',
+        ];
+
+        $sliderPermissions = [
+            'slider-list',
+            'slider-create',
+            'slider-edit',
+            'slider-delete',
+        ];
+
+        $adminExcludedPermissions = array_values(array_unique(array_merge(
+            $webSettingsPermissions,
+            $systemSettingsPermissions,
+            $systemUpdatePermissions,
+            $sliderPermissions
+        )));
+
+        $adminPermissions = array_values(array_diff($allPermissionNames, $adminExcludedPermissions));
+        $this->syncRolePermissions($adminRole, $adminPermissions);
+
+        // Teacher User: academics, students, parents, leave, timetable(view), attendance(self),
+        // student assignment, exam, holiday list, session year, announcement.
+        $teacherPermissions = [
+            'medium-list',
+            'section-list',
+            'class-list',
+            'subject-list',
+            'subject-teacher-list',
+            'lesson-list',
+            'topic-list',
+            'semester-list',
+            'stream-list',
+            'shift-list',
+            'student-list',
+            'parents-list',
+            'leave-create',
+            'leave-edit',
+            'leave-list',
+            'leave-delete',
+            'timetable-list',
+            'class-timetable',
+            'teacher-timetable',
+            'class-attendance',
+            'student-assignment',
+            'assignment-submission',
+            'exam-list',
+            'exam-result',
+            'holiday-list',
+            'session-year-list',
+            'announcement-list',
+        ];
+        $this->syncRolePermissions($teacherRole, $teacherPermissions);
+
+        // Parent User: one-student timetable/attendance/fees views, exam, announcement, events, session year.
+        $parentPermissions = [
+            'timetable-list',
+            'class-timetable',
+            'class-attendance',
+            'exam-list',
+            'exam-result',
+            'fees-paid',
+            'announcement-list',
+            'event-list',
+            'session-year-list',
+        ];
+        $this->syncRolePermissions($parentRole, $parentPermissions);
+
+        // Student User: self student view, student assignment, announcement, event.
+        $studentPermissions = [
+            'student-list',
+            'student-assignment',
+            'assignment-submission',
+            'announcement-list',
+            'event-list',
+        ];
+        $this->syncRolePermissions($studentRole, $studentPermissions);
 
         $this->seedUser($superAdminRole, 'superadmin@gmail.com', [
             'first_name' => 'super',
@@ -166,10 +276,10 @@ class DemoUsersSeeder extends Seeder
 
         $columns = Schema::getColumnListing('users');
 
-        if (in_array('name', $columns, true) && !array_key_exists('name', $attributes)) {
+        if (in_array('name', $columns, true) && ! array_key_exists('name', $attributes)) {
             $first = $attributes['first_name'] ?? '';
             $last = $attributes['last_name'] ?? '';
-            $attributes['name'] = trim($first . ' ' . $last);
+            $attributes['name'] = trim($first.' '.$last);
         }
 
         $attributes = array_intersect_key($attributes, array_flip($columns));
@@ -189,6 +299,17 @@ class DemoUsersSeeder extends Seeder
     private function filterTableData(string $table, array $data): array
     {
         $columns = $this->tableColumnsCache[$table] ??= Schema::getColumnListing($table);
+
         return array_intersect_key($data, array_flip($columns));
+    }
+
+    private function syncRolePermissions(Role $role, array $permissions): void
+    {
+        $availablePermissions = Permission::query()
+            ->whereIn('name', $permissions)
+            ->pluck('name')
+            ->all();
+
+        $role->syncPermissions($availablePermissions);
     }
 }

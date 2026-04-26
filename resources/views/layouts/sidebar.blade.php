@@ -37,7 +37,7 @@
                 'students.create-bulk-data',
             );
             $teacherOpen = $isRoute('teachers.*', 'teacher.*');
-            $staffOpen = $isRoute('staff.*', 'roles*');
+            $staffOpen = $isRoute('staff.*', 'roles*', 'users*');
             $leaveOpen = $isRoute(
                 'leave*',
                 'leave-master.*',
@@ -363,6 +363,13 @@
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('staff.*') ? 'active' : '' }}"
                                     href="{{ route('staff.index') }}"> {{ __('staff') }}
+                                </a>
+                            </li>
+                        @endcan
+                        @can('staff-list')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}"
+                                    href="{{ route('users.index') }}"> {{ __('users') }}
                                 </a>
                             </li>
                         @endcan
@@ -721,20 +728,14 @@
             </li>
         @endcan
 
-        {{-- notification --}}
-        @can('notification-create')
-            <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}"
-                    href="{{ route('notifications.index') }}">
-                    <i class="fa fa-bell menu-icon"></i>
-                    <span class="menu-title">{{ __('custom') . ' ' . __('notifications') }}</span>
-                </a>
-            </li>
-        @endcan
-
+        {{-- communication and updates --}}
+        @canany(['announcement-list', 'announcement-create', 'event-list', 'holiday-list', 'notification-list',
+            'notification-create'])
+            <li class="nav-item nav-category">{{ __('communication') }}</li>
+        @endcanany
 
         {{-- announcement --}}
-        @can('announcement-create')
+        @canany(['announcement-list', 'announcement-create', 'announcement-edit', 'announcement-delete'])
             <li class="nav-item">
                 <a class="nav-link {{ request()->routeIs('announcement.*') ? 'active' : '' }}"
                     href="{{ route('announcement.index') }}">
@@ -742,18 +743,20 @@
                     <span class="menu-title">{{ __('announcement') }}</span>
                 </a>
             </li>
-        @endcan
+        @endcanany
 
-
-        {{-- sliders --}}
-        @can('slider-create')
+        {{-- Events --}}
+        @canany(['event-list', 'event-create', 'event-edit', 'event-delete'])
             <li class="nav-item">
-                <a href="{{ route('sliders.index') }}"
-                    class="nav-link {{ request()->routeIs('sliders.*') ? 'active' : '' }}"> <i
-                        class="fa fa-sliders menu-icon"></i>
-                    <span class="menu-title">{{ __('sliders') }}</span></a>
+                @can('event-list')
+                    <a href="{{ route('events.index') }}"
+                        class="nav-link {{ request()->routeIs('events.*') ? 'active' : '' }}">
+                        <i class="fa fa-list-ul menu-icon"></i>
+                        <span class="menu-title">{{ __('events') }}</span>
+                    </a>
+                @endcan
             </li>
-        @endcan
+        @endcanany
 
         {{-- Holiday --}}
         @canany(['holiday-create', 'holiday-list'])
@@ -762,25 +765,31 @@
                     <a href="{{ route('holiday.index') }}"
                         class="nav-link {{ request()->routeIs('holiday.*') ? 'active' : '' }}">
                         <i class="fa fa-calendar-check-o menu-icon"></i>
-                        <span class="menu-title">{{ __('holiday_list') }}</span> </a>
+                        <span class="menu-title">{{ __('holiday_list') }}</span>
+                    </a>
                 @endcan
             </li>
         @endcanany
 
-        {{-- Events --}}
-        @canany(['event-create'])
+        {{-- notification --}}
+        @canany(['notification-list', 'notification-create', 'notification-edit', 'notification-delete'])
             <li class="nav-item">
-                @can('holiday-list')
-                    <a href="{{ route('events.index') }}"
-                        class="nav-link {{ request()->routeIs('events.*') ? 'active' : '' }}">
-                        <i class="fa fa-list-ul menu-icon"></i>
-                        <span class="menu-title">{{ __('events') }}</span> </a>
-                @endcan
+                <a class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}"
+                    href="{{ route('notifications.index') }}">
+                    <i class="fa fa-bell menu-icon"></i>
+                    <span class="menu-title">{{ __('custom') . ' ' . __('notifications') }}</span>
+                </a>
             </li>
+        @endcanany
+
+        {{-- configuration / system changes --}}
+        @canany(['session-year-list', 'session-year-create', 'slider-list', 'slider-create', 'content-list', 'content-create',
+            'setting-create'])
+            <li class="nav-item nav-category">{{ __('configuration') }}</li>
         @endcanany
 
         {{-- session-year --}}
-        @can('session-year-create')
+        @canany(['session-year-list', 'session-year-create', 'session-year-edit', 'session-year-delete'])
             <li class="nav-item">
                 <a href="{{ route('session-years.index') }}"
                     class="nav-link {{ request()->routeIs('session-years.*') ? 'active' : '' }}">
@@ -788,11 +797,22 @@
                     <span class="menu-title">{{ __('session_years') }}</span>
                 </a>
             </li>
-        @endcan
+        @endcanany
 
+        {{-- sliders --}}
+        @canany(['slider-list', 'slider-create', 'slider-edit', 'slider-delete'])
+            <li class="nav-item">
+                <a href="{{ route('sliders.index') }}"
+                    class="nav-link {{ request()->routeIs('sliders.*') ? 'active' : '' }}">
+                    <i class="fa fa-sliders menu-icon"></i>
+                    <span class="menu-title">{{ __('sliders') }}</span>
+                </a>
+            </li>
+        @endcanany
 
         {{-- web-settings --}}
-        @canany(['content-create', 'event-create', 'program-create', 'media-create', 'faq-create', 'contact-us'])
+        @canany(['content-list', 'content-create', 'program-list', 'program-create', 'media-list', 'media-create', 'faq-list',
+            'faq-create', 'contact-us'])
             <li class="nav-item {{ $webSettingsOpen ? 'active' : '' }}">
                 <a class="nav-link" data-toggle="collapse" href="#web-settings"
                     aria-expanded="{{ $webSettingsOpen ? 'true' : 'false' }}" aria-controls="settings-menu"><i
