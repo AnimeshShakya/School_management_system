@@ -37,7 +37,7 @@
                 'students.create-bulk-data',
             );
             $teacherOpen = $isRoute('teachers.*', 'teacher.*');
-            $staffOpen = $isRoute('staff.*', 'roles*');
+            $staffOpen = $isRoute('staff.*', 'roles*', 'users*');
             $leaveOpen = $isRoute(
                 'leave*',
                 'leave-master.*',
@@ -363,6 +363,13 @@
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('staff.*') ? 'active' : '' }}"
                                     href="{{ route('staff.index') }}"> {{ __('staff') }}
+                                </a>
+                            </li>
+                        @endcan
+                        @can('staff-list')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}"
+                                    href="{{ route('users.index') }}"> {{ __('users') }}
                                 </a>
                             </li>
                         @endcan

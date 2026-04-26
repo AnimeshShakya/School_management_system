@@ -1,41 +1,43 @@
-@extends('layouts.app')
+@extends('layouts.master')
 
+@section('title')
+    {{ __('show') . ' ' . __('user') }}
+@endsection
 
 @section('content')
-<div class="row">
-    <div class="col-lg-12 margin-tb">
-        <div class="pull-left">
-            <h2> Show User</h2>
+    <div class="content-wrapper">
+        <div class="page-header">
+            <h3 class="page-title">{{ __('show') . ' ' . __('user') }}</h3>
+            <a class="btn btn-sm btn-theme" href="{{ route('users.index') }}">{{ __('back') }}</a>
         </div>
-        <div class="pull-right">
-            <a class="btn btn-primary" href="{{ route('users.index') }}"> Back</a>
-        </div>
-    </div>
-</div>
 
-
-<div class="row">
-    <div class="col-xs-12 col-sm-12 col-md-12">
-        <div class="form-group">
-            <strong>Name:</strong>
-            {{ $user->first_name.' '.$user->last_name }}
+        <div class="row grid-margin">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="font-weight-bold">{{ __('name') }}</label>
+                                <div>{{ trim($user->first_name . ' ' . $user->last_name) }}</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="font-weight-bold">{{ __('email') }}</label>
+                                <div>{{ $user->email }}</div>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="font-weight-bold">{{ __('role') }}</label>
+                                <div>
+                                    @forelse ($user->getRoleNames() as $roleName)
+                                        <span class="badge badge-success mr-1">{{ $roleName }}</span>
+                                    @empty
+                                        <span class="badge badge-secondary">N/A</span>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    <div class="col-xs-12 col-sm-12 col-md-12">
-        <div class="form-group">
-            <strong>Email:</strong>
-            {{ $user->email }}
-        </div>
-    </div>
-    <div class="col-xs-12 col-sm-12 col-md-12">
-        <div class="form-group">
-            <strong>Roles:</strong>
-            @if(!empty($user->getRoleNames()))
-                @foreach($user->getRoleNames() as $v)
-                    <label class="badge badge-success">{{ $v }}</label>
-                @endforeach
-            @endif
-        </div>
-    </div>
-</div>
 @endsection
