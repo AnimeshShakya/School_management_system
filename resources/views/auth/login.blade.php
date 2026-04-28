@@ -29,8 +29,17 @@
                                             NOTE : <a target="_blank" href="{{ route('login') }}">-- Click Here --</a> If you Can't Login.
                                         </div>
                                     @endif
+                                    @php
+                                        $loginLogoPath = env('LOGO2');
+                                        $primaryLogoPath = env('LOGO1');
+                                        $loginLogo = !empty($loginLogoPath) && Storage::disk('public')->exists($loginLogoPath)
+                                            ? asset('storage/' . $loginLogoPath)
+                                            : (!empty($primaryLogoPath) && Storage::disk('public')->exists($primaryLogoPath)
+                                                ? asset('storage/' . $primaryLogoPath)
+                                                : url('assets/logo.svg'));
+                                    @endphp
                                     <div class="brand-logo text-center">
-                                        <img src="{{ env('LOGO2') ? url(Storage::url(env('LOGO2'))) :url('assets/logo.svg') }}" alt="logo">
+                                        <img src="{{ $loginLogo }}" alt="logo">
                                     </div>
                                     <form action="{{ route('login') }}" id="frmLogin" method="POST" class="pt-3">
                                         @csrf

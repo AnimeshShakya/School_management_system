@@ -39,18 +39,7 @@
                 </div>
             @endcan
         @endif
-        <ul class="navbar-nav navbar-nav-left">
-            <li class="nav-item">
-                <a class="nav-link" href="#" aria-expanded="false">
-                    <span class="badge badge-success">{{ $current_version }} v</span>
-                </a>
-            </li>
-            <li class="nav-item mx-2">
-                <span class="badge badge-info  shadow-sm">
-                    {{ $current_session->name }}
-                </span>
-            </li>
-        </ul>
+
         <ul class="navbar-nav navbar-nav-right">
             <a class="nav-link" href="{{ url('clear') }}">
                 <input class="btn-inverse-info btn" type="submit" value="{{ __('cache_clear') }}">
