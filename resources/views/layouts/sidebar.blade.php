@@ -976,6 +976,13 @@
                         <span class="menu-title">{{ __('system_update') }}</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('revenue.analysis') ? 'active' : '' }}"
+                        href="{{ route('revenue.analysis') }}">
+                        <i class="fa fa-line-chart menu-icon"></i>
+                        <span class="menu-title">Revenue Analysis</span>
+                    </a>
+                </li>
             @endif
 
         </ul>

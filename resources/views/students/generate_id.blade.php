@@ -49,6 +49,7 @@
                                             <th data-field="class_section_name" data-sortable="false">{{ __('class') . ' ' . __('section') }}</th>
                                             <th data-field="stream_name" data-sortable="false">{{ __('stream') }}</th>
                                             <th data-field="roll_number" data-sortable="false">{{ __('roll_no') }}</th>
+                                            <th data-field="registration_payment_status" data-sortable="false" data-formatter="studentRegistrationPaymentStatusFormatter">Registration Payment</th>
                                             <th data-field="first_name" data-sortable="false">{{ __('first_name') }}</th>
                                             <th data-field="last_name" data-sortable="false">{{ __('last_name') }}</th>
                                             <th data-field="dob" data-sortable="false">{{ __('dob') }}</th>

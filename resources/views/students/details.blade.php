@@ -60,6 +60,7 @@
                                             <th scope="col" data-field="caste" data-visible="false">{{ __('caste') }}</th>
                                             <th scope="col" data-field="religion" data-visible="false">{{ __('religion') }}</th>
                                             <th scope="col" data-field="admission_date">{{ __('admission_date') }}</th>
+                                            <th scope="col" data-field="registration_payment_status" data-formatter="studentRegistrationPaymentStatusFormatter">Registration Payment</th>
                                             <th scope="col" data-field="height" data-visible="false">{{ __('height') }}</th>
                                             <th scope="col" data-field="weight" data-visible="false">{{ __('weight') }}</th>
                                             <th scope="col" data-field="father_full_name">{{ __('father') . ' ' . __('name') }}</th>
