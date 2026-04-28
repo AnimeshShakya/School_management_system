@@ -27,6 +27,24 @@
                     @endforeach
                 @endif
             </div>
+
+            {{-- Hero text overlay --}}
+            <div class="heroOverlay">
+                <div class="container">
+                    <div class="heroContent">
+                        <span class="heroTag">Welcome to {{ config('app.name') }}</span>
+                        <h1 class="heroTitle">{{ isset($settings['school_name']) ? $settings['school_name'] : config('app.name') }}</h1>
+                        <div class="heroCtas">
+                            <a href="{{ route('about.us') }}" class="heroBtnPrimary">
+                                Discover More <i class="fa-solid fa-arrow-right"></i>
+                            </a>
+                            <a href="{{ url('login') }}" class="heroBtnSecondary">
+                                <i class="fa-solid fa-right-to-bracket"></i> Login
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- heroSection ends here  -->

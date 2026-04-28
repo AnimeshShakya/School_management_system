@@ -27,88 +27,7 @@
     </div>
 
     <div class="row">
-        <div class="col-md-12 grid-margin  stretch-card">
-            <div class="card">
-                <div class="card-body">
-                    <h4 class="card-title">
-                        {{ __('manage') . ' ' . __('roles') }}
-                    </h4>
-                        {!! Form::open(['route' => 'roles.store', 'method' => 'POST','class' => 'pt-3']) !!}
-                            <div class="col-xs-12 col-sm-12 col-md-12">
-                                <div class="form-group">
-                                    <label>{{ __('name') }}</label>
-                                    {!! Form::text('name', null, ['placeholder' => __('name'), 'class' => 'form-control']) !!}
-                                </div>
-                            </div>
-                            <div class="col-xs-12 col-sm-12 col-md-12">
-                                <label>{{ __('permission') }}</label>
-                                @foreach ($permissionGroups as $groupName => $groupPermissions)
-                                    @php
-                                        $groupActions = $groupPermissions
-                                            ->map(function ($permissionItem) {
-                                                $parts = explode('-', $permissionItem->name);
-
-                                                return strtolower(end($parts));
-                                            })
-                                            ->unique()
-                                            ->values();
-                                    @endphp
-                                    <div class="card mt-3 border">
-                                        <div class="px-3 pt-3 pb-2 d-flex justify-content-between align-items-center border-bottom">
-                                            <h5 class="mb-0">{{ $groupName }}</h5>
-                                            <div class="d-flex align-items-center" style="gap: 6px;">
-                                                <button type="button" class="btn btn-sm btn-theme permission-group-toggle" data-group="permission-group-{{ $loop->index }}" data-select-label="Select All" data-clear-label="Clear All">
-                                                    Select All
-                                                </button>
-                                                <button type="button" class="btn btn-sm btn-light permission-group-clear" data-group="permission-group-{{ $loop->index }}">
-                                                    Clear
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div class="card-body py-3">
-                                            @if ($groupActions->count() > 0)
-                                                <div class="d-flex flex-wrap mb-3" style="gap: 6px;">
-                                                    @foreach ($groupActions as $action)
-                                                        <button
-                                                            type="button"
-                                                            class="btn btn-xs btn-outline-primary permission-action-select"
-                                                            data-group="permission-group-{{ $loop->parent->index }}"
-                                                            data-action="{{ $action }}">
-                                                            {{ 'Select ' . ucwords(str_replace('-', ' ', $action)) }}
-                                                        </button>
-                                                    @endforeach
-                                                </div>
-                                            @endif
-                                            <div class="row permission-group-{{ $loop->index }}">
-                                                @foreach ($groupPermissions as $permissionItem)
-                                                    @php
-                                                        $parts = explode('-', $permissionItem->name);
-                                                        $actionName = strtolower(end($parts));
-                                                        $actionLabel = ucwords(str_replace('-', ' ', $actionName));
-                                                    @endphp
-                                                    <div class="col-lg-3 col-md-4 col-sm-6 mb-2">
-                                                        <div class="form-check">
-                                                            <label class="form-check-label d-flex align-items-center">
-                                                                {!! Form::checkbox('permission[]', $permissionItem->id, in_array($permissionItem->id, old('permission', [])), ['class' => 'name form-check-input', 'data-action' => $actionName]) !!}
-                                                                <span>{{ $actionLabel }}</span>
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                            <div class="col-xs-12 col-sm-12 col-md-12">
-                                <button type="submit" class="btn btn-theme">{{ __('submit') }}</button>
-                            </div>
-                        {!! Form::close() !!}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-12 grid-margin  stretch-card">
+        <div class="col-md-12 grid-margin stretch-card">
             <div class="card">
                 <div class="card-body">
                     <h4 class="card-title">
@@ -140,6 +59,62 @@
                 </div>
             </div>
         </div>
+
+        <div class="col-md-12 grid-margin stretch-card">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">
+                        {{ __('manage') . ' ' . __('roles') }}
+                    </h4>
+                        {!! Form::open(['route' => 'roles.store', 'method' => 'POST','class' => 'pt-3']) !!}
+                            <div class="col-xs-12 col-sm-12 col-md-12">
+                                <div class="form-group">
+                                    <label>{{ __('name') }}</label>
+                                    {!! Form::text('name', null, ['placeholder' => __('name'), 'class' => 'form-control']) !!}
+                                </div>
+                            </div>
+                            <div class="col-xs-12 col-sm-12 col-md-12">
+                                <label>{{ __('permission') }}</label>
+                                @foreach ($permissionGroups as $groupName => $groupPermissions)
+                                    <div class="card mt-3 border">
+                                        <div class="px-3 pt-3 pb-2 d-flex justify-content-between align-items-center border-bottom">
+                                            <h5 class="mb-0">{{ $groupName }}</h5>
+                                            <div class="d-flex align-items-center" style="gap: 6px;">
+                                                <button type="button" class="btn btn-sm btn-theme permission-group-toggle" data-group="permission-group-{{ $loop->index }}" data-select-label="Select All" data-clear-label="Clear All">
+                                                    Select All
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-light permission-group-clear" data-group="permission-group-{{ $loop->index }}">
+                                                    Clear
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body py-3">
+                                            <div class="row permission-group-{{ $loop->index }}">
+                                                @foreach ($groupPermissions as $permissionItem)
+                                                    @php
+                                                        $parts = explode('-', $permissionItem->name);
+                                                        $actionName = strtolower(end($parts));
+                                                        $actionLabel = ucwords(str_replace('-', ' ', $actionName));
+                                                    @endphp
+                                                    <div class="col-lg-3 col-md-4 col-sm-6 mb-2">
+                                                        <label class="permission-inline-option mb-0">
+                                                            {!! Form::checkbox('permission[]', $permissionItem->id, in_array($permissionItem->id, old('permission', [])), ['class' => 'name permission-inline-checkbox', 'data-action' => $actionName]) !!}
+                                                            <span>{{ $actionLabel }}</span>
+                                                        </label>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                            <div class="col-xs-12 col-sm-12 col-md-12">
+                                <button type="submit" class="btn btn-theme">{{ __('submit') }}</button>
+                            </div>
+                        {!! Form::close() !!}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -147,7 +122,6 @@
     document.addEventListener('DOMContentLoaded', function () {
         const groupToggleButtons = document.querySelectorAll('.permission-group-toggle');
         const groupClearButtons = document.querySelectorAll('.permission-group-clear');
-        const actionSelectButtons = document.querySelectorAll('.permission-action-select');
 
         groupToggleButtons.forEach(function (button) {
             button.addEventListener('click', function () {
@@ -180,38 +154,26 @@
                 }
             });
         });
-
-        actionSelectButtons.forEach(function (button) {
-            button.addEventListener('click', function () {
-                const groupClass = button.getAttribute('data-group');
-                const targetAction = button.getAttribute('data-action');
-                const checkboxes = document.querySelectorAll('.' + groupClass + ' input[type="checkbox"]');
-                const targetCheckboxes = Array.from(checkboxes).filter(function (checkbox) {
-                    return checkbox.getAttribute('data-action') === targetAction;
-                });
-
-                const shouldSelect = targetCheckboxes.some(function (checkbox) {
-                    return !checkbox.checked;
-                });
-
-                targetCheckboxes.forEach(function (checkbox) {
-                    checkbox.checked = shouldSelect;
-                });
-
-                button.classList.toggle('btn-theme', shouldSelect);
-                button.classList.toggle('btn-outline-primary', !shouldSelect);
-
-                const toggleButton = document.querySelector('.permission-group-toggle[data-group="' + groupClass + '"]');
-                if (toggleButton) {
-                    const allChecked = Array.from(checkboxes).every(function (checkbox) {
-                        return checkbox.checked;
-                    });
-
-                    toggleButton.textContent = allChecked ? toggleButton.dataset.clearLabel : toggleButton.dataset.selectLabel;
-                }
-            });
-        });
     });
 </script>
+
+<style>
+    .permission-inline-option {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+    }
+
+    .permission-inline-checkbox {
+        -webkit-appearance: checkbox !important;
+        appearance: checkbox !important;
+        position: static !important;
+        opacity: 1 !important;
+        width: 16px !important;
+        height: 16px !important;
+        margin: 0 !important;
+    }
+</style>
 
 @endsection
