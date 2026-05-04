@@ -63,12 +63,12 @@
                             </div>
 
                             <div class="form-group">
-                                <label>{{ __('bg_color') }} <span class="text-danger">*</span></label>
+                                <label>{{ __('bg_color') }}</label>
                                 <input name="bg_color" type="text" placeholder="{{ __('bg_color_only_hex_code') }}" class="color-picker" autocomplete="off" />
                             </div>
 
                             <div class="form-group">
-                                <label>{{ __('image') }} <span class="text-danger">*</span></label>
+                                <label>{{ __('image') }}</label>
                                 <input type="file" name="image" class="file-upload-default" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/svg" />
                                 <div class="input-group col-xs-12">
                                     <input type="text" class="form-control file-upload-info" disabled="" placeholder="{{ __('image') }}" />
@@ -175,12 +175,12 @@
                             </div>
 
                             <div class="form-group">
-                                <label>{{ __('bg_color') }} <span class="text-danger">*</span></label>
+                                <label>{{ __('bg_color') }}</label>
                                 <input name="bg_color" id="edit_bg_color" type="text" placeholder="{{ __('bg_color_only_hex_code') }}" class="color-picker" autocomplete="off" />
                             </div>
 
                             <div class="form-group">
-                                <label>{{ __('image') }} <span class="text-danger">*</span></label>
+                                <label>{{ __('image') }}</label>
                                 <input type="file" id="edit_image" name="image" class="file-upload-default" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/svg" />
                                 <div class="input-group col-xs-12">
                                     <input type="text" id="edit_image" class="form-control" disabled="" value="" />

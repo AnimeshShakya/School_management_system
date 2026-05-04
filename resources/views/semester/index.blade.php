@@ -37,6 +37,13 @@
                                     <input type="text" name="end_date" class="datepicker-popup form-control current-date"
                                         placeholder="{{ __('end_date') }}" autocomplete="off" required>
                                 </div>
+                                <div class="form-group col-sm-6 col-md-4">
+                                    <label>{{ __('status') }}</label>
+                                    <select name="status" class="form-control">
+                                        <option value="1">{{ __('active') }}</option>
+                                        <option value="0">{{ __('inactive') }}</option>
+                                    </select>
+                                </div>
                             </div>
                             <input class="btn btn-theme" id="create-btn" type="submit" value={{ __('submit') }}>
                         </form>
@@ -117,6 +124,13 @@
                                         <input type="text" name="edit_end_date" id="edit_end_date"
                                             class="datepicker-popup form-control current-date"
                                             placeholder="{{ __('end_date') }}" autocomplete="off" required>
+                                    </div>
+                                    <div class="form-group col-sm-6 col-md-4">
+                                        <label>{{ __('status') }}</label>
+                                        <select name="edit_status" id="edit_status" class="form-control">
+                                            <option value="1">{{ __('active') }}</option>
+                                            <option value="0">{{ __('inactive') }}</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>

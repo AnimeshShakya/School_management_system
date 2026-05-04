@@ -2,26 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use Throwable;
-use App\Models\Settings;
 use App\Models\ChatMessage;
 use App\Models\SessionYear;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Settings;
 use App\Services\MailService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Throwable;
 
 class SettingController extends Controller
 {
-
     public function index()
     {
-        if (!Auth::user()->can('setting-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('setting-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
 
@@ -31,16 +31,18 @@ class SettingController extends Controller
         $getTimeFormat = getTimeFormat();
 
         $session_year = SessionYear::orderBy('id', 'desc')->get();
+
         // $language = Language::select('id', 'name')->orderBy('id', 'desc')->get();
         return view('settings.index', compact('settings', 'getDateFormat', 'getTimezoneList', 'getTimeFormat', 'session_year'));
     }
 
     public function update(Request $request)
     {
-        if (!Auth::user()->can('setting-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('setting-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $request->validate([
@@ -60,7 +62,7 @@ class SettingController extends Controller
             'maplink' => 'required',
             'recaptcha_site_key' => 'nullable',
             'recaptcha_secret_key' => 'nullable',
-            'recaptcha_status' => 'required'
+            'recaptcha_status' => 'required',
         ]);
 
         $settings = [
@@ -82,7 +84,7 @@ class SettingController extends Controller
             'maplink',
             'recaptcha_site_key',
             'recaptcha_secret_key',
-            'recaptcha_status'
+            'recaptcha_status',
         ];
         try {
             foreach ($settings as $row) {
@@ -91,7 +93,7 @@ class SettingController extends Controller
                         $get_id = Settings::select('message')->where('type', 'session_year')->pluck('message')->first();
 
                         $old_year = SessionYear::find($get_id);
-                        if (!empty($old_year)) {
+                        if (! empty($old_year)) {
                             $old_year->default = 0;
                             $old_year->save();
                         }
@@ -104,16 +106,16 @@ class SettingController extends Controller
                     // removing the double unnecessary double quotes in school name
                     if ($row == 'school_name') {
                         $data = [
-                            'message' => str_replace('"', '', $request->$row)
+                            'message' => str_replace('"', '', $request->$row),
                         ];
                     } else {
                         $data = [
-                            'message' => $request->$row
+                            'message' => $request->$row,
                         ];
                     }
                     Settings::where('type', $row)->update($data);
                 } else {
-                    $setting = new Settings();
+                    $setting = new Settings;
                     $setting->type = $row;
                     $setting->message = $row == 'school_name' ? str_replace('"', '', $request->$row) : $request->$row;
                     $setting->save();
@@ -123,11 +125,11 @@ class SettingController extends Controller
             // for online payment data
             if (Settings::where('type', 'online_payment')->exists()) {
                 $data = [
-                    'message' => $request->online_payment
+                    'message' => $request->online_payment,
                 ];
                 Settings::where('type', 'online_payment')->update($data);
             } else {
-                $setting = new Settings();
+                $setting = new Settings;
                 $setting->type = 'online_payment';
                 $setting->message = $request->online_payment;
                 $setting->save();
@@ -141,11 +143,11 @@ class SettingController extends Controller
                         Storage::disk('public')->delete($get_id);
                     }
                     $data = [
-                        'message' => $request->file('logo1')->store('logo', 'public')
+                        'message' => $request->file('logo1')->store('logo', 'public'),
                     ];
                     Settings::where('type', 'logo1')->update($data);
                 } else {
-                    $setting = new Settings();
+                    $setting = new Settings;
                     $setting->type = 'logo1';
                     $setting->message = $request->file('logo1')->store('logo', 'public');
                     $setting->save();
@@ -158,11 +160,11 @@ class SettingController extends Controller
                         Storage::disk('public')->delete($get_id);
                     }
                     $data = [
-                        'message' => $request->file('logo2')->store('logo', 'public')
+                        'message' => $request->file('logo2')->store('logo', 'public'),
                     ];
                     Settings::where('type', 'logo2')->update($data);
                 } else {
-                    $setting = new Settings();
+                    $setting = new Settings;
                     $setting->type = 'logo2';
                     $setting->message = $request->file('logo2')->store('logo', 'public');
                     $setting->save();
@@ -175,11 +177,11 @@ class SettingController extends Controller
                         Storage::disk('public')->delete($get_id);
                     }
                     $data = [
-                        'message' => $request->file('favicon')->store('logo', 'public')
+                        'message' => $request->file('favicon')->store('logo', 'public'),
                     ];
                     Settings::where('type', 'favicon')->update($data);
                 } else {
-                    $setting = new Settings();
+                    $setting = new Settings;
                     $setting->type = 'favicon';
                     $setting->message = $request->file('favicon')->store('logo', 'public');
                     $setting->save();
@@ -192,11 +194,11 @@ class SettingController extends Controller
                         Storage::disk('public')->delete($get_id);
                     }
                     $data = [
-                        'message' => $request->file('login_image')->store('logo', 'public')
+                        'message' => $request->file('login_image')->store('logo', 'public'),
                     ];
                     Settings::where('type', 'login_image')->update($data);
                 } else {
-                    $setting = new Settings();
+                    $setting = new Settings;
                     $setting->type = 'login_image';
                     $setting->message = $request->file('login_image')->store('logo', 'public');
                     $setting->save();
@@ -217,59 +219,65 @@ class SettingController extends Controller
                 'LOGO2' => $logo2,
                 'FAVICON' => $favicon,
                 'LOGIN_IMAGE' => $login_image,
-                'APP_NAME' => '"' . $app_name . '"',
-                'TIMEZONE' => "'" . $timezone . "'",
-                'SITE_KEY' =>  $recaptcha_site_key,
-                'SECRET_KEY' => $recaptcha_secret_key
+                'APP_NAME' => '"'.$app_name.'"',
+                'TIMEZONE' => "'".$timezone."'",
+                'SITE_KEY' => $recaptcha_site_key,
+                'SECRET_KEY' => $recaptcha_secret_key,
 
             ]);
             if ($env_update) {
-                $response = array(
+                $response = [
                     'error' => false,
                     'message' => trans('data_update_successfully'),
-                );
+                ];
             }
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-                'data' => $e
-            );
+                'data' => $e,
+            ];
         }
+
         return response()->json($response);
     }
 
     public function fcm_index()
     {
-        if (!Auth::user()->can('fcm-setting-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('fcm-setting-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
 
         $settings = getSettings();
+
         return view('settings.fcm_key', compact('settings'));
     }
 
     public function email_index()
     {
-        if (!Auth::user()->can('email-setting-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('email-setting-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $settings = getSettings();
+
         return view('settings.email_configuration', compact('settings'));
     }
 
     public function email_update(Request $request)
     {
-        if (!Auth::user()->can('email-setting-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('email-setting-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $request->validate([
@@ -305,11 +313,11 @@ class SettingController extends Controller
                 if (Settings::where('type', $row)->exists()) {
 
                     $data = [
-                        'message' => $row === 'mail_password' ? $mailPassword : $request->$row
+                        'message' => $row === 'mail_password' ? $mailPassword : $request->$row,
                     ];
                     Settings::where('type', $row)->update($data);
                 } else {
-                    $setting = new Settings();
+                    $setting = new Settings;
                     $setting->type = $row;
                     $setting->message = $row === 'mail_password' ? $mailPassword : $request->$row;
                     $setting->save();
@@ -326,48 +334,51 @@ class SettingController extends Controller
                 'MAIL_USERNAME' => $request->mail_username,
                 'MAIL_PASSWORD' => $mailPassword,
                 'MAIL_ENCRYPTION' => $request->mail_encryption,
-                'MAIL_FROM_ADDRESS' => $request->mail_send_from
+                'MAIL_FROM_ADDRESS' => $request->mail_send_from,
 
             ]);
             if ($env_update) {
                 Artisan::call('config:clear');
 
-                $response = array(
+                $response = [
                     'error' => false,
                     'message' => trans('data_update_successfully'),
-                );
+                ];
             } else {
-                $response = array(
+                $response = [
                     'error' => false,
                     'message' => trans('error_occurred'),
-                );
+                ];
             }
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-                'data' => $e
-            );
+                'data' => $e,
+            ];
         }
+
         return response()->json($response);
     }
 
     public function verifyEmailConfigration(Request $request)
     {
-        if (!Auth::user()->can('email-setting-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('email-setting-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $validator = Validator::make($request->all(), [
             'verify_email' => 'required|email',
         ]);
         if ($validator->fails()) {
-            $response = array(
+            $response = [
                 'error' => true,
                 'message' => $validator->errors()->first(),
-            );
+            ];
+
             return response()->json($response);
         }
         try {
@@ -375,16 +386,17 @@ class SettingController extends Controller
                 'email' => $request->verify_email,
             ];
             $admin_mail = env('MAIL_FROM_ADDRESS', config('mail.from.address'));
-            if (!filter_var($request->verify_email, FILTER_VALIDATE_EMAIL)) {
-                $response = array(
+            if (! filter_var($request->verify_email, FILTER_VALIDATE_EMAIL)) {
+                $response = [
                     'error' => true,
                     'message' => trans('invalid_email'),
-                );
+                ];
+
                 return response()->json($response);
             }
 
             // send mail and check result
-            $status =  MailService::sendWithFallback('mail', $data, function ($message) use ($data, $admin_mail) {
+            $status = MailService::sendWithFallback('mail', $data, function ($message) use ($data, $admin_mail) {
                 $message->to($data['email'])->subject('Connection Verified successfully');
                 $message->from($admin_mail, 'Eschool Admin');
             });
@@ -392,125 +404,145 @@ class SettingController extends Controller
             if ($status) {
                 Settings::where('type', 'email_configration_verification')->update(['message' => 1]);
 
-                $response = array(
+                $response = [
                     'error' => false,
                     'message' => trans('email_sent_successfully'),
-                );
+                ];
             } else {
                 // Sending failed (sendWithFallback returned falsy)
                 $mailError = MailService::getLastError();
                 $message = trans('email_send_failed');
 
-                if ($mailError && str_contains(strtolower($mailError), 'authentication failed')) {
+                $mailErrorLower = strtolower((string) $mailError);
+                if (
+                    $mailErrorLower !== '' &&
+                    (
+                        str_contains($mailErrorLower, 'authentication failed') ||
+                        str_contains($mailErrorLower, 'failed to authenticate') ||
+                        str_contains($mailErrorLower, 'application-specific password required') ||
+                        str_contains($mailErrorLower, '5.7.9')
+                    )
+                ) {
                     $message = 'SMTP authentication failed. Please recheck MAIL_USERNAME and MAIL_PASSWORD (for Gmail, use App Password without spaces).';
                 }
 
-                $response = array(
+                $response = [
                     'error' => true,
                     'message' => $message,
-                );
+                ];
             }
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-                'data' => $e
-            );
+                'data' => $e,
+            ];
         }
+
         return response()->json($response);
     }
 
     public function privacy_policy_index()
     {
-        if (!Auth::user()->can('privacy-policy')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('privacy-policy')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $settings = Settings::where('type', 'privacy_policy')->first();
         $type = 'privacy_policy';
+
         return view('settings.privacy_policy', compact('settings', 'type'));
     }
 
     public function contact_us_index()
     {
-        if (!Auth::user()->can('contact-us')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('contact-us')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $settings = Settings::where('type', 'contact_us')->first();
         $type = 'contact_us';
+
         return view('settings.contact_us', compact('settings', 'type'));
     }
 
     public function about_us_index()
     {
-        if (!Auth::user()->can('about-us')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('about-us')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $settings = Settings::where('type', 'about_us')->first();
         $type = 'about_us';
+
         return view('settings.about_us', compact('settings', 'type'));
     }
 
     public function terms_condition_index()
     {
-        if (!Auth::user()->can('terms-condition')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('terms-condition')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $settings = Settings::where('type', 'terms_condition')->first();
         $type = 'terms_condition';
+
         return view('settings.terms_condition', compact('settings', 'type'));
     }
 
     public function setting_page_update(Request $request)
     {
-        if (!Auth::user()->can('setting-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('setting-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $validator = Validator::make($request->all(), [
             'type' => 'required',
-            'message' => 'required'
+            'message' => 'required',
         ]);
         if ($validator->fails()) {
-            $response = array(
+            $response = [
                 'error' => true,
                 'message' => $validator->errors()->first(),
-            );
+            ];
+
             return response()->json($response);
         }
         $type = $request->type;
         $message = $request->message;
         $id = Settings::select('id')->where('type', $type)->pluck('id')->first();
-        if (isset($id) && !empty($id)) {
+        if (isset($id) && ! empty($id)) {
             $setting = Settings::find($id);
             $setting->message = $message;
             $setting->save();
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_update_successfully'),
-            );
+            ];
         } else {
-            $setting = new Settings();
+            $setting = new Settings;
             $setting->type = $type;
             $setting->message = $message;
             $setting->save();
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_store_successfully'),
-            );
+            ];
         }
 
         return response()->json($response);
@@ -518,22 +550,25 @@ class SettingController extends Controller
 
     public function app_index()
     {
-        if (!Auth::user()->can('setting-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('setting-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $settings = getSettings();
+
         return view('settings.app_settings', compact('settings'));
     }
 
     public function app_update(Request $request)
     {
-        if (!Auth::user()->can('setting-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('setting-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $request->validate([
@@ -572,54 +607,56 @@ class SettingController extends Controller
                 if (Settings::where('type', $row)->exists()) {
 
                     $data = [
-                        'message' => $request->$row
+                        'message' => $request->$row,
                     ];
                     Settings::where('type', $row)->update($data);
                 } else {
-                    $setting = new Settings();
+                    $setting = new Settings;
                     $setting->type = $row;
                     $setting->message = $request->$row;
                     $setting->save();
                 }
             }
 
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_update_successfully'),
-            );
+            ];
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-                'data' => $e
-            );
+                'data' => $e,
+            ];
         }
+
         return response()->json($response);
     }
 
     public function notification_setting(Request $request)
     {
-        if (!Auth::user()->can('setting-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('setting-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $request->validate([
             'sender_id' => 'required',
             'project_id' => 'required',
-            //'service_account_file' => 'required|mimes:json'
+            // 'service_account_file' => 'required|mimes:json'
         ]);
         $settings = ['sender_id', 'project_id'];
         try {
             foreach ($settings as $row) {
                 if (Settings::where('type', $row)->exists()) {
                     $data = [
-                        'message' => $request->$row
+                        'message' => $request->$row,
                     ];
                     Settings::where('type', $row)->update($data);
                 } else {
-                    $setting = new Settings();
+                    $setting = new Settings;
                     $setting->type = $row;
                     $setting->message = $request->$row;
                     $setting->save();
@@ -638,11 +675,11 @@ class SettingController extends Controller
 
                     // Store the new file with its original name
                     $data = [
-                        'message' => $serviceAccountFile->storeAs('firebase', $serviceAccountFile->getClientOriginalName(), 'public')
+                        'message' => $serviceAccountFile->storeAs('firebase', $serviceAccountFile->getClientOriginalName(), 'public'),
                     ];
                     Settings::where('type', 'service_account_file')->update($data);
                 } else {
-                    $setting = new Settings();
+                    $setting = new Settings;
                     $setting->type = 'service_account_file';
                     $setting->message = $serviceAccountFile->storeAs('firebase', $serviceAccountFile->getClientOriginalName(), 'public');
                     $setting->save();
@@ -652,21 +689,21 @@ class SettingController extends Controller
             $sender_id = Settings::select('message')->where('type', 'sender_id')->pluck('message')->first();
             $firebase_project_id = Settings::select('message')->where('type', 'project_id')->pluck('message')->first();
             $env_update = changeEnv([
-                'SENDER_ID' =>  $sender_id,
-                'FIREBASE_PROJECT_ID' =>  $firebase_project_id,
+                'SENDER_ID' => $sender_id,
+                'FIREBASE_PROJECT_ID' => $firebase_project_id,
             ]);
             if ($env_update) {
-                $response = array(
+                $response = [
                     'error' => false,
                     'message' => trans('data_update_successfully'),
-                );
+                ];
             }
-        } catch (\Throwable $e) {
-            $response = array(
+        } catch (Throwable $e) {
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-                'data' => $e
-            );
+                'data' => $e,
+            ];
         }
 
         return response()->json($response);
@@ -674,22 +711,25 @@ class SettingController extends Controller
 
     public function chat_setting_index()
     {
-        if (!Auth::user()->can('chat-settings')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('chat-settings')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $settings = getSettings();
+
         return view('settings.chat_setting', compact('settings'));
     }
 
     public function chat_setting_update(Request $request)
     {
-        if (!Auth::user()->can('chat-settings')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('chat-settings')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $request->validate([
@@ -697,57 +737,60 @@ class SettingController extends Controller
             'max_file_size_in_bytes' => 'required',
             'max_characters_in_text_message' => 'required',
             'automatically_messages_removed_days' => 'required',
-            'info-link' => 'required'
+            'info-link' => 'required',
         ]);
         $settings = ['max_files_or_images_in_one_message', 'max_file_size_in_bytes', 'max_characters_in_text_message', 'automatically_messages_removed_days', 'info-link'];
         try {
             foreach ($settings as $row) {
                 if (Settings::where('type', $row)->exists()) {
                     $data = [
-                        'message' => $request->$row
+                        'message' => $request->$row,
                     ];
                     Settings::where('type', $row)->update($data);
                 } else {
-                    $setting = new Settings();
+                    $setting = new Settings;
                     $setting->type = $row;
                     $setting->message = $request->$row;
                     $setting->save();
                 }
             }
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_update_successfully'),
-            );
-        } catch (\Throwable $e) {
-            $response = array(
+            ];
+        } catch (Throwable $e) {
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-                'data' => $e
-            );
+                'data' => $e,
+            ];
         }
+
         return response()->json($response);
     }
 
     public function delete_chat_messages(Request $request)
     {
-        if (!Auth::user()->can('chat-message-delete')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('chat-message-delete')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $validator = Validator::make($request->all(), [
             'from_date' => 'required|date',
             'to_date' => 'required|date|after:from_date',
         ], [
-            'to_date.after' => "The 'To Date' must be a date after the 'From Date'."
+            'to_date.after' => "The 'To Date' must be a date after the 'From Date'.",
         ]);
 
         if ($validator->fails()) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => $validator->errors()->first()
-            );
+                'message' => $validator->errors()->first(),
+            ];
+
             return response()->json($response);
         }
         try {
@@ -770,17 +813,18 @@ class SettingController extends Controller
                 $message->delete();
             }
 
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_delete_successfully'),
-            );
-        } catch (\Throwable $e) {
-            $response = array(
+            ];
+        } catch (Throwable $e) {
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-                'data' => $e
-            );
+                'data' => $e,
+            ];
         }
+
         return response()->json($response);
     }
 
@@ -808,17 +852,18 @@ class SettingController extends Controller
                 $message->delete();
             }
 
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_delete_successfully'),
-            );
-        } catch (\Throwable $e) {
-            $response = array(
+            ];
+        } catch (Throwable $e) {
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-                'data' => $e
-            );
+                'data' => $e,
+            ];
         }
+
         return response()->json($response);
     }
 }

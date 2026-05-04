@@ -4,39 +4,38 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\Shift;
-use App\Models\Lesson;
-use App\Models\Stream;
-use App\Models\Mediums;
-use App\Models\Section;
-use App\Models\Subject;
-use App\Models\Semester;
-use App\Models\Students;
-use App\Models\ExamClass;
-use App\Models\FeesClass;
-use App\Models\Timetable;
+use App\Http\Resources\User;
 use App\Models\Assignment;
 use App\Models\Attendance;
-use App\Models\ExamResult;
-use App\Models\OnlineExam;
 use App\Models\ClassSchool;
-use App\Http\Resources\User;
 use App\Models\ClassSection;
 use App\Models\ClassSubject;
-use Illuminate\Http\Request;
-use App\Models\SubjectTeacher;
-use App\Models\ElectiveSubject;
-use App\Models\StudentSessions;
 use App\Models\EducationalProgram;
-use App\Models\OnlineExamQuestion;
-use Illuminate\Support\Facades\DB;
 use App\Models\ElectiveSubjectGroup;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
-use App\Http\Resources\ClassSubjectCollection;
+use App\Models\ExamClass;
+use App\Models\ExamResult;
+use App\Models\FeesClass;
+use App\Models\Lesson;
+use App\Models\Mediums;
+use App\Models\OnlineExam;
+use App\Models\OnlineExamQuestion;
+use App\Models\Section;
+use App\Models\Semester;
+use App\Models\Shift;
+use App\Models\Stream;
+use App\Models\Students;
+use App\Models\StudentSessions;
 use App\Models\StudentSubject;
+use App\Models\Subject;
+use App\Models\SubjectTeacher;
+use App\Models\Timetable;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Throwable;
 
 class ClassSchoolController extends Controller
@@ -44,14 +43,15 @@ class ClassSchoolController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index()
     {
-        if (!Auth::user()->can('class-list')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('class-list')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $classes = ClassSchool::orderBy('id', 'DESC')->with('medium', 'sections', 'streams')->get();
@@ -61,22 +61,36 @@ class ClassSchoolController extends Controller
         $shifts = Shift::where('status', 1)->get();
         $educational_programs = EducationalProgram::orderBy('id', 'ASC')->get();
         $semesters = Semester::orderBy('id', 'ASC')->get();
+
         return response(view('class.index', compact('classes', 'sections', 'mediums', 'streams', 'shifts', 'educational_programs', 'semesters')));
+    }
+
+    public function create()
+    {
+        if (! Auth::user()->can('class-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
+            return redirect(route('home'))->withErrors($response);
+        }
+
+        return redirect()->route('class.index');
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function store(Request $request)
     {
-        if (!Auth::user()->can('class-create')) {
-            $response = array(
+        if (! Auth::user()->can('class-create')) {
+            $response = [
                 'error' => true,
-                'message' => trans('no_permission_message')
-            );
+                'message' => trans('no_permission_message'),
+            ];
+
             return response()->json($response);
         }
 
@@ -87,33 +101,34 @@ class ClassSchoolController extends Controller
         ]);
 
         if ($validator->fails()) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => $validator->errors()->first()
-            );
+                'message' => $validator->errors()->first(),
+            ];
+
             return response()->json($response);
         }
         try {
-            if (!$request->stream_id) {
-                $class = new ClassSchool();
+            if (! $request->stream_id) {
+                $class = new ClassSchool;
                 $class->name = $request->name;
                 $class->educational_program_id = $request->educational_program;
                 $class->medium_id = $request->medium_id;
                 $class->shift_id = $request->shift_id;
                 $class->include_semesters = $request->include_semesters ?? 0;
                 $class->save();
-                $class_section = array();
+                $class_section = [];
                 foreach ($request->section_id as $section_id) {
-                    $class_section[] = array(
+                    $class_section[] = [
                         'class_id' => $class->id,
-                        'section_id' => $section_id
-                    );
+                        'section_id' => $section_id,
+                    ];
                 }
                 ClassSection::insert($class_section);
-                $response = array(
+                $response = [
                     'error' => false,
                     'message' => trans('data_store_successfully'),
-                );
+                ];
             } else {
                 $classes = [];
                 foreach ($request->stream_id as $stream_id) {
@@ -121,7 +136,7 @@ class ClassSchoolController extends Controller
                         'name' => $request->name,
                         'medium_id' => $request->medium_id,
                         'stream_id' => $stream_id,
-                        'shift_id'  => $request->shift_id,
+                        'shift_id' => $request->shift_id,
                         'educational_program_id' => $request->educational_program,
                         'include_semesters' => $request->include_semesters ?? 0,
                     ];
@@ -137,41 +152,42 @@ class ClassSchoolController extends Controller
                     foreach ($request->section_id as $section_id) {
                         $class_sections[] = [
                             'class_id' => $classId,
-                            'section_id' => $section_id
+                            'section_id' => $section_id,
                         ];
                     }
                 }
                 ClassSection::insert($class_sections);
-                $response = array(
+                $response = [
                     'error' => false,
                     'message' => trans('data_store_successfully'),
-                );
+                ];
             }
-        } catch (\Throwable $e) {
-            $response = array(
+        } catch (Throwable $e) {
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-                'data' => $e
-            );
+                'data' => $e,
+            ];
         }
+
         return response()->json($response);
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * @param  int  $id
+     * @return JsonResponse
      */
     public function update(Request $request, $id)
     {
         // dd($request->all());
-        if (!Auth::user()->can('class-edit')) {
-            $response = array(
+        if (! Auth::user()->can('class-edit')) {
+            $response = [
                 'error' => true,
-                'message' => trans('no_permission_message')
-            );
+                'message' => trans('no_permission_message'),
+            ];
+
             return response()->json($response);
         }
         $validator = Validator::make($request->all(), [
@@ -182,10 +198,11 @@ class ClassSchoolController extends Controller
         ]);
 
         if ($validator->fails()) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => $validator->errors()->first()
-            );
+                'message' => $validator->errors()->first(),
+            ];
+
             return response()->json($response);
         }
         try {
@@ -193,7 +210,7 @@ class ClassSchoolController extends Controller
 
             $semesterIncluded = $request->include_semesters[0] ?? 0;
             if ($class->include_semesters != $semesterIncluded) {
-                //If include_semester is changed then delete the class subjects
+                // If include_semester is changed then delete the class subjects
                 $elective_subject_group = ElectiveSubjectGroup::where('class_id', $class->id)->delete();
                 $class_subjects = ClassSubject::where('class_id', $class->id)->delete();
             }
@@ -215,13 +232,13 @@ class ClassSchoolController extends Controller
             $class->save();
             $all_section_ids = ClassSection::whereIn('section_id', $request->section_id)->where('class_id', $id)->pluck('section_id')->toArray();
             $delete_class_section = $class->sections->pluck('id')->toArray();
-            $class_section = array();
+            $class_section = [];
             foreach ($request->section_id as $key => $section_id) {
-                if (!in_array($section_id, $all_section_ids)) {
-                    $class_section[] = array(
+                if (! in_array($section_id, $all_section_ids)) {
+                    $class_section[] = [
                         'class_id' => $class->id,
-                        'section_id' => $section_id
-                    );
+                        'section_id' => $section_id,
+                    ];
                 } else {
                     unset($delete_class_section[array_search($section_id, $delete_class_section)]);
                 }
@@ -239,43 +256,59 @@ class ClassSchoolController extends Controller
             $timetables = Timetable::whereIn('class_section_id', $delete_class_section)->count();
 
             if ($assignemnts || $attendances || $exam_result || $lessons || $student_session || $students || $subject_teachers || $timetables) {
-                $response = array(
+                $response = [
                     'error' => true,
-                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data')
-                );
+                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data'),
+                ];
+
                 return response()->json($response);
             } else {
-                //Remaining Data in $delete_class_section should be deleted
+                // Remaining Data in $delete_class_section should be deleted
                 ClassSection::whereIn('section_id', $delete_class_section)->where('class_id', $id)->delete();
             }
 
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_update_successfully'),
-            );
-        } catch (\Throwable $e) {
-            $response = array(
+            ];
+        } catch (Throwable $e) {
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-                'data' => $e
-            );
+                'data' => $e,
+            ];
         }
+
         return response()->json($response);
+    }
+
+    public function edit($id)
+    {
+        if (! Auth::user()->can('class-edit')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
+            return redirect(route('home'))->withErrors($response);
+        }
+
+        return redirect()->route('class.index');
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\Models\ClassSchool $classSchool
-     * @return \Illuminate\Http\JsonResponse
+     * @param  ClassSchool  $classSchool
+     * @return JsonResponse
      */
     public function destroy($id)
     {
-        if (!Auth::user()->can('class-delete')) {
-            $response = array(
+        if (! Auth::user()->can('class-delete')) {
+            $response = [
                 'error' => true,
-                'message' => trans('no_permission_message')
-            );
+                'message' => trans('no_permission_message'),
+            ];
+
             return response()->json($response);
         }
         try {
@@ -285,10 +318,10 @@ class ClassSchoolController extends Controller
             $class_fees = FeesClass::where('class_id', $id)->count();
 
             if ($class_subject || $class_exam || $class_fees) {
-                $response = array(
+                $response = [
                     'error' => true,
-                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data')
-                );
+                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data'),
+                ];
             } else {
                 $class = ClassSchool::find($id);
                 $class_section = ClassSection::where('class_id', $class->id);
@@ -305,40 +338,42 @@ class ClassSchoolController extends Controller
                 $timetables = Timetable::whereIn('class_section_id', $class_section_id)->count();
 
                 if ($assignemnts || $attendances || $exam_result || $lessons || $student_session || $students || $subject_teachers || $timetables) {
-                    $response = array(
+                    $response = [
                         'error' => true,
-                        'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data')
-                    );
+                        'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data'),
+                    ];
                 } else {
                     $class_section->delete();
                     $class->delete();
-                    $response = array(
+                    $response = [
                         'error' => false,
-                        'message' => trans('data_delete_successfully')
-                    );
+                        'message' => trans('data_delete_successfully'),
+                    ];
                 }
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $message = trans('error_occurred');
             $err = strtolower($e->getMessage());
             if (str_contains($err, 'integrity constraint') || str_contains($err, 'foreign key') || str_contains($err, 'constraint')) {
                 $message = trans('cannot_delete_beacuse_data_is_associated_with_other_data');
             }
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => $message
-            );
+                'message' => $message,
+            ];
         }
+
         return response()->json($response);
     }
 
     public function show()
     {
-        if (!Auth::user()->can('class-list')) {
-            $response = array(
+        if (! Auth::user()->can('class-list')) {
+            $response = [
                 'error' => true,
-                'message' => trans('no_permission_message')
-            );
+                'message' => trans('no_permission_message'),
+            ];
+
             return response()->json($response);
         }
         $offset = 0;
@@ -346,18 +381,22 @@ class ClassSchoolController extends Controller
         $sort = 'id';
         $order = 'DESC';
 
-        if (isset($_GET['offset']))
+        if (isset($_GET['offset'])) {
             $offset = $_GET['offset'];
-        if (isset($_GET['limit']))
+        }
+        if (isset($_GET['limit'])) {
             $limit = $_GET['limit'];
+        }
 
-        if (isset($_GET['sort']))
+        if (isset($_GET['sort'])) {
             $sort = $_GET['sort'];
-        if (isset($_GET['order']))
+        }
+        if (isset($_GET['order'])) {
             $order = $_GET['order'];
+        }
         DB::enableQueryLog();
         $sql = ClassSchool::with('sections', 'medium', 'streams', 'shifts', 'educational_program');
-        if (isset($_GET['search']) && !empty($_GET['search'])) {
+        if (isset($_GET['search']) && ! empty($_GET['search'])) {
             $search = $_GET['search'];
             $sql->where('id', 'LIKE', "%$search%")->orwhere('name', 'LIKE', "%$search%")
                 ->orWhereHas('sections', function ($q) use ($search) {
@@ -387,14 +426,14 @@ class ClassSchoolController extends Controller
         $sql->orderBy($sort, $order)->skip($offset)->take($limit);
         $res = $sql->get();
 
-        $bulkData = array();
+        $bulkData = [];
         $bulkData['total'] = $total;
-        $rows = array();
-        $tempRow = array();
+        $rows = [];
+        $tempRow = [];
         $no = 1;
         foreach ($res as $row) {
-            $operate = '<a href=' . route('class.edit', $row->id) . ' class="btn btn-xs btn-gradient-primary btn-rounded btn-icon edit-data" data-id=' . $row->id . ' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
-            $operate .= '<a href=' . route('class.destroy', $row->id) . ' class="btn btn-xs btn-gradient-danger btn-rounded btn-icon delete-form" data-id=' . $row->id . '><i class="fa fa-trash"></i></a>';
+            $operate = '<a href='.route('class.edit', $row->id).' class="btn btn-xs btn-gradient-primary btn-rounded btn-icon edit-data" data-id='.$row->id.' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
+            $operate .= '<a href='.route('class.destroy', $row->id).' class="btn btn-xs btn-gradient-danger btn-rounded btn-icon delete-form" data-id='.$row->id.'><i class="fa fa-trash"></i></a>';
 
             $tempRow['id'] = $row->id;
             $tempRow['no'] = $no++;
@@ -418,14 +457,17 @@ class ClassSchoolController extends Controller
         }
 
         $bulkData['rows'] = $rows;
+
         return response()->json($bulkData);
     }
+
     public function subject()
     {
-        if (!Auth::user()->can('class-list')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('class-list')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
 
@@ -440,7 +482,7 @@ class ClassSchoolController extends Controller
 
     public function update_subjects(Request $request)
     {
-        $validation_rules = array(
+        $validation_rules = [
             'class_id' => 'required|numeric',
             'edit_core_subject' => 'nullable|array',
             'edit_core_subject.*' => 'nullable|array|required_array_keys:class_subject_id,subject_id',
@@ -449,14 +491,14 @@ class ClassSchoolController extends Controller
             'elective_subjects' => 'nullable|array',
             'elective_subjects.*.subject_id' => 'required|array',
             'elective_subjects.*.total_selectable_subjects' => 'required|numeric',
-        );
+        ];
 
         $validator = Validator::make($request->all(), $validation_rules);
 
         if ($validator->fails()) {
             return response()->json([
                 'error' => true,
-                'message' => $validator->errors()->first()
+                'message' => $validator->errors()->first(),
             ]);
         }
 
@@ -488,7 +530,7 @@ class ClassSchoolController extends Controller
                 foreach ($request->core_subjects as $row) {
                     $core_subjects[] = [
                         'class_id' => $request->class_id,
-                        'type' => "Compulsory",
+                        'type' => 'Compulsory',
                         'subject_id' => $row['subject_id'],
                         'semester_id' => $row['semester_id'] ?? null,
                     ];
@@ -522,16 +564,16 @@ class ClassSchoolController extends Controller
 
                     foreach ($subject_group['subject_id'] as $key => $subject_id) {
 
-                        if (!empty($subject_group['class_subject_id'][$key])) {
+                        if (! empty($subject_group['class_subject_id'][$key])) {
                             // Existing subject
                             $elective_subject = ClassSubject::findOrFail($subject_group['class_subject_id'][$key]);
                         } else {
                             // New subject
-                            $elective_subject = new ClassSubject();
+                            $elective_subject = new ClassSubject;
                         }
 
                         $elective_subject->class_id = $request->class_id;
-                        $elective_subject->type = "Elective";
+                        $elective_subject->type = 'Elective';
                         $elective_subject->subject_id = $subject_id;
                         $elective_subject->elective_subject_group_id = $elective_subject_group->id;
                         $elective_subject->semester_id = $subject_group['semester_id'] ?? null;
@@ -567,7 +609,7 @@ class ClassSchoolController extends Controller
                 foreach ($request->elective_subjects as $subject_group) {
 
                     // Create group
-                    $elective_subject_group = new ElectiveSubjectGroup();
+                    $elective_subject_group = new ElectiveSubjectGroup;
                     $elective_subject_group->total_subjects = count($subject_group['subject_id']);
                     $elective_subject_group->total_selectable_subjects = $subject_group['total_selectable_subjects'];
                     $elective_subject_group->class_id = $request->class_id;
@@ -575,13 +617,13 @@ class ClassSchoolController extends Controller
                     $elective_subject_group->save();
 
                     foreach ($subject_group['subject_id'] as $subject_id) {
-                        $elective_subject = array(
+                        $elective_subject = [
                             'class_id' => $request->class_id,
-                            'type' => "Elective",
+                            'type' => 'Elective',
                             'subject_id' => $subject_id,
                             'semester_id' => $subject_group['semester_id'] ?? null,
                             'elective_subject_group_id' => $elective_subject_group->id,
-                        );
+                        ];
                         ClassSubject::insert($elective_subject);
                     }
                 }
@@ -591,24 +633,22 @@ class ClassSchoolController extends Controller
                 'error' => false,
                 'message' => trans('data_store_successfully'),
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
 
             return response()->json([
                 'error' => true,
                 'message' => trans('error_occurred'),
-                'data' => $e->getMessage()
+                'data' => $e->getMessage(),
             ]);
         }
     }
 
-
-
     public function subject_list()
     {
-        if (!Auth::user()->can('class-list')) {
+        if (! Auth::user()->can('class-list')) {
             return response()->json([
                 'error' => true,
-                'message' => trans('no_permission_message')
+                'message' => trans('no_permission_message'),
             ]);
         }
 
@@ -619,13 +659,13 @@ class ClassSchoolController extends Controller
 
         $sql = ClassSchool::with('sections', 'medium', 'streams', 'coreSubject.semester', 'electiveSubjectGroup.electiveSubjects.subject');
 
-        if (!empty($_GET['search'])) {
+        if (! empty($_GET['search'])) {
             $search = $_GET['search'];
             $sql->where('id', 'LIKE', "%$search%")
                 ->orWhere('name', 'LIKE', "%$search%");
         }
 
-        if (!empty($_GET['medium_id'])) {
+        if (! empty($_GET['medium_id'])) {
             $sql->where('medium_id', $_GET['medium_id']);
         }
 
@@ -644,7 +684,7 @@ class ClassSchoolController extends Controller
         $no = 1;
 
         foreach ($res as $row) {
-            $operate = '<a href=' . route('class-subject-edit.index', $row->id) . ' class="btn btn-xs btn-gradient-primary btn-rounded btn-icon edit-data" data-id=' . $row->id . ' title="Edit"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
+            $operate = '<a href='.route('class-subject-edit.index', $row->id).' class="btn btn-xs btn-gradient-primary btn-rounded btn-icon edit-data" data-id='.$row->id.' title="Edit"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
 
             $tempRow = [];
             $tempRow['id'] = $row->id;
@@ -658,7 +698,7 @@ class ClassSchoolController extends Controller
             $tempRow['include_semesters'] = $row->include_semesters;
             $tempRow['semesters'] = Semester::all(); // List all semesters
 
-            if ($row->include_semesters && !empty($currentSemester)) {
+            if ($row->include_semesters && ! empty($currentSemester)) {
                 $tempRow['core_subjects'] = $row->coreSubject->filter(function ($data) use ($currentSemester) {
                     return $data->semester_id == $currentSemester->id;
                 })->values(); // Filter subjects based on current semester
@@ -678,9 +718,9 @@ class ClassSchoolController extends Controller
         }
 
         $bulkData['rows'] = $rows;
+
         return response()->json($bulkData);
     }
-
 
     public function subject_destroy($id)
     {
@@ -692,17 +732,17 @@ class ClassSchoolController extends Controller
         //     return response()->json($response);
         // }
         try {
-            //check wheather the class subject exists in other table
+            // check wheather the class subject exists in other table
             $online_exam_questions = OnlineExamQuestion::where('class_subject_id', $id)->count();
             $online_exams = OnlineExam::where('subject_id', $id)->count();
             if ($online_exam_questions || $online_exams) {
-                $response = array(
+                $response = [
                     'error' => true,
-                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data')
-                );
+                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data'),
+                ];
             } else {
                 $class_subject = ClassSubject::findOrFail($id);
-                if ($class_subject->type == "Elective") {
+                if ($class_subject->type == 'Elective') {
                     $subject_group = ElectiveSubjectGroup::findOrFail($class_subject->elective_subject_group_id);
                     $subject_group->total_subjects = $subject_group->total_subjects - 1;
                     if ($subject_group->total_subjects > 0) {
@@ -712,17 +752,18 @@ class ClassSchoolController extends Controller
                     }
                 }
                 $class_subject->delete();
-                $response = array(
+                $response = [
                     'error' => false,
-                    'message' => trans('data_delete_successfully')
-                );
+                    'message' => trans('data_delete_successfully'),
+                ];
             }
-        } catch (\Throwable $e) {
-            $response = array(
+        } catch (Throwable $e) {
+            $response = [
                 'error' => true,
-                'message' => trans('error_occurred')
-            );
+                'message' => trans('error_occurred'),
+            ];
         }
+
         return response()->json($response);
     }
 
@@ -740,7 +781,7 @@ class ClassSchoolController extends Controller
             if ($online_exam_questions || $online_exams) {
                 return response()->json([
                     'error' => true,
-                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data')
+                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data'),
                 ]);
             }
 
@@ -764,42 +805,43 @@ class ClassSchoolController extends Controller
 
             return response()->json([
                 'error' => false,
-                'message' => trans('data_delete_successfully')
+                'message' => trans('data_delete_successfully'),
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
 
             return response()->json([
                 'error' => true,
-                'message' => trans('error_occurred')
+                'message' => trans('error_occurred'),
             ]);
         }
     }
-
 
     public function getSubjectsByMediumId($medium_id)
     {
         try {
             $subjects = Subject::where('medium_id', $medium_id)->get();
-            $response = array(
+            $response = [
                 'error' => false,
                 'data' => $subjects,
-                'message' => trans('data_delete_successfully')
-            );
-        } catch (\Throwable $e) {
-            $response = array(
+                'message' => trans('data_delete_successfully'),
+            ];
+        } catch (Throwable $e) {
+            $response = [
                 'error' => true,
-                'message' => trans('error_occurred')
-            );
+                'message' => trans('error_occurred'),
+            ];
         }
+
         return response()->json($response);
     }
 
     public function classSubjectsEdit($id)
     {
-        if (!Auth::user()->can('class-list')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('class-list')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $class = ClassSchool::where('id', $id)->orderBy('id', 'DESC')->with('medium', 'sections', 'streams', 'coreSubject', 'electiveSubjectGroup.electiveSubjects')->first();
@@ -807,17 +849,18 @@ class ClassSchoolController extends Controller
         $subjects = Subject::orderBy('id', 'ASC')->get();
         $mediums = Mediums::orderBy('id', 'ASC')->get();
         $streams = Stream::orderBy('id', 'ASC')->get();
+
         // dd($class->toArray());
-        return response(view('class.edit_subject', compact('class', 'semesters', 'subjects', 'mediums', 'streams',)));
+        return response(view('class.edit_subject', compact('class', 'semesters', 'subjects', 'mediums', 'streams')));
     }
 
     public function assignElectiveSubject(Request $request)
     {
         try {
-            if (!Auth::user()->can('assign-elective-subjects')) {
+            if (! Auth::user()->can('assign-elective-subjects')) {
                 return response()->json([
                     'error' => true,
-                    'message' => trans('no_permission_message')
+                    'message' => trans('no_permission_message'),
                 ]);
             }
 
@@ -835,11 +878,11 @@ class ClassSchoolController extends Controller
             if ($validator->fails()) {
                 return response()->json([
                     'error' => true,
-                    'message' => $validator->errors()->first()
+                    'message' => $validator->errors()->first(),
                 ], 422);
             }
 
-            $isBulk = (int)$request->input('is_bulk', 0);
+            $isBulk = (int) $request->input('is_bulk', 0);
             $electiveGroupId = $request->input('elective_group');
             $selectedSubjects = $request->input('selected_subjects');
 
@@ -854,17 +897,17 @@ class ClassSchoolController extends Controller
             if ($selectedCount != $requiredCount) {
                 return response()->json([
                     'error' => true,
-                    'message' => "You must select exactly {$requiredCount} subject(s)."
+                    'message' => "You must select exactly {$requiredCount} subject(s).",
                 ], 422);
             }
 
             $validSubjectIds = $electiveGroup->electiveSubjects->pluck('subject_id')->toArray();
             $invalidSubjects = array_diff($selectedSubjectIds, $validSubjectIds);
 
-            if (!empty($invalidSubjects)) {
+            if (! empty($invalidSubjects)) {
                 return response()->json([
                     'error' => true,
-                    'message' => 'Some selected subjects do not belong to this elective group.'
+                    'message' => 'Some selected subjects do not belong to this elective group.',
                 ], 422);
             }
 
@@ -910,13 +953,14 @@ class ClassSchoolController extends Controller
                 'error' => false,
                 'message' => $isBulk
                     ? 'Elective subjects assigned successfully to all selected students!'
-                    : 'Elective subjects assigned successfully!'
+                    : 'Elective subjects assigned successfully!',
             ]);
         } catch (Throwable $e) {
             DB::rollBack();
+
             return response()->json([
                 'error' => true,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
@@ -924,17 +968,17 @@ class ClassSchoolController extends Controller
     public function getStudentAssignedSubjects(Request $request)
     {
         try {
-            if (!Auth::user()->can('assign-elective-subjects')) {
+            if (! Auth::user()->can('assign-elective-subjects')) {
                 return response()->json([
                     'error' => true,
-                    'message' => trans('no_permission_message')
+                    'message' => trans('no_permission_message'),
                 ]);
             }
 
             $studentId = $request->input('student_id');
             // $electiveGroupId = $request->input('elective_group_id');
 
-            if (!$studentId) {
+            if (! $studentId) {
                 return response()->json(['error' => 'Student ID is required'], 400);
             }
 
@@ -948,22 +992,23 @@ class ClassSchoolController extends Controller
 
             return response()->json([
                 'error' => false,
-                'assigned_subjects' => $assignedSubjects
+                'assigned_subjects' => $assignedSubjects,
             ]);
         } catch (Throwable $e) {
             return response()->json([
                 'error' => true,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
 
     public function selectElectiveSubjects()
     {
-        if (!Auth::user()->can('assign-elective-subjects')) {
+        if (! Auth::user()->can('assign-elective-subjects')) {
             $response = [
-                'message' => trans('no_permission_message')
+                'message' => trans('no_permission_message'),
             ];
+
             return redirect(route('home'))->withErrors($response);
         }
 
@@ -973,7 +1018,7 @@ class ClassSchoolController extends Controller
             // Get unique classes, with required relations
             $classes = ClassSchool::with([
                 'medium',
-                'streams'
+                'streams',
             ])->get();
         }
 
@@ -988,10 +1033,10 @@ class ClassSchoolController extends Controller
 
     public function getElectiveGroups(Request $request)
     {
-        if (!Auth::user()->can('assign-elective-subjects')) {
+        if (! Auth::user()->can('assign-elective-subjects')) {
             return response()->json([
                 'error' => true,
-                'message' => trans('no_permission_message')
+                'message' => trans('no_permission_message'),
             ]);
         }
 
@@ -999,7 +1044,7 @@ class ClassSchoolController extends Controller
         $groups = ElectiveSubjectGroup::with([
             'electiveSubjects' => function ($query) {
                 $query->without('semester')->with('subject');
-            }
+            },
         ])
             ->where('class_id', $class_id)
             ->get()
@@ -1011,20 +1056,20 @@ class ClassSchoolController extends Controller
 
     public function getElectiveSubjects(Request $request)
     {
-        if (!Auth::user()->can('assign-elective-subjects')) {
+        if (! Auth::user()->can('assign-elective-subjects')) {
             return response()->json([
                 'error' => true,
-                'message' => trans('no_permission_message')
+                'message' => trans('no_permission_message'),
             ]);
         }
 
         $class_id = $request->class_id;
 
-        // Fetch elective subjects corresponding to class 
+        // Fetch elective subjects corresponding to class
         $subjects = ElectiveSubjectGroup::with([
             'electiveSubjects' => function ($query) {
                 $query->without('semester')->with('subject');
-            }
+            },
         ])
             ->where('class_id', $class_id)
             ->get()
@@ -1040,19 +1085,19 @@ class ClassSchoolController extends Controller
 
     public function fetchStudentSubjects(Request $request)
     {
-        if (!Auth::user()->can('assign-elective-subjects')) {
+        if (! Auth::user()->can('assign-elective-subjects')) {
             return response()->json([
-                'error'   => true,
-                'message' => trans('no_permission_message')
+                'error' => true,
+                'message' => trans('no_permission_message'),
             ]);
         }
 
-        $offset   = (int) $request->input('offset', 0);
-        $limit    = (int) $request->input('limit', 10);
-        $sort     = $request->input('sort', 'id');
-        $order    = $request->input('order', 'DESC');
-        $search   = $request->input('search');
-        $status   = $request->input('filter_status');
+        $offset = (int) $request->input('offset', 0);
+        $limit = (int) $request->input('limit', 10);
+        $sort = $request->input('sort', 'id');
+        $order = $request->input('order', 'DESC');
+        $search = $request->input('search');
+        $status = $request->input('filter_status');
 
         // Get session year
         $sessionYearData = getSettings('session_year');
@@ -1062,10 +1107,10 @@ class ClassSchoolController extends Controller
 
         // ---------- NEW: single class_id from request ----------
         $class_id = (int) $request->input('class_id');
-        if (!$class_id) {
+        if (! $class_id) {
             return response()->json([
                 'total' => 0,
-                'rows'  => []
+                'rows' => [],
             ]);
         }
         // -------------------------------------------------------
@@ -1085,7 +1130,7 @@ class ClassSchoolController extends Controller
             ->where('class_sections.class_id', $class_id)
             ->when(
                 $search,
-                fn($q) => $q
+                fn ($q) => $q
                     ->whereRaw("CONCAT(users.first_name,' ',users.last_name) LIKE ?", ["%$search%"])
                     ->orWhere('students.admission_no', 'LIKE', "%$search%")
             );
@@ -1126,38 +1171,38 @@ class ClassSchoolController extends Controller
                     ->pluck('subject_id')
                     ->toArray();
 
-                if (!in_array($filterSubjectId, $studentElectiveIds)) {
+                if (! in_array($filterSubjectId, $studentElectiveIds)) {
                     continue;
                 }
             }
 
             // ---- selected subject names -----------------------------------------
             $names = $selections->get($s->id, collect())
-                ->map(fn($x) => Subject::find($x->subject_id)?->name ?? '')
+                ->map(fn ($x) => Subject::find($x->subject_id)?->name ?? '')
                 ->filter()
                 ->implode(', ');
 
             $filtered[] = [
-                'id'                => $s->id,
-                'full_name'         => $s->user->full_name,
-                'photo'             => $s->user->image,
-                'status'            => $st['label'],
-                'status_badge'      => $st['badge'],
+                'id' => $s->id,
+                'full_name' => $s->user->full_name,
+                'photo' => $s->user->image,
+                'status' => $st['label'],
+                'status_badge' => $st['badge'],
                 'selected_subjects' => $names ?: '—',
-                'class_id'          => $class_id,
-                'operate'           => '<a href="javascript:void(0)" class="btn btn-xs border border-dark rounded btn-secondary bg-transparent text-dark assign-elective" 
-                    data-class-id="' . $class_id . '" data-student-id="' . $s->id . '" 
+                'class_id' => $class_id,
+                'operate' => '<a href="javascript:void(0)" class="btn btn-xs border border-dark rounded btn-secondary bg-transparent text-dark assign-elective" 
+                    data-class-id="'.$class_id.'" data-student-id="'.$s->id.'" 
                     data-toggle="modal" data-target="#assignModal">Assign</a>',
             ];
         }
 
         $total = count($filtered);
-        $rows  = array_slice($filtered, $offset, $limit);
+        $rows = array_slice($filtered, $offset, $limit);
 
         // ---- KEEP ORIGINAL RESPONSE STRUCTURE ----
         return response()->json([
             'total' => $total,
-            'rows'  => $rows,
+            'rows' => $rows,
         ]);
     }
 
@@ -1177,7 +1222,7 @@ class ClassSchoolController extends Controller
         $electiveIds = collect($electiveIds)
             ->map(function ($ids) {
                 // ensure every value is an array of IDs
-                return is_array($ids) ? array_values($ids) : [(int)$ids];
+                return is_array($ids) ? array_values($ids) : [(int) $ids];
             });
         $selections = collect($selections)
             ->map(function ($items) {
@@ -1187,10 +1232,10 @@ class ClassSchoolController extends Controller
 
         // Get class id from student (null-safe)
         $classId = $student->class_section?->class_id ?? null;
-        if (!$classId) {
+        if (! $classId) {
             return [
-                'label'    => 'No Class',
-                'badge'    => '<span class="badge badge-secondary">N/A</span>',
+                'label' => 'No Class',
+                'badge' => '<span class="badge badge-secondary">N/A</span>',
                 'selected' => 0,
                 'required' => 0,
             ];
@@ -1205,7 +1250,7 @@ class ClassSchoolController extends Controller
         $validElectiveIds = $electiveIds->get($classId, []);
 
         // Ensure IDs are integers (defensive) and always array
-        $validElectiveIds = array_map('intval', (array)$validElectiveIds);
+        $validElectiveIds = array_map('intval', (array) $validElectiveIds);
 
         // Count how many selected subjects are actually elective for this class
         $selectedCount = $studentSelections->whereIn('subject_id', $validElectiveIds)->count();
@@ -1214,8 +1259,8 @@ class ClassSchoolController extends Controller
         if ($requiredCount === 0) {
             // No rule exists (class doesn't require/select electives)
             return [
-                'label'    => 'No Rule',
-                'badge'    => '<span class="badge badge-info">No Rule</span>',
+                'label' => 'No Rule',
+                'badge' => '<span class="badge badge-info">No Rule</span>',
                 'selected' => $selectedCount,
                 'required' => $requiredCount,
             ];
@@ -1223,8 +1268,8 @@ class ClassSchoolController extends Controller
         if ($selectedCount === 0) {
             // Rule exists but student hasn't selected any valid elective
             return [
-                'label'    => 'Not Assigned',
-                'badge'    => '<span class="badge badge-secondary border rounded border-dark text-dark bg-transparent">Not Assigned</span>',
+                'label' => 'Not Assigned',
+                'badge' => '<span class="badge badge-secondary border rounded border-dark text-dark bg-transparent">Not Assigned</span>',
                 'selected' => 0,
                 'required' => $requiredCount,
             ];
@@ -1232,16 +1277,16 @@ class ClassSchoolController extends Controller
 
         if ($selectedCount >= $requiredCount) {
             return [
-                'label'    => 'Completed',
-                'badge'    => '<span class="badge badge-success border rounded border-success text-success bg-transparent">Completed</span>',
+                'label' => 'Completed',
+                'badge' => '<span class="badge badge-success border rounded border-success text-success bg-transparent">Completed</span>',
                 'selected' => $selectedCount,
                 'required' => $requiredCount,
             ];
         }
 
         return [
-            'label'    => 'Incomplete',
-            'badge'    => '<span class="badge badge-warning border rounded border-warning text-warning bg-transparent">Incomplete</span>',
+            'label' => 'Incomplete',
+            'badge' => '<span class="badge badge-warning border rounded border-warning text-warning bg-transparent">Incomplete</span>',
             'selected' => $selectedCount,
             'required' => $requiredCount,
         ];

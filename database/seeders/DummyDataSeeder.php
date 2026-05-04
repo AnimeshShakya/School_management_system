@@ -2,29 +2,30 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
+use App\Models\Category;
+use App\Models\ClassSchool;
+use App\Models\ClassSection;
 use App\Models\Mediums;
 use App\Models\Parents;
 use App\Models\Section;
-use App\Models\Subject;
-use App\Models\Category;
+use App\Models\SessionYear;
 use App\Models\Settings;
 use App\Models\Students;
-use App\Models\ClassSchool;
-use App\Models\SessionYear;
-use App\Models\ClassSection;
-use Illuminate\Support\Carbon;
+use App\Models\Subject;
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
-class DummyDataSeeder extends Seeder {
+class DummyDataSeeder extends Seeder
+{
     /**
      * Run the database seeds.
      *
      * @return void
      */
-    public function run() {
+    public function run()
+    {
         $medium = [
             ['id' => 1, 'name' => 'Hindi'],
             ['id' => 2, 'name' => 'English'],
@@ -55,17 +56,64 @@ class DummyDataSeeder extends Seeder {
         ClassSection::upsert($class_sections, ['id'], ['class_id', 'section_id']);
 
         $subjects = [
-            ['id' => 1, 'name' => 'Maths', 'code' => 'MA', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 2, 'type' => 'Practical'],
-            ['id' => 2, 'name' => 'Science', 'code' => 'SC', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 2, 'type' => 'Practical'],
-            ['id' => 3, 'name' => 'English', 'code' => 'EN', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 2, 'type' => 'Theory'],
-            ['id' => 4, 'name' => 'Gujarati', 'code' => 'GJ', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 2, 'type' => 'Theory'],
-            ['id' => 5, 'name' => 'Sanskrit', 'code' => 'SN', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 2, 'type' => 'Theory'],
-            ['id' => 6, 'name' => 'Hindi', 'code' => 'HN', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 2, 'type' => 'Theory'],
-            ['id' => 7, 'name' => 'Computer', 'code' => 'CMP', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 2, 'type' => 'Practical'],
-            ['id' => 8, 'name' => 'PT', 'code' => 'PT', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 2, 'type' => 'Practical'],
+            // 1-4
+            ['id' => 1, 'name' => 'English', 'code' => 'ENG', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '1-4', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 2, 'name' => 'Nepali', 'code' => 'NEP', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '1-4', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 3, 'name' => 'Maths', 'code' => 'MTH', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '1-4', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 4, 'name' => 'Science', 'code' => 'SCI', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '1-4', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 5, 'name' => 'Serofero', 'code' => 'SRO', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '1-4', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 6, 'name' => 'Computer', 'code' => 'CMP', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '1-4', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 7, 'name' => 'Moral', 'code' => 'MRL', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '1-4', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 8, 'name' => 'GK', 'code' => 'GK', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '1-4', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 9, 'name' => 'Dance', 'code' => 'DNCE', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '1-4', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+            ['id' => 10, 'name' => 'Music', 'code' => 'MSC', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '1-4', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+            ['id' => 11, 'name' => 'Art', 'code' => 'ART', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '1-4', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+            ['id' => 12, 'name' => 'Sports', 'code' => 'SPT', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '1-4', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+            ['id' => 13, 'name' => 'Taekwondo', 'code' => 'TKD', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '1-4', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+            ['id' => 14, 'name' => 'Library', 'code' => 'LIB', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '1-4', 'selection_type' => 'ECA', 'eca_type' => 'single'],
 
+            // 5-7
+            ['id' => 15, 'name' => 'English', 'code' => 'ENG', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '5-7', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 16, 'name' => 'Nepali', 'code' => 'NEP', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '5-7', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 17, 'name' => 'Maths', 'code' => 'MTH', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '5-7', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 18, 'name' => 'Science', 'code' => 'SCI', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '5-7', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 19, 'name' => 'Social', 'code' => 'SOC', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '5-7', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 20, 'name' => 'H&PE', 'code' => 'HPE', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '5-7', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 21, 'name' => 'Nepal Bhasa', 'code' => 'NBH', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '5-7', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 22, 'name' => 'Computer', 'code' => 'CMP', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '5-7', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 23, 'name' => 'Dance', 'code' => 'DNCE', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '5-7', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+            ['id' => 24, 'name' => 'Music', 'code' => 'MSC', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '5-7', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+            ['id' => 25, 'name' => 'Art', 'code' => 'ART', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '5-7', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+            ['id' => 26, 'name' => 'Sports', 'code' => 'SPT', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '5-7', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+            ['id' => 27, 'name' => 'Taekwondo', 'code' => 'TKD', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '5-7', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+            ['id' => 28, 'name' => 'Library', 'code' => 'LIB', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '5-7', 'selection_type' => 'ECA', 'eca_type' => 'single'],
+
+            // 8
+            ['id' => 29, 'name' => 'English', 'code' => 'ENG', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '8', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 30, 'name' => 'Nepali', 'code' => 'NEP', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '8', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 31, 'name' => 'Maths', 'code' => 'MTH', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '8', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 32, 'name' => 'Science', 'code' => 'SCI', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '8', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 33, 'name' => 'Social', 'code' => 'SOC', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '8', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 34, 'name' => 'H&PE', 'code' => 'HPE', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '8', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 35, 'name' => 'Opt. Math', 'code' => 'OMT', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '8', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 36, 'name' => 'Nepal Bhasa', 'code' => 'NBH', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '8', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 37, 'name' => 'Computer', 'code' => 'CMP', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '8', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 38, 'name' => 'Dance/Music', 'code' => 'DNCE', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '8', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+            ['id' => 39, 'name' => 'Art', 'code' => 'ART', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '8', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+            ['id' => 40, 'name' => 'Sports', 'code' => 'SPT', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '8', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+
+            // 9-10
+            ['id' => 41, 'name' => 'English', 'code' => 'ENG', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '9-10', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 42, 'name' => 'Nepali', 'code' => 'NEP', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '9-10', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 43, 'name' => 'Maths', 'code' => 'MTH', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '9-10', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 44, 'name' => 'Science', 'code' => 'SCI', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '9-10', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 45, 'name' => 'Social', 'code' => 'SOC', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '9-10', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 46, 'name' => 'Opt. Math', 'code' => 'OMT', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Theory', 'class_level' => '9-10', 'selection_type' => 'compulsory', 'eca_type' => null],
+            ['id' => 47, 'name' => 'Computer/Account', 'code' => 'CMP', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '9-10', 'selection_type' => 'optional', 'eca_type' => 'single'],
+            ['id' => 48, 'name' => 'Dance/Music/Art', 'code' => 'DMA', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '9-10', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
+            ['id' => 49, 'name' => 'Sports', 'code' => 'SPT', 'bg_color' => '#5031f7', 'image' => 'subject.png', 'medium_id' => 1, 'type' => 'Practical', 'class_level' => '9-10', 'selection_type' => 'ECA', 'eca_type' => 'combined'],
         ];
-        Subject::upsert($subjects, ['id'], ['name', 'code', 'bg_color', 'image', 'medium_id', 'type']);
+        Subject::upsert($subjects, ['id'], ['name', 'code', 'bg_color', 'image', 'medium_id', 'type', 'class_level', 'selection_type', 'eca_type']);
 
         $session_years = [
             ['id' => 1, 'name' => '2022', 'default' => 1, 'start_date' => Carbon::create('2022', '06', '01'), 'end_date' => Carbon::create('2023', '04', '30')],
@@ -76,7 +124,7 @@ class DummyDataSeeder extends Seeder {
         SessionYear::upsert($session_years, ['id'], ['name', 'default', 'start_date', 'end_date']);
 
         $session_year_settings = [
-            ['id' => 9, 'type'   => 'session_year', 'message' => 1],
+            ['id' => 9, 'type' => 'session_year', 'message' => 1],
         ];
         Settings::upsert($session_year_settings, ['id'], ['type', 'message']);
 
@@ -88,8 +136,7 @@ class DummyDataSeeder extends Seeder {
         ];
         Category::upsert($student_categories, ['id'], ['name', 'status']);
 
-
-        //Users
+        // Users
         $user = [
             [
                 'id' => 2,
@@ -101,7 +148,7 @@ class DummyDataSeeder extends Seeder {
                 'mobile' => 1234567890,
                 'gender' => 'Male',
                 'current_address' => 'Mumbai',
-                'permanent_address' => 'Mumbai'
+                'permanent_address' => 'Mumbai',
             ],
             [
                 'id' => 3,
@@ -113,7 +160,7 @@ class DummyDataSeeder extends Seeder {
                 'mobile' => 1234567890,
                 'gender' => 'Female',
                 'current_address' => 'Mumbai',
-                'permanent_address' => 'Mumbai'
+                'permanent_address' => 'Mumbai',
             ],
             [
                 'id' => 4,
@@ -125,13 +172,13 @@ class DummyDataSeeder extends Seeder {
                 'mobile' => 1234567890,
                 'gender' => 'Male',
                 'current_address' => 'Mumbai',
-                'permanent_address' => 'Mumbai'
-            ]
+                'permanent_address' => 'Mumbai',
+            ],
         ];
 
         User::upsert($user, ['id'], ['image', 'password', 'first_name', 'last_name', 'email', 'mobile', 'current_address', 'permanent_address']);
 
-        //Parents
+        // Parents
         $parent = [
             [
                 'id' => 1,
@@ -167,11 +214,11 @@ class DummyDataSeeder extends Seeder {
                 'mobile' => 1234567890,
                 'gender' => 'Male',
 
-            ]
+            ],
         ];
         Parents::upsert($parent, ['id'], ['user_id', 'first_name', 'last_name', 'image', 'occupation', 'email', 'mobile', 'dob', 'gender']);
 
-        //Student
+        // Student
         $student = [
             'id' => 1,
             'user_id' => 4,
@@ -187,8 +234,8 @@ class DummyDataSeeder extends Seeder {
             'father_id' => 1,
             'mother_id' => 2,
             'guardian_id' => 3,
-            'admission_date' => Carbon::create('2022', '04', '01')
+            'admission_date' => Carbon::create('2022', '04', '01'),
         ];
-        Students::upsert($student, ['id'], ['user_id', 'class_section_id', 'category_id', 'admission_no', 'roll_number', 'caste', 'religion', 'admission_date', 'blood_group', 'height', 'weight', 'father_id', 'mother_id', 'guardian_id',]);
+        Students::upsert($student, ['id'], ['user_id', 'class_section_id', 'category_id', 'admission_no', 'roll_number', 'caste', 'religion', 'admission_date', 'blood_group', 'height', 'weight', 'father_id', 'mother_id', 'guardian_id']);
     }
 }
