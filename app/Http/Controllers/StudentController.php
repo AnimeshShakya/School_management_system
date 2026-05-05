@@ -34,6 +34,7 @@ use App\Services\MailService;
 use App\Services\ResponseService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -479,28 +480,26 @@ class StudentController extends Controller
             [
                 'first_name' => 'required',
                 'last_name' => 'required',
-                'mobile' => 'nullable|numeric|regex:/^[0-9]{7,16}$/',
+                'mobile' => 'nullable|regex:/^(?:\\+977)?9\\d{9}$/',
                 'image' => 'mimes:jpeg,png,jpg|image|max:2048',
-                'dob' => 'required',
+                'dob' => 'nullable|date_format:d-m-Y',
                 'class_section_id' => 'required',
-                'category_id' => 'required',
+                'category_id' => 'nullable',
                 'admission_no' => 'required|unique:students,admission_no',
                 'admission_date' => 'required|date_format:d-m-Y',
-                'current_address' => 'required',
-                'permanent_address' => 'required',
-                'height' => 'required|numeric|min:0',
-                'weight' => 'required|numeric|min:0',
-                'parent_guardian_type' => 'required|in:parent,guardian',
+                'current_address' => 'nullable',
+                'permanent_address' => 'nullable',
+                'height' => 'nullable|numeric|min:0',
+                'weight' => 'nullable|numeric|min:0',
+                'parent_guardian_type' => 'nullable|in:parent,guardian',
             ],
             [
-                'mobile.regex' => __('The mobile number must be a length of 7 to 15 digits.'),
-                'height.required' => 'Height is required.',
+                'mobile.regex' => __('Please enter a valid Nepal mobile number (e.g. 98XXXXXXXX or +97798XXXXXXXX).'),
                 'height.numeric' => 'Height must be a number.',
                 'height.min' => 'Height must be greater than 0.',
-                'weight.required' => 'Weight is required.',
                 'weight.numeric' => 'Weight must be a number.',
                 'weight.min' => 'Weight must be greater than 0.',
-                'guardian_mobile.regex' => 'The guardian mobile number must be a length of 7 to 15 digits.',
+                'guardian_mobile.regex' => 'Please enter a valid Nepal mobile number (e.g. 98XXXXXXXX).',
             ]
         );
 
@@ -512,11 +511,22 @@ class StudentController extends Controller
             $father_parent_id = null;
             $mother_parent_id = null;
             $guardian_parent_id = null;
+            $guardian_email = null;
+            $guardian_name = null;
+            $guardian_plaintext_password = null;
+            $hasGuardianData = $request->filled('guardian_email') ||
+                $request->filled('guardian_first_name') ||
+                $request->filled('guardian_last_name') ||
+                $request->filled('guardian_mobile') ||
+                $request->filled('guardian_dob') ||
+                $request->filled('guardian_occupation') ||
+                $request->hasFile('guardian_image');
             // Add Father in User and Parent table data
             if ($request->parent_guardian_type == 'parent') {
                 if (! intval($request->father_email)) {
                     $request->validate([
                         'father_email' => 'required|email|unique:users,email|unique:parents,email',
+                        'father_mobile' => 'required|regex:/^(?:\\+977)?9\\d{9}$/',
                         'father_image' => 'required|mimes:jpeg,png,jpg|image|max:2048',
                     ]);
                 }
@@ -524,6 +534,7 @@ class StudentController extends Controller
                 if (! intval($request->mother_email)) {
                     $request->validate([
                         'mother_email' => 'required|email|unique:users,email|unique:parents,email',
+                        'mother_mobile' => 'required|regex:/^(?:\\+977)?9\\d{9}$/',
                         'mother_image' => 'required|mimes:jpeg,png,jpg|image|max:2048',
                     ]);
                 }
@@ -622,7 +633,7 @@ class StudentController extends Controller
                 }
 
                 // Add Mother in User and Parent table data
-                $mother_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($request->mother_dob)));
+                $mother_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($request->mother_dob ?? '1990-01-01')));
                 if (! intval($request->mother_email)) {
                     $mother_email = $request->mother_email;
                     $mother_user = new User;
@@ -715,21 +726,21 @@ class StudentController extends Controller
                     $motherData = Parents::where('id', $request->mother_email)->select('first_name', 'last_name')->first();
                     $mother_name = $motherData->full_name;
                 }
-            } elseif ($request->parent_guardian_type == 'guardian') {
-                if (isset($request->guardian_email)) {
-                    if (isset($request->guardian_email) && ! intval($request->guardian_email)) {
+            } elseif ($request->parent_guardian_type == 'guardian' || $hasGuardianData) {
+                if ($hasGuardianData) {
+                    if (! intval($request->guardian_email)) {
                         $request->validate([
                             'guardian_email' => 'required|email|unique:parents,email',
                             'guardian_first_name' => 'required',
                             'guardian_last_name' => 'required',
-                            'guardian_mobile' => 'required|numeric|regex:/^[0-9]{7,16}$/',
+                            'guardian_mobile' => 'required|regex:/^(?:\\+977)?9\\d{9}$/',
                             'guardian_gender' => 'required',
                             'guardian_dob' => 'required',
                             'guardian_occupation' => 'required',
                             'guardian_image' => 'required|mimes:jpeg,png,jpg|image|max:2048',
                         ]);
                     }
-                    $guardian_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($request->guardian_dob)));
+                    $guardian_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($request->guardian_dob ?? '1990-01-01')));
                     if (! intval($request->guardian_email)) {
                         $guardian_email = $request->guardian_email;
                         $guardian_user = new User;
@@ -932,6 +943,7 @@ class StudentController extends Controller
                 'result' => 1,
             ]);
 
+            $class_section_name = '';
             if ($request->class_section_id) {
                 $classSection = ClassSection::where('id', $request->class_section_id)->with('class.medium', 'class.streams', 'section')->first();
                 $class_section_name = $classSection->class->name.' - '.$classSection->section->name.' '.$classSection->class->medium->name.'  '.($classSection->class->streams->name ?? '');
@@ -981,7 +993,7 @@ class StudentController extends Controller
                 MailService::sendWithFallback('students.email', $mother_data, function ($message) use ($mother_data) {
                     $message->to($mother_data['email'])->subject($mother_data['subject']);
                 });
-            } else {
+            } elseif (! empty($guardian_email)) {
                 $guardian_data = [
                     'subject' => 'Welcome to '.$school_name,
                     'email' => $guardian_email,
@@ -1962,7 +1974,14 @@ class StudentController extends Controller
             $guardian_name = $student->guardian->first_name.' '.$student->guardian->last_name;
         }
         $gr_no = $student->admission_no;
-        $dob = date('d-m-Y', strtotime($student->user->dob));
+        $studentDob = $student->user->dob;
+        if ($studentDob instanceof CarbonInterface) {
+            $dob = date('d-m-Y', strtotime($studentDob->toDateString()));
+        } elseif (is_string($studentDob) && $studentDob !== '') {
+            $dob = date('d-m-Y', strtotime($studentDob));
+        } else {
+            $dob = '-';
+        }
         $roll_number = $student->roll_number;
         $class_section = $student->class_section->class->name.' '.$student->class_section->section->name.' '.$student->class_section->class->medium->name.' '.($student->class_section->class->streams->name ?? '');
 
@@ -2022,7 +2041,14 @@ class StudentController extends Controller
         }
         $admission_date = $student->admission_date;
         $gr_no = $student->admission_no;
-        $dob = date('d-m-Y', strtotime($student->user->dob));
+        $studentDob = $student->user->dob;
+        if ($studentDob instanceof CarbonInterface) {
+            $dob = date('d-m-Y', strtotime($studentDob->toDateString()));
+        } elseif (is_string($studentDob) && $studentDob !== '') {
+            $dob = date('d-m-Y', strtotime($studentDob));
+        } else {
+            $dob = '-';
+        }
         $roll_number = $student->roll_number;
         $class_section = $student->class_section->class->name.' '.$student->class_section->section->name.' '.$student->class_section->class->medium->name.' '.($student->class_section->class->streams->name ?? '');
 
@@ -2094,7 +2120,14 @@ class StudentController extends Controller
         }
         $admission_date = $student->admission_date;
         $gr_no = $student->admission_no;
-        $dob = date('d-m-Y', strtotime($student->user->dob));
+        $studentDob = $student->user->dob;
+        if ($studentDob instanceof CarbonInterface) {
+            $dob = date('d-m-Y', strtotime($studentDob->toDateString()));
+        } elseif (is_string($studentDob) && $studentDob !== '') {
+            $dob = date('d-m-Y', strtotime($studentDob));
+        } else {
+            $dob = '-';
+        }
         $roll_number = $student->roll_number;
         $class_section = $student->class_section->class->name.' '.$student->class_section->section->name.' '.$student->class_section->class->medium->name.' '.($student->class_section->class->streams->name ?? '');
 
@@ -2245,7 +2278,7 @@ class StudentController extends Controller
 
     public function studentList(Request $request)
     {
-        if (! Auth::user()->can('student-list')) {
+        if (! Auth::user()->can('student-list') && ! Auth::user()->can('generate-result')) {
             $response = [
                 'message' => trans('no_permission_message'),
             ];
@@ -2257,18 +2290,22 @@ class StudentController extends Controller
         $sort = request('sort', 'id');
         $order = request('order', 'ASC');
         $search = request('search');
-        $sql = Students::with('class_section.class', 'class_section.section')->where('class_section_id', $request->class_section_id);
+        $sql = Students::with('user:id,first_name,last_name,dob', 'class_section.class', 'class_section.section', 'class_section.class.medium', 'class_section.class.streams')
+            ->where('class_section_id', $request->class_section_id);
+
         if (! empty($search)) {
-            $sql = $sql->where('user_id', 'LIKE', "%$search%")
-                ->orWhere('admission_no', 'LIKE', "%$search%")
-                ->orWhere('roll_number', 'LIKE', "%$search%")
-                ->orWhere('class_section_id', 'LIKE', "%$search%");
-            $sql = $sql->orWhereHas('user', function ($q) use ($search) {
-                $q->where('first_name', 'LIKE', "%$search%")
-                    ->orWhere('last_name', 'LIKE', "%$search%")
-                    ->orWhereRaw("concat(first_name,' ',last_name) LIKE '%".$search."%'")
-                    ->orWhere('email', 'LIKE', "%$search%")
-                    ->orWhere('dob', 'LIKE', "%$search%");
+            $sql->where(function ($query) use ($search) {
+                $query->where('user_id', 'LIKE', "%$search%")
+                    ->orWhere('admission_no', 'LIKE', "%$search%")
+                    ->orWhere('roll_number', 'LIKE', "%$search%")
+                    ->orWhere('class_section_id', 'LIKE', "%$search%")
+                    ->orWhereHas('user', function ($q) use ($search) {
+                        $q->where('first_name', 'LIKE', "%$search%")
+                            ->orWhere('last_name', 'LIKE', "%$search%")
+                            ->orWhereRaw("concat(first_name,' ',last_name) LIKE '%".$search."%'")
+                            ->orWhere('email', 'LIKE', "%$search%")
+                            ->orWhere('dob', 'LIKE', "%$search%");
+                    });
             });
         }
 
@@ -2288,11 +2325,19 @@ class StudentController extends Controller
                 $operate = '<a href="'.route('generate.result', $row->id).'" class="btn btn-xs btn-gradient-success btn-rounded btn-icon" data-id="'.$row->id.'" title="Generate Result"><i class="fa fa-file-pdf-o"></i></a>&nbsp;&nbsp;';
             }
 
+            $formattedDob = '-';
+            $studentDob = $row->user?->dob;
+            if ($studentDob instanceof CarbonInterface) {
+                $formattedDob = date($data['date_formate'], strtotime($studentDob->toDateString()));
+            } elseif (is_string($studentDob) && $studentDob !== '') {
+                $formattedDob = date($data['date_formate'], strtotime($studentDob));
+            }
+
             $tempRow['id'] = $row->id;
             $tempRow['no'] = $no++;
             $tempRow['user_id'] = $row->user_id;
             $tempRow['student_name'] = $row->user->first_name.' '.$row->user->last_name;
-            $tempRow['dob'] = date($data['date_formate'], strtotime(is_object($row->user->dob) ? $row->user->dob->toDateString() : $row->user->dob));
+            $tempRow['dob'] = $formattedDob;
             $tempRow['admission_no'] = $row->admission_no;
             $tempRow['class_section_id'] = $row->class_section_id;
             $tempRow['class_section_name'] = $row->class_section->class->name.' '.$row->class_section->section->name.' '.$row->class_section->class->medium->name.' '.($row->class_section->class->streams->name ?? '');

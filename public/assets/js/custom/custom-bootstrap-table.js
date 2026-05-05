@@ -1672,6 +1672,7 @@ window.semesterEvents = {
 
         $('#edit_start_date').datepicker('update', formatDate(row.start_date));
         $('#edit_end_date').datepicker('update', formatDate(row.end_date));
+        $('#edit_status').val(row.status);
     }
 };
 

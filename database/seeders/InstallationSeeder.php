@@ -2,13 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Settings;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Artisan;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class InstallationSeeder extends Seeder
 {
@@ -20,7 +18,7 @@ class InstallationSeeder extends Seeder
     public function run()
     {
 
-        //Add Permissions
+        // Add Permissions
         $permissions = [
             ['id' => 1, 'name' => 'role-list'],
             ['id' => 2, 'name' => 'role-create'],
@@ -188,7 +186,6 @@ class InstallationSeeder extends Seeder
             ['id' => 131, 'name' => 'form-field-edit'],
             ['id' => 132, 'name' => 'form-field-delete'],
 
-
             ['id' => 133, 'name' => 'notification-list'],
             ['id' => 134, 'name' => 'notification-create'],
             ['id' => 135, 'name' => 'notification-edit'],
@@ -314,7 +311,6 @@ class InstallationSeeder extends Seeder
             'timetable-create',
             'timetable-edit',
             'timetable-delete',
-
 
             'holiday-list',
             'holiday-create',
@@ -454,12 +450,12 @@ class InstallationSeeder extends Seeder
 
             'student-leave-approve',
 
-            'assign-elective-subjects'
+            'assign-elective-subjects',
 
         ];
         $role->syncPermissions($superadmin_permission_list);
 
-        //Add Teacher Role
+        // Add Teacher Role
         $teacher_role = Role::updateOrCreate(['name' => 'Teacher']);
         $teacher_permissions_list = [
             'student-list',
@@ -504,16 +500,53 @@ class InstallationSeeder extends Seeder
             'leave-delete',
             'attendance-report',
             'staff-leave-list',
-            'student-leave-approve'
+            'student-leave-approve',
 
         ];
         $teacher_role->syncPermissions($teacher_permissions_list);
 
-        // Add Parent and Student Role
-        Role::updateOrCreate(['name' => 'Parent']);
-        Role::updateOrCreate(['name' => 'Student']);
+        // Add Parent Role
+        $parent_role = Role::updateOrCreate(['name' => 'Parent']);
+        $parent_permissions_list = [
+            'class-timetable',
+            'student-assignment',
+            'subject-lesson',
+            'class-attendance',
+            'holiday-list',
+            'announcement-list',
+            'exam-result',
+            'fees-paid',
+            'privacy-policy',
+            'terms-condition',
+            'contact-us',
+            'about-us',
+        ];
+        $parent_role->syncPermissions($parent_permissions_list);
 
-        //Change system version here
+        // Add Student Role
+        $student_role = Role::updateOrCreate(['name' => 'Student']);
+        $student_permissions_list = [
+            'class-timetable',
+            'student-assignment',
+            'assignment-submission',
+            'subject-lesson',
+            'class-attendance',
+            'holiday-list',
+            'announcement-list',
+            'exam-result',
+            'student-change-password',
+            'leave-create',
+            'leave-edit',
+            'leave-delete',
+            'leave-list',
+            'privacy-policy',
+            'terms-condition',
+            'contact-us',
+            'about-us',
+        ];
+        $student_role->syncPermissions($student_permissions_list);
+
+        // Change system version here
         Settings::updateOrCreate(['type' => 'system_version'], ['message' => '3.3.6']);
 
         // Ensure framework runtime directories exist before clearing caches.
@@ -525,7 +558,7 @@ class InstallationSeeder extends Seeder
         ];
 
         foreach ($frameworkPaths as $path) {
-            if (!is_dir($path)) {
+            if (! is_dir($path)) {
                 mkdir($path, 0755, true);
             }
         }

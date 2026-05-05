@@ -432,6 +432,14 @@ function feesPaidStatusFormatter(value, row, index) {
     }
 }
 
+function studentRegistrationPaymentStatusFormatter(value, row, index) {
+    if (row.registration_payment_status === 'paid') {
+        return "<span class='badge badge-success'>Paid</span>";
+    }
+
+    return "<span class='badge badge-danger'>Unpaid</span>";
+}
+
 function textFormatter(value, row) {
     if (row.text) {
         if (row.text.length > 20) {

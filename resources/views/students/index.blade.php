@@ -34,7 +34,14 @@
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
                                     <label>{{ __('mobile') }}</label>
-                                    {!! Form::number('mobile', null, ['placeholder' => __('mobile'), 'class' => 'form-control mobile', 'min' => 10]) !!}
+                                    {!! Form::text('mobile', null, [
+                                        'placeholder' => '98XXXXXXXX',
+                                        'class' => 'form-control mobile',
+                                        'maxlength' => 10,
+                                        'inputmode' => 'numeric',
+                                        'pattern' => '9[0-9]{9}',
+                                    ]) !!}
+                                    <small class="text-muted">Nepal mobile format: 10 digits starting with 9.</small>
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
                                     <label>{{ __('gender') }} <span class="text-danger">*</span></label><br>
@@ -54,7 +61,7 @@
                                     </div>
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
-                                    <label>{{ __('image') }} <span class="text-danger">*</span></label>
+                                    <label>{{ __('image') }}</label>
                                     <input type="file" name="image" class="file-upload-default" accept="image/*" />
                                     <div class="input-group col-xs-12">
                                         <input type="text" class="form-control file-upload-info" disabled=""
@@ -66,7 +73,7 @@
                                     </div>
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
-                                    <label>{{ __('dob') }} <span class="text-danger">*</span></label>
+                                    <label>{{ __('dob') }}</label>
                                     {!! Form::text('dob', null, ['placeholder' => __('dob'), 'class' => 'datepicker-popup-no-future form-control']) !!}
                                     <span class="input-group-addon input-group-append">
                                     </span>
@@ -87,7 +94,7 @@
                                     </select>
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
-                                    <label> {{ __('category') }} <span class="text-danger">*</span></label>
+                                    <label> {{ __('category') }}</label>
                                     <select name="category_id" class="form-control">
                                         <option value="">{{ __('select') . ' ' . __('category') }}</option>
                                         @foreach ($category as $cat)
@@ -123,7 +130,7 @@
                             </div>
                             <div class="row">
                                 <div class="form-group col-sm-12 col-md-4">
-                                    <label>{{ __('blood_group') }} <span class="text-danger">*</span></label>
+                                    <label>{{ __('blood_group') }}</label>
                                     <select name="blood_group" class="form-control">
                                         <option value="">{{ __('select') . ' ' . __('blood_group') }}</option>
                                         <option value="A+">A+</option>
@@ -137,19 +144,19 @@
                                     </select>
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
-                                    <label>{{ __('height') }} <span class="text-danger">*</span></label>
-                                    {!! Form::text('height', null, ['placeholder' => __('height'), 'class' => 'form-control']) !!}
+                                    <label>{{ __('height') }}</label>
+                                    {!! Form::text('height', null, ['placeholder' => __('height') . ' (cm)', 'class' => 'form-control']) !!}
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
-                                    <label>{{ __('weight') }} <span class="text-danger">*</span></label>
-                                    {!! Form::text('weight', null, ['placeholder' => __('weight'), 'class' => 'form-control']) !!}
+                                    <label>{{ __('weight') }}</label>
+                                    {!! Form::text('weight', null, ['placeholder' => __('weight') . ' (kg)', 'class' => 'form-control']) !!}
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="form-group col-12">
-                                    <label>{{ __('current_address') }} <span class="text-danger">*</span></label>
+                                    <label>{{ __('current_address') }}</label>
                                     {!! Form::textarea('current_address', null, [
-                                        'placeholder' => __('current_address'),
+                                        'placeholder' => 'Tole / Ward / Municipality / District',
                                         'class' => 'form-control',
                                         'id' => 'current_address',
                                         'rows' => 2,
@@ -158,9 +165,9 @@
                             </div>
                             <div class="row">
                                 <div class="form-group col-12">
-                                    <label>{{ __('permanent_address') }} <span class="text-danger">*</span></label>
+                                    <label>{{ __('permanent_address') }}</label>
                                     {!! Form::textarea('permanent_address', null, [
-                                        'placeholder' => __('permanent_address'),
+                                        'placeholder' => 'Tole / Ward / Municipality / District',
                                         'class' => 'form-control',
                                         'id' => 'permanent_address',
                                         'rows' => 2,
@@ -278,11 +285,12 @@
                                         </div>
                                         <div class="form-check form-check-inline">
                                             <label class="form-check-label">
-                                                {!! Form::radio('parent_guardian_type', 'guardian', true) !!}
+                                                {!! Form::radio('parent_guardian_type', 'guardian') !!}
                                                 {{ __('guardian_details') }}
                                             </label>
                                         </div>
                                     </div>
+                                    <small class="text-muted">Parent/guardian details are optional. Select one only if you want to register linked contacts now.</small>
                                 </div>
                             </div>
 
@@ -319,11 +327,13 @@
                                 <div class="form-group col-sm-12 col-md-4">
                                     <label>{{ __('father') . ' ' . __('mobile') }} <span
                                             class="text-danger">*</span></label>
-                                    {!! Form::number('father_mobile', null, [
+                                    {!! Form::text('father_mobile', null, [
                                         'placeholder' => __('father') . ' ' . __('mobile'),
                                         'class' => 'form-control',
                                         'id' => 'father_mobile',
-                                        'min' => 0,
+                                        'maxlength' => 10,
+                                        'inputmode' => 'numeric',
+                                        'pattern' => '9[0-9]{9}',
                                     ]) !!}
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
@@ -502,11 +512,13 @@
                                 <div class="form-group col-sm-12 col-md-4">
                                     <label>{{ __('mother') . ' ' . __('mobile') }} <span
                                             class="text-danger">*</span></label>
-                                    {!! Form::number('mother_mobile', null, [
+                                    {!! Form::text('mother_mobile', null, [
                                         'placeholder' => __('mother') . ' ' . __('mobile'),
                                         'class' => 'form-control',
                                         'id' => 'mother_mobile',
-                                        'min' => 0,
+                                        'maxlength' => 10,
+                                        'inputmode' => 'numeric',
+                                        'pattern' => '9[0-9]{9}',
                                     ]) !!}
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
@@ -655,7 +667,7 @@
 
                             </div>
 
-                            <div class="row" id="guardian_div">
+                            <div class="row" id="guardian_div" style="display:none;">
                                 <div class="form-group col-sm-12 col-md-12">
                                     <label>{{ __('guardian') . ' ' . __('email') }} <span
                                             class="text-danger">*</span></label>
@@ -690,11 +702,13 @@
                                 <div class="form-group col-sm-12 col-md-4">
                                     <label>{{ __('guardian') . ' ' . __('mobile') }} <span
                                             class="text-danger">*</span></label>
-                                    {!! Form::number('guardian_mobile', null, [
+                                    {!! Form::text('guardian_mobile', null, [
                                         'placeholder' => __('guardian') . ' ' . __('mobile'),
                                         'class' => 'form-control',
                                         'id' => 'guardian_mobile',
-                                        'min' => 0,
+                                        'maxlength' => 10,
+                                        'inputmode' => 'numeric',
+                                        'pattern' => '9[0-9]{9}',
                                     ]) !!}
                                 </div>
                                 <div class="form-group col-sm-12 col-md-12">

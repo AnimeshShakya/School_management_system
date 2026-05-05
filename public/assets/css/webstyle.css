@@ -2419,4 +2419,350 @@ input::-webkit-inner-spin-button {
 
 .radio-text {
     color: #212529;
+}}
+
+/* ================================================================
+   MODERN UI OVERRIDES — eShikshya Clean Design System
+   ================================================================ */
+
+/* Smooth scrolling & base improvements */
+html {
+    scroll-behavior: smooth;
 }
+
+/* ── Sticky Navbar ── */
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background-color: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.3s ease;
+}
+
+/* ── Top header refinement ── */
+.topHeader {
+    background-color: rgba(34, 87, 122, 0.05);
+    border-bottom: 1px solid rgba(34, 87, 122, 0.1);
+}
+
+/* ── Hero gradient overlay at bottom ── */
+.heroSection::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.5) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* ── Hero text overlay ── */
+.heroOverlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 56px;
+    z-index: 2;
+}
+
+.heroContent {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 580px;
+}
+
+.heroTag {
+    display: inline-block;
+    background: rgba(56, 163, 165, 0.88);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 4px;
+    width: max-content;
+}
+
+.heroTitle {
+    color: #fff;
+    font-size: 44px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+    margin: 0;
+}
+
+.heroCtas {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.heroBtnPrimary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--secondary-color1);
+    color: #fff !important;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 10px 22px;
+    border-radius: 6px;
+    text-decoration: none !important;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.heroBtnPrimary:hover {
+    background-color: var(--primary-hover-color);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+    color: #fff !important;
+}
+
+.heroBtnSecondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff !important;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 10px 22px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(6px);
+    text-decoration: none !important;
+    transition: all 0.25s ease;
+}
+
+.heroBtnSecondary:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: #fff !important;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 767px) {
+    .heroTitle { font-size: 26px; }
+    .heroOverlay { padding-bottom: 28px; }
+    .heroBtnPrimary, .heroBtnSecondary { font-size: 13px; padding: 8px 16px; }
+}
+
+/* ── Modern section tags ── */
+.commonTag {
+    background: none;
+    color: var(--secondary-color1);
+    padding: 0 0 0 10px;
+    border-radius: 0;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    border-left: 3px solid var(--secondary-color1);
+    width: max-content;
+}
+
+/* ── Better button styles ── */
+.commonBtn {
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+    transition: all 0.25s ease;
+}
+
+.commonBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(34, 87, 122, 0.3);
+}
+
+/* ── Reduce excessive spacing ── */
+.commonMT {
+    margin-top: 72px;
+}
+
+/* ── Fix constrained center layout ── */
+.flex_column_center {
+    padding: 0 clamp(0px, 7vw, 260px);
+}
+
+/* ── Programs section modernization ── */
+.programs {
+    padding: 60px 30px;
+    background-color: #f8fafc;
+}
+
+.programs .programsCardWrapper {
+    margin-top: 50px;
+}
+
+.programs .programsCardWrapper .card {
+    border-radius: 12px !important;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+}
+
+.programs .programsCardWrapper .card:hover {
+    transform: translateY(-7px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.13);
+}
+
+.programs .programsCardWrapper .card img {
+    border-radius: 12px 12px 0 0;
+    height: 200px;
+    transition: transform 0.4s ease;
+    overflow: hidden;
+}
+
+.programs .programsCardWrapper .card:hover img {
+    transform: scale(1.06);
+}
+
+.programs .programsCardWrapper .card .cardTitle {
+    padding: 16px 18px;
+    border-top: 2px solid var(--secondary-color1);
+}
+
+/* ── Events cards modernization ── */
+.events .eventsCardWrapper .card {
+    border-radius: 10px !important;
+    overflow: hidden;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.06);
+}
+
+.events .eventsCardWrapper .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.11);
+}
+
+.events .eventsCardWrapper {
+    margin-top: 50px;
+}
+
+/* ── Photos slider image zoom on hover ── */
+.commonSlider .swiperDataWrapper {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.commonSlider .swiperDataWrapper .img_div img {
+    transition: transform 0.4s ease;
+    border-radius: 10px;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.commonSlider .swiperDataWrapper:hover .img_div img {
+    transform: scale(1.06);
+}
+
+/* ── FAQ accordion modernization ── */
+.faqs .accordion {
+    margin-top: 50px;
+}
+
+.faqs .accordion-item {
+    border-radius: 10px !important;
+    margin: 10px 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s ease;
+}
+
+.faqs .accordion-item:hover {
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.09);
+}
+
+/* ── App section padding fix ── */
+.ourApp .flex_column_center {
+    padding: 0 clamp(0px, 6vw, 200px);
+}
+
+.ourApp .wrapper {
+    margin-top: 50px;
+}
+
+/* ── App cards modernization ── */
+.ourApp .card {
+    border-radius: 14px !important;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1a4a7a 100%);
+    box-shadow: 0 4px 18px rgba(34, 87, 122, 0.22);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.ourApp .card:hover {
+    transform: translateY(-7px);
+    box-shadow: 0 14px 34px rgba(34, 87, 122, 0.33);
+}
+
+/* ── Footer refinements ── */
+footer {
+    background: linear-gradient(to bottom, rgba(56, 163, 165, 0.05) 0%, rgba(56, 163, 165, 0.09) 100%);
+}
+
+footer .socialIcons span {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+footer .socialIcons span:hover {
+    background-color: var(--secondary-color1);
+    transform: translateY(-2px);
+}
+
+footer .socialIcons span:hover i {
+    color: #fff !important;
+}
+
+footer .linksWrapper a {
+    transition: color 0.2s ease, transform 0.2s ease;
+    display: inline-block;
+}
+
+footer .linksWrapper a:hover {
+    color: var(--secondary-color1) !important;
+    transform: translateX(4px);
+}
+
+/* ── About image fallback styling ── */
+.aboutUs .aboutImgWrapper img[src=''] ,
+.aboutUs .aboutImgWrapper img:not([src]) {
+    display: none;
+}
+
+.aboutUs .aboutImgWrapper {
+    background: linear-gradient(135deg, #f0f7ff 0%, #e8f4f8 100%);
+    border-radius: 12px;
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.aboutUs .aboutImgWrapper img {
+    border-radius: 12px;
+}
+
+/* ================================================================
+   End Modern UI Overrides
+   ================================================================ */

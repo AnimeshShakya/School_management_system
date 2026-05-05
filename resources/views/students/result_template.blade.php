@@ -3,190 +3,320 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Add your CSS stylesheets or link to external stylesheets here -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Student Result || {{ config('app.name') }}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/4.6.0/css/bootstrap.min.css" integrity="sha512-P5MgMn1jBN01asBgU0z60Qk4QxiXo86+wlFahKrsQf37c9cro517WzVSPPV1tDKzhku2iJ2FVgL67wG03SGnNA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
     <style>
-        /* Add your CSS styles here */
+        @page {
+            margin: 22px;
+        }
+
         body {
             font-family: DejaVu Sans, sans-serif;
             margin: 0;
             padding: 0;
-            width: 100%;
-            height: auto;
-        }
-
-
-        .container {
-            max-width: 95%; /* Adjust for margins */
-            height: 95%;
-            margin: 0;
-            padding: 20px;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-            align-items: center;
-            border: 2px solid {{ $settings['theme_color'] ?? '#22577a' }};
-        }
-        h1 {
-            text-align: center;
-        }
-        .student-info {
-            margin-bottom: 20px;
-        }
-        .result-table {
-            width: 95% !important;
-            border-collapse: collapse;
-            margin-top: 20px;
-            font-size: 0.7rem;
-        }
-        .result-table th, .result-table td {
-            border: 1px solid {{ $settings['theme_color'] ?? '#22577a' }};
-            padding: 8px;
-            text-align: center;
-        }
-        .result-table th {
-            background-color: #f2f2f2;
-            font-size: 0.7rem
-        }
-        .table-header {
-            border: none;
+            color: #1f2933;
             font-size: 12px;
-            width: 95%;
+            line-height: 1.4;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        .document {
+            width: 100%;
+            border: 1.5px solid {{ $settings['theme_color'] ?? '#22577a' }};
+            padding: 18px;
+        }
+
+        .header-table,
+        .info-table,
+        .result-table,
+        .summary-table,
+        .footer-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-table td {
+            vertical-align: middle;
+        }
+
+        .brand-block {
             text-align: center;
         }
-        .table-data{
-            border: 1px solid {{ $settings['theme_color'] ?? '#22577a' }};
-            width: 95%;
-            font-size: 0.8rem;
-        }
-        .table-data tr{
-            border: 1px solid {{ $settings['theme_color'] ?? '#22577a' }};
-        }
-        td{
-            padding: 8px;
 
+        .logo {
+            height: 58px;
+            width: auto;
+            margin-bottom: 8px;
         }
-        tr{
-            width: 100%;
-        }
-        th{
-            padding: 0 0 0 5px;
-        }
-        .heading{
-            font-size: 1.3rem;
+
+        .school-name {
+            font-size: 24px;
             font-weight: 700;
             color: {{ $settings['theme_color'] ?? '#22577a' }};
         }
-        .sub-heading{
-            font-size: 0.8rem;
-            word-break: break-all;
+
+        .school-address {
+            font-size: 11px;
             color: {{ $settings['secondary_color'] ?? '#38A3A5' }};
         }
-        .heading1{
-            font-size: 1rem;
+
+        .title-block {
+            margin: 18px 0 14px;
+            padding: 12px 14px;
+            border: 1px solid {{ $settings['theme_color'] ?? '#22577a' }};
+            background: #f8fbfc;
+            text-align: center;
+        }
+
+        .title-block h1 {
+            margin: 0;
+            font-size: 18px;
+            color: {{ $settings['theme_color'] ?? '#22577a' }};
+        }
+
+        .title-block p {
+            margin: 4px 0 0;
+            font-size: 11px;
+            color: #52606d;
+        }
+
+        .section-label {
+            margin: 16px 0 8px;
+            font-size: 12px;
             font-weight: 700;
             color: {{ $settings['theme_color'] ?? '#22577a' }};
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
         }
-        .sub-heading1{
-            font-size: 0.9rem;
+
+        .info-table td,
+        .summary-table td {
+            width: 50%;
+            border: 1px solid #d9e2ec;
+            padding: 9px 10px;
+            vertical-align: top;
+        }
+
+        .label {
+            display: block;
+            font-size: 10px;
+            color: #7b8794;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .value {
+            font-size: 12px;
             font-weight: 600;
-            color: {{ $settings['theme_color'] ?? '#22577a' }};
+            color: #102a43;
         }
-        .card-document {
-            padding: 10px; /* Add padding to the card */
+
+        .result-table {
+            margin-top: 8px;
+            font-size: 11px;
+        }
+
+        .result-table th, .result-table td {
+            border: 1px solid #d9e2ec;
+            padding: 9px 8px;
+            text-align: center;
+        }
+
+        .result-table th {
+            background-color: {{ $settings['theme_color'] ?? '#22577a' }};
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .result-table .subject-column {
+            text-align: left;
+            font-weight: 700;
+            width: 24%;
+        }
+
+        .result-table tbody tr:nth-child(even) {
+            background-color: #f8fbfc;
+        }
+
+        .summary-table {
+            margin-top: 14px;
+        }
+
+        .result-pill {
+            font-weight: 700;
+            color: {{ $data['result'] === 'Passed' ? '#0b6e4f' : '#b42318' }};
+        }
+
+        .footer-table {
+            margin-top: 28px;
+        }
+
+        .footer-table td {
+            width: 50%;
+            vertical-align: bottom;
+        }
+
+        .generated-note {
+            font-size: 10px;
+            color: #7b8794;
+        }
+
+        .signature-block {
+            text-align: right;
+        }
+
+        .signature-image {
+            height: 42px;
+            width: auto;
+            margin-bottom: 6px;
+        }
+
+        .signature-label {
+            display: inline-block;
+            border-top: 1px solid #9fb3c8;
+            padding-top: 6px;
+            min-width: 110px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .muted {
+            color: #7b8794;
         }
     </style>
 
 </head>
 <body>
-    <div class="container">
-        <div class="card-document">
-            <div class="row">
-                <div class="col-12">
-
-                    <div class="text-center">
-                        <img style="height: 3rem;width: 8rem;"  src="{{public_path('storage/').$settings['logo1']}}" alt="logo"><br>
-                        <span class="text-default-d3 heading">{{$settings['school_name']}}</span><br>
-                        <span class="text-default-d3 sub-heading">{{$settings['school_address']}}</span>
+    <div class="document">
+        <table class="header-table">
+            <tr>
+                <td>
+                    <div class="brand-block">
+                        @if (!empty($settings['logo1']))
+                            <img class="logo" src="{{ public_path('storage/') . $settings['logo1'] }}" alt="School logo">
+                        @endif
+                        <div class="school-name">{{ $settings['school_name'] }}</div>
+                        <div class="school-address">{{ $settings['school_address'] }}</div>
                     </div>
+                </td>
+            </tr>
+        </table>
 
-
-                    <div class="text-center">
-                        <span class="heading1">{{ $data['class_section']}} Result</span><br>
-                        <span class="sub-heading1"> Session Year - ({{$data['sessionYear']}})</span>
-                    </div>
-                    <br>
-                    <div class="student-info">
-                        <table class="table-data">
-                            <tr>
-                                <td><strong>Name:</strong>   {{ $data['student_name']}} </td>
-                                <td><strong>DOB :</strong> {{ $data['dob'] }} </td>
-                                <td><strong>GR No. :</strong> {{ $data['gr_no'] }} </td>
-                            </tr>
-                            <tr>
-                                <td><strong>Father/Guardian Name :</strong> {{ $data['guardian_name'] }} </td>
-                                <td><strong>Class :</strong> {{ $data['class_section'] }}</td>
-                                <td><strong>Roll number :</strong> {{ $data['roll_number'] ?? '-' }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                    <table class="result-table">
-                        <thead>
-                            <tr>
-                                <th>Subjects</th>
-                                @foreach ($exams as $exam)
-                                    @if (!empty($exam->timetable))
-                                        <th>{{ $exam->name }}</th>
-                                    @endif
-                                @endforeach
-                                <th>Total</th>
-                                <th>Grade</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        @foreach ($data['subjects'] as $subject => $subjectData)
-                            <tr>
-                                <th>{{ $subject }}</th  >
-                                @foreach ($exams as $exam)
-                                    <td>
-                                        @if (isset($subjectData[$exam->name]))
-                                            {{ $subjectData[$exam->name] }}
-                                        @else
-                                            -
-                                        @endif
-                                    </td>
-                                @endforeach
-                                <td>{{ $subjectData['total_obtained'] ?? '-' }}</td>
-                                <td>{{ $subjectData['grade'] ?? '-'}}
-                            </tr>
-                        @endforeach
-                    </tbody>
-                    </table>
-
-                    <br>
-                    <div class="student-info">
-                        <table class="table-data">
-                            <tr>
-                                <td><strong>Total :</strong>   {{ $data['obtainmarks'] }} out of {{ $data['totalMarks']}} </td>
-                                <td><strong>Percentage :</strong> {{ $data['percentage'] }}% </td>
-                            </tr>
-                            <tr>
-                                <td><strong>Grade :</strong> {{ $data['grade'] }} </td>
-                                <td><strong>Result :</strong> {{ $data['result'] }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-                <div class="footer">
-                    @if ($settings['signature'] ?? '')
-                        <img class="" height="40" style="position: fixed;bottom:50px;right:40px" class="signature" width="100" align="center" src="{{ public_path('storage/').$settings['signature'] }}" alt="">
-                        <span style="position: fixed;bottom:25px;right:40px"><b>Signature</b></span>
-                    @endif
-                </div>
-            </div>
+        <div class="title-block">
+            <h1>{{ $data['class_section'] }} Result Sheet</h1>
+            <p>Session Year: {{ $data['sessionYear'] }} | Generated on {{ $data['date'] }}</p>
         </div>
+
+        <div class="section-label">Student Information</div>
+        <table class="info-table">
+            <tr>
+                <td>
+                    <span class="label">Student Name</span>
+                    <span class="value">{{ $data['student_name'] }}</span>
+                </td>
+                <td>
+                    <span class="label">Father / Guardian</span>
+                    <span class="value">{{ $data['guardian_name'] ?: '-' }}</span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <span class="label">Date of Birth</span>
+                    <span class="value">{{ $data['dob'] }}</span>
+                </td>
+                <td>
+                    <span class="label">GR Number</span>
+                    <span class="value">{{ $data['gr_no'] }}</span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <span class="label">Class Section</span>
+                    <span class="value">{{ $data['class_section'] }}</span>
+                </td>
+                <td>
+                    <span class="label">Roll Number</span>
+                    <span class="value">{{ $data['roll_number'] ?: '-' }}</span>
+                </td>
+            </tr>
+        </table>
+
+        <div class="section-label">Subject Performance</div>
+        <table class="result-table">
+            <thead>
+                <tr>
+                    <th class="subject-column">Subject</th>
+                    @foreach ($exams as $exam)
+                        @if (!empty($exam->timetable))
+                            <th>{{ $exam->name }}</th>
+                        @endif
+                    @endforeach
+                    <th>Total</th>
+                    <th>Grade</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($data['subjects'] as $subject => $subjectData)
+                    <tr>
+                        <td class="subject-column">{{ $subject }}</td>
+                        @foreach ($exams as $exam)
+                            <td>
+                                @if (isset($subjectData[$exam->name]))
+                                    {{ $subjectData[$exam->name] }}
+                                @else
+                                    -
+                                @endif
+                            </td>
+                        @endforeach
+                        <td>{{ $subjectData['total_obtained'] ?? '-' }} / {{ $subjectData['total_marks'] ?? '-' }}</td>
+                        <td>{{ $subjectData['grade'] ?? '-' }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        <div class="section-label">Overall Summary</div>
+        <table class="summary-table">
+            <tr>
+                <td>
+                    <span class="label">Marks Secured</span>
+                    <span class="value">{{ $data['obtainmarks'] }} / {{ $data['totalMarks'] }}</span>
+                </td>
+                <td>
+                    <span class="label">Percentage</span>
+                    <span class="value">{{ $data['percentage'] !== null ? $data['percentage'] . '%' : '-' }}</span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <span class="label">Overall Grade</span>
+                    <span class="value">{{ $data['grade'] ?: '-' }}</span>
+                </td>
+                <td>
+                    <span class="label">Result</span>
+                    <span class="value result-pill">{{ $data['result'] ?: '-' }}</span>
+                </td>
+            </tr>
+        </table>
+
+        <table class="footer-table">
+            <tr>
+                <td>
+                    <div class="generated-note">This is a computer-generated academic result prepared for school records and printing.</div>
+                </td>
+                <td>
+                    <div class="signature-block">
+                        @if (!empty($settings['signature']))
+                            <img class="signature-image" src="{{ public_path('storage/') . $settings['signature'] }}" alt="Signature">
+                        @endif
+                        <div class="signature-label">Authorized Signature</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>

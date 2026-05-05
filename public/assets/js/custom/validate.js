@@ -287,74 +287,162 @@ $(".student-registration-form").validate({
     rules: {
         'first_name': "required",
         'last_name': "required",
-        'mobile': "number",
+        'mobile': {
+            digits: true,
+            minlength: 10,
+            maxlength: 10
+        },
         'image': {
-            required: true,
             extension: "jpg|jpeg|png",
             filesize: 2048
         },
-        'dob': "required",
+        'dob': false,
         'class_section_id': "required",
-        'category_id': "required",
+        'category_id': false,
         'admission_no': "required",
-        'roll_number': "required",
-        // 'caste': "required",
-        // 'religion': "required",
         'admission_date': "required",
-        'blood_group': "required",
-        // 'height': "required",
-        // 'weight': "required",
-        'current_address': "required",
-        'permanent_address': "required",
-        'father_first_name': "required",
-        'father_last_name': "required",
+        'blood_group': false,
+        'current_address': false,
+        'permanent_address': false,
+        'father_first_name': {
+            required: function () {
+                const email = $('#father_email').val();
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent' && email && !$.isNumeric(email);
+            }
+        },
+        'father_last_name': {
+            required: function () {
+                const email = $('#father_email').val();
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent' && email && !$.isNumeric(email);
+            }
+        },
         'father_email': {
             "email": true,
-            "required": true,
+            "required": function () {
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent';
+            },
         },
         'father_mobile': {
-            "number": true,
-            "required": true,
+            digits: true,
+            minlength: 10,
+            maxlength: 10,
+            "required": function () {
+                const email = $('#father_email').val();
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent' && email && !$.isNumeric(email);
+            }
         },
-        'father_occupation': "required",
-        'father_dob': "required",
+        'father_occupation': {
+            required: function () {
+                const email = $('#father_email').val();
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent' && email && !$.isNumeric(email);
+            }
+        },
+        'father_dob': {
+            required: function () {
+                const email = $('#father_email').val();
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent' && email && !$.isNumeric(email);
+            }
+        },
         'father_image': {
+            required: function () {
+                const email = $('#father_email').val();
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent' && email && !$.isNumeric(email);
+            },
             extension: "jpg|jpeg|png",
             filesize: 2048
         },
 
         'mother_email': {
-            "required": true,
+            "required": function () {
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent';
+            },
             "email": true,
         },
-        'mother_first_name': "required",
-        'mother_last_name': "required",
-        'mother_mobile': {
-            "number": true,
-            "required": true,
+        'mother_first_name': {
+            required: function () {
+                const email = $('#mother_email').val();
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent' && email && !$.isNumeric(email);
+            }
         },
-        'mother_occupation': "required",
-        'mother_dob': "required",
+        'mother_last_name': {
+            required: function () {
+                const email = $('#mother_email').val();
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent' && email && !$.isNumeric(email);
+            }
+        },
+        'mother_mobile': {
+            digits: true,
+            minlength: 10,
+            maxlength: 10,
+            "required": function () {
+                const email = $('#mother_email').val();
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent' && email && !$.isNumeric(email);
+            }
+        },
+        'mother_occupation': {
+            required: function () {
+                const email = $('#mother_email').val();
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent' && email && !$.isNumeric(email);
+            }
+        },
+        'mother_dob': {
+            required: function () {
+                const email = $('#mother_email').val();
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent' && email && !$.isNumeric(email);
+            }
+        },
         'mother_image': {
+            required: function () {
+                const email = $('#mother_email').val();
+                return $('input[name="parent_guardian_type"]:checked').val() === 'parent' && email && !$.isNumeric(email);
+            },
             extension: "jpg|jpeg|png",
             filesize: 2048
         },
         'guardian_email': {
-            "required": true,
             "email": true,
         },
-        'guardian_first_name': "required",
-        'guardian_last_name': "required",
-        'guardian_mobile': {
-            "number": true,
-            "required": true,
+        'guardian_first_name': {
+            required: function () {
+                const email = $('#guardian_email').val();
+                return email && !$.isNumeric(email);
+            }
         },
-        'guardian_occupation': "required",
-        'guardian_dob': "required",
-        // 'guardian_image': {
-        //     extension: "jpg|jpeg|png",
-        //     filesize: 2048
-        // },
+        'guardian_last_name': {
+            required: function () {
+                const email = $('#guardian_email').val();
+                return email && !$.isNumeric(email);
+            }
+        },
+        'guardian_mobile': {
+            digits: true,
+            minlength: 10,
+            maxlength: 10,
+            "required": function () {
+                const email = $('#guardian_email').val();
+                return email && !$.isNumeric(email);
+            }
+        },
+        'guardian_occupation': {
+            required: function () {
+                const email = $('#guardian_email').val();
+                return email && !$.isNumeric(email);
+            }
+        },
+        'guardian_dob': {
+            required: function () {
+                const email = $('#guardian_email').val();
+                return email && !$.isNumeric(email);
+            }
+        },
+        'guardian_image': {
+            required: function () {
+                const email = $('#guardian_email').val();
+                return email && !$.isNumeric(email);
+            },
+            extension: "jpg|jpeg|png",
+            filesize: 2048
+        },
     },
     messages: {
         'image': {
