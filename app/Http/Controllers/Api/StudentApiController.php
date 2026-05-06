@@ -55,6 +55,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\AssignmentSubmission;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Models\OnlineExamStudentAnswer;
 use App\Models\StudentOnlineExamStatus;
 use Illuminate\Support\Facades\Storage;
@@ -645,25 +646,39 @@ class StudentApiController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'gr_no' => 'required',
-            'dob' => 'required|date',
+            'dob'   => 'required|date',
+            'email' => 'required|email',
         ]);
 
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
         }
         try {
+            $ip = $request->ip();
             $get_id = Students::select('user_id')->where('admission_no', $request->gr_no)->pluck('user_id')->first();
             if (isset($get_id) && !empty($get_id)) {
-
-                $user = User::where('id', $get_id)->whereDate('dob', '=', date('Y-m-d', strtotime($request->dob)))->first();
+                $user = User::where('id', $get_id)
+                    ->whereDate('dob', '=', date('Y-m-d', strtotime($request->dob)))
+                    ->where('email', $request->email)
+                    ->first();
                 if ($user) {
                     $user->reset_request = 1;
                     $user->save();
+                    Log::info('Password reset requested successfully.', [
+                        'gr_no' => $request->gr_no,
+                        'ip'    => $ip,
+                    ]);
                     ResponseService::successResponse("Request Send Successfully");
                 } else {
+                    Log::warning('Failed password reset attempt: invalid credentials.', [
+                        'ip' => $ip,
+                    ]);
                     ResponseService::errorResponse("Invalid user Details", null, 107);
                 }
             } else {
+                Log::warning('Failed password reset attempt: admission number not found.', [
+                    'ip' => $ip,
+                ]);
                 ResponseService::errorResponse("Invalid user Details", null, 107);
             }
         } catch (Throwable $e) {

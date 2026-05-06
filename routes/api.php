@@ -30,7 +30,7 @@ Route::group(['prefix' => 'student'], function () {
 
     //Non Authenticated APIs
     Route::post('login', [StudentApiController::class, 'login']);
-    Route::post('forgot-password', [StudentApiController::class, 'forgotPassword']);
+    Route::post('forgot-password', [StudentApiController::class, 'forgotPassword'])->middleware('throttle:5,60');
 
     //Authenticated APIs
     Route::group([
