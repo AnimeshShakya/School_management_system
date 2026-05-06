@@ -236,6 +236,11 @@
             });
         });
 
+        function formatValue(val) {
+            if (val === null || val === undefined) return '';
+            return escapeHtml(String(val));
+        }
+
         function renderPreview(response) {
             const validRows = response.valid || [];
             const errorRows = response.errors || [];
@@ -246,10 +251,10 @@
             validRows.forEach(function (row, i) {
                 validHtml += '<tr>' +
                     '<td>' + (i + 1) + '</td>' +
-                    '<td>' + escapeHtml(row.admission_no) + '</td>' +
-                    '<td>' + escapeHtml(row.student_name) + '</td>' +
-                    '<td>' + (row.obtained_marks !== null && row.obtained_marks !== undefined ? escapeHtml(String(row.obtained_marks)) : '') + '</td>' +
-                    '<td>' + (row.total_marks !== null && row.total_marks !== undefined ? escapeHtml(String(row.total_marks)) : '') + '</td>' +
+                    '<td>' + formatValue(row.admission_no) + '</td>' +
+                    '<td>' + formatValue(row.student_name) + '</td>' +
+                    '<td>' + formatValue(row.obtained_marks) + '</td>' +
+                    '<td>' + formatValue(row.total_marks) + '</td>' +
                     '</tr>';
             });
             $('#valid-tbody').html(validHtml || '<tr><td colspan="5" class="text-center text-muted">{{ __('no_valid_rows') }}</td></tr>');
@@ -260,10 +265,10 @@
             errorRows.forEach(function (row) {
                 errorHtml += '<tr class="table-danger">' +
                     '<td>' + row.row + '</td>' +
-                    '<td>' + escapeHtml(row.admission_no) + '</td>' +
-                    '<td>' + escapeHtml(row.student_name) + '</td>' +
-                    '<td>' + (row.marks_obtained !== null && row.marks_obtained !== undefined ? escapeHtml(String(row.marks_obtained)) : '') + '</td>' +
-                    '<td>' + escapeHtml(row.error) + '</td>' +
+                    '<td>' + formatValue(row.admission_no) + '</td>' +
+                    '<td>' + formatValue(row.student_name) + '</td>' +
+                    '<td>' + formatValue(row.obtained_marks) + '</td>' +
+                    '<td>' + formatValue(row.error) + '</td>' +
                     '</tr>';
             });
             $('#error-tbody').html(errorHtml || '<tr><td colspan="5" class="text-center text-muted">{{ __('no_errors') }}</td></tr>');

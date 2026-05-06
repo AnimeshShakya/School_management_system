@@ -19,7 +19,7 @@ class ExamMarksImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
 
     private int $classSectionId;
 
-    private float $totalMarks;
+    private float $totalMarks = 0.0;
 
     public function __construct(int $classSectionId, int $classId, int $examId, int $subjectId)
     {
@@ -49,7 +49,7 @@ class ExamMarksImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
                     'row'          => $rowNum,
                     'admission_no' => $admissionNo,
                     'student_name' => $row['student_name'] ?? '',
-                    'marks_obtained' => $marksRaw,
+                    'obtained_marks' => $marksRaw,
                     'error'        => trans('admission_no_is_required'),
                 ];
                 continue;
@@ -61,7 +61,7 @@ class ExamMarksImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
                     'row'          => $rowNum,
                     'admission_no' => $admissionNo,
                     'student_name' => $row['student_name'] ?? '',
-                    'marks_obtained' => $marksRaw,
+                    'obtained_marks' => $marksRaw,
                     'error'        => trans('duplicate_admission_no_in_file'),
                 ];
                 continue;
@@ -78,7 +78,7 @@ class ExamMarksImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
                     'row'          => $rowNum,
                     'admission_no' => $admissionNo,
                     'student_name' => $row['student_name'] ?? '',
-                    'marks_obtained' => $marksRaw,
+                    'obtained_marks' => $marksRaw,
                     'error'        => trans('admission_no_not_found_in_class'),
                 ];
                 continue;
@@ -90,7 +90,7 @@ class ExamMarksImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
                     'row'          => $rowNum,
                     'admission_no' => $admissionNo,
                     'student_name' => $student->user->first_name . ' ' . $student->user->last_name,
-                    'marks_obtained' => $marksRaw,
+                    'obtained_marks' => $marksRaw,
                     'error'        => trans('marks_obtained_must_be_a_non_negative_number'),
                 ];
                 continue;
@@ -102,7 +102,7 @@ class ExamMarksImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
                     'row'          => $rowNum,
                     'admission_no' => $admissionNo,
                     'student_name' => $student->user->first_name . ' ' . $student->user->last_name,
-                    'marks_obtained' => $marksRaw,
+                    'obtained_marks' => $marksRaw,
                     'error'        => trans('marks_obtained_exceeds_total_marks') . ' (' . $this->totalMarks . ')',
                 ];
                 continue;

@@ -522,7 +522,7 @@ class ExamController extends Controller
                 'total_marks' => $examTimetable->total_marks,
             ]);
         } catch (Throwable $e) {
-            Log::error('ExamMarksImport error: ' . $e->getMessage());
+            Log::error('ExamMarksImport error', ['exception' => $e]);
             return response()->json(['error' => true, 'message' => trans('error_occurred')]);
         }
     }
