@@ -69,7 +69,7 @@ class AnnouncementController extends Controller {
             'title' => 'required',
             'set_data' => 'required',
             'file' => 'nullable|array',
-            'file.*' => 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif|max:4096'
+            'file.*' => 'mimes:pdf,doc,docx,jpg,jpeg,png|max:10240'
         ], [
             'set_data.required' => 'The Assign To Field is Required'
         ]);
@@ -142,7 +142,9 @@ class AnnouncementController extends Controller {
                         $file = new File();
                         $file->file_name = $file_upload->getClientOriginalName();
                         $file->type = 1;
-                        $file->file_url = $file_upload->store('announcement', 'public');
+                        $uuid = Str::uuid();
+                        $extension = $file_upload->getClientOriginalExtension();
+                        $file->file_url = $file_upload->storeAs('announcement', $uuid . '.' . $extension, 'public');
                         $file->modal()->associate($announcement);
                         $file->save();
                     }
@@ -188,7 +190,9 @@ class AnnouncementController extends Controller {
         }
         $request->validate([
             'title' => 'required',
-            'set_data' => 'required'
+            'set_data' => 'required',
+            'file' => 'nullable|array',
+            'file.*' => 'mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
         ],  [
             'set_data.required' => 'The Assign To Field is required.'
         ]);
@@ -250,7 +254,9 @@ class AnnouncementController extends Controller {
                     $file = new File();
                     $file->file_name = $file_upload->getClientOriginalName();
                     $file->type = 1;
-                    $file->file_url = $file_upload->store('announcement', 'public');
+                    $uuid = Str::uuid();
+                    $extension = $file_upload->getClientOriginalExtension();
+                    $file->file_url = $file_upload->storeAs('announcement', $uuid . '.' . $extension, 'public');
                     $file->modal()->associate($announcement);
                     $file->save();
                 }
