@@ -25,7 +25,7 @@ class ClassSchool extends Model
     }
 
     public function medium() {
-        return $this->belongsTo(Mediums::class)->select('name', 'id')->withTrashed();
+        return $this->belongsTo(Mediums::class)->select('name', 'id');
     }
 
     public function streams()

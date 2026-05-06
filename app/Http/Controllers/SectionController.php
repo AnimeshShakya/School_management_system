@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Section;
+use App\Models\ClassSection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -135,11 +136,19 @@ class SectionController extends Controller
             return response()->json($response);
         }
         try {
-            Section::find($id)->delete();
-            $response = array(
-                'error' => false,
-                'message' => trans('data_delete_successfully')
-            );
+            $associatedClassSections = ClassSection::where('section_id', $id)->count();
+            if ($associatedClassSections > 0) {
+                $response = array(
+                    'error' => true,
+                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data')
+                );
+            } else {
+                Section::find($id)->delete();
+                $response = array(
+                    'error' => false,
+                    'message' => trans('data_delete_successfully')
+                );
+            }
         } catch (\Throwable $e) {
             $response = array(
                 'error' => true,
