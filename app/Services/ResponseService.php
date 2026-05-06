@@ -141,7 +141,6 @@ class ResponseService {
             } elseif (is_array($data)) {
                 $data = array_merge($data, $customData);
             }
-            $customData = [];
         }
 
         // Auto-extract pagination meta from paginator objects
