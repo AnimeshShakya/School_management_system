@@ -579,6 +579,7 @@ class StudentApiController extends Controller
                 ->limit(3)
                 ->get();
 
+            $event = [];
             foreach ($events as $row) {
                 if ($row->type == 'multiple') {
                     $hasdaySchedule = MultipleEvent::where('event_id', $row->id)->first();
@@ -1240,6 +1241,7 @@ class StudentApiController extends Controller
                     $query->whereIn('subject_id', $subject_id);
                 })->get();
 
+            $exam_data = [];
             foreach ($exam_data_db as $data) {
                 // date status
                 $starting_date_db = ExamTimetable::select(DB::raw("min(date)"))->where(['exam_id' => $data->exam->id, 'class_id' => $class_id])->first();
@@ -1427,6 +1429,7 @@ class StudentApiController extends Controller
             }
 
 
+            $exam_data = [];
             foreach ($exam_data_db->timetable as $data) {
                 $exam_data[] = array(
                     'id' => $data->id,
