@@ -26,6 +26,7 @@ use App\Imports\ExamMarksImport;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
@@ -515,12 +516,13 @@ class ExamController extends Controller
             Excel::import($import, $request->file('file'));
 
             return response()->json([
-                'error'      => false,
-                'valid'      => $import->valid,
-                'errors'     => $import->errors,
-                'total_marks' => $import->valid[0]['total_marks'] ?? 0,
+                'error'       => false,
+                'valid'       => $import->valid,
+                'errors'      => $import->errors,
+                'total_marks' => $examTimetable->total_marks,
             ]);
         } catch (Throwable $e) {
+            Log::error('ExamMarksImport error: ' . $e->getMessage());
             return response()->json(['error' => true, 'message' => trans('error_occurred')]);
         }
     }

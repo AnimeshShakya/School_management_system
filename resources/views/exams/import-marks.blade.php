@@ -248,8 +248,8 @@
                     '<td>' + (i + 1) + '</td>' +
                     '<td>' + escapeHtml(row.admission_no) + '</td>' +
                     '<td>' + escapeHtml(row.student_name) + '</td>' +
-                    '<td>' + row.obtained_marks + '</td>' +
-                    '<td>' + row.total_marks + '</td>' +
+                    '<td>' + (row.obtained_marks !== null && row.obtained_marks !== undefined ? escapeHtml(String(row.obtained_marks)) : '') + '</td>' +
+                    '<td>' + (row.total_marks !== null && row.total_marks !== undefined ? escapeHtml(String(row.total_marks)) : '') + '</td>' +
                     '</tr>';
             });
             $('#valid-tbody').html(validHtml || '<tr><td colspan="5" class="text-center text-muted">{{ __('no_valid_rows') }}</td></tr>');
@@ -262,7 +262,7 @@
                     '<td>' + row.row + '</td>' +
                     '<td>' + escapeHtml(row.admission_no) + '</td>' +
                     '<td>' + escapeHtml(row.student_name) + '</td>' +
-                    '<td>' + (row.marks_obtained !== null ? escapeHtml(String(row.marks_obtained)) : '') + '</td>' +
+                    '<td>' + (row.marks_obtained !== null && row.marks_obtained !== undefined ? escapeHtml(String(row.marks_obtained)) : '') + '</td>' +
                     '<td>' + escapeHtml(row.error) + '</td>' +
                     '</tr>';
             });
@@ -270,20 +270,19 @@
 
             // Show confirm button only if there are valid rows
             if (validRows.length > 0) {
+                $('#confirm-import-btn').data('valid-rows', validRows);
                 $('#confirm-section').show();
             } else {
+                $('#confirm-import-btn').data('valid-rows', []);
                 $('#confirm-section').hide();
             }
 
             $('#preview-section').show();
-
-            // Store valid rows for confirm step
-            window._importValidRows = validRows;
         }
 
         // Confirm import – submit valid rows via existing submitMarks endpoint
         $('#confirm-import-btn').on('click', function () {
-            const validRows = window._importValidRows || [];
+            const validRows = $(this).data('valid-rows') || [];
             if (validRows.length === 0) return;
 
             const examId = $('#exam_id').val();
@@ -328,7 +327,7 @@
                         $('#preview-section').hide();
                         $('#exam_id').html('<option value="">{{ __('select') . ' ' . __('exam') }}</option>');
                         $('#subject_id').html('<option value="">{{ __('select_subject') }}</option>');
-                        window._importValidRows = [];
+                        $('#confirm-import-btn').data('valid-rows', []);
                         $('#confirm-import-btn').prop('disabled', false).html('<i class="fa fa-check"></i> {{ __('confirm_import') }}');
                     }
                 },
