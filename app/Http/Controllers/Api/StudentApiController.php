@@ -1084,7 +1084,7 @@ class StudentApiController extends Controller
                     $file->modal()->associate($assignment_submission);
                     $file->type = 1;
                     $uuid = Str::uuid();
-                    $extension = $image->getClientOriginalExtension();
+                    $extension = $image->extension();
                     $file->file_url = $image->storeAs('assignment', $uuid . '.' . $extension, 'public');
                     $file->save();
                 }

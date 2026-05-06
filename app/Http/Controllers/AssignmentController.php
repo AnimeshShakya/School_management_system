@@ -232,7 +232,7 @@ class AssignmentController extends Controller
                     $file->file_name = $file_upload->getClientOriginalName();
                     $file->type = 1;
                     $uuid = Str::uuid();
-                    $extension = $file_upload->getClientOriginalExtension();
+                    $extension = $file_upload->extension();
                     $file->file_url = $file_upload->storeAs('assignment', $uuid . '.' . $extension, 'public');
                     $file->modal()->associate($assignment);
                     $file->save();
@@ -364,7 +364,7 @@ class AssignmentController extends Controller
                     $file->file_name = $file_upload->getClientOriginalName();
                     $file->type = 1;
                     $uuid = Str::uuid();
-                    $extension = $file_upload->getClientOriginalExtension();
+                    $extension = $file_upload->extension();
                     $file->file_url = $file_upload->storeAs('assignment', $uuid . '.' . $extension, 'public');
                     $file->modal()->associate($assignment);
                     $file->save();
