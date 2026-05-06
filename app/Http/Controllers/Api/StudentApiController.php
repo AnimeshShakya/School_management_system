@@ -896,6 +896,18 @@ class StudentApiController extends Controller
         }
         try {
             $student = $request->user()->student;
+            $student_subject = $student->subjects();
+            $core_subjects = array_column($student_subject["core_subject"], 'subject_id');
+            $elective_subjects = $student_subject["elective_subject"] ?? [];
+            if ($elective_subjects) {
+                $elective_subjects = $elective_subjects->pluck('subject_id')->toArray();
+            }
+            $enrolled_subject_ids = array_merge($core_subjects, $elective_subjects);
+
+            if (!in_array((int)$request->subject_id, $enrolled_subject_ids)) {
+                ResponseService::errorResponse("Invalid Subject ID", null, 106);
+            }
+
             $data = Lesson::where('class_section_id', $student->class_section_id)->where('subject_id', $request->subject_id)->with('topic', 'file');
             if ($request->lesson_id) {
                 $data->where('id', $request->lesson_id);
@@ -925,8 +937,10 @@ class StudentApiController extends Controller
         }
 
         try {
-            //$student = $request->user()->student;
-            $data = LessonTopic::where('lesson_id', $request->lesson_id)->with('file');
+            $student = $request->user()->student;
+            $data = LessonTopic::whereHas('lesson', function ($q) use ($student) {
+                $q->where('class_section_id', $student->class_section_id);
+            })->where('lesson_id', $request->lesson_id)->with('file');
             if ($request->topic_id) {
                 $data->where('id', $request->topic_id);
             }
@@ -1195,6 +1209,20 @@ class StudentApiController extends Controller
             }
 
             $data = Announcement::with('file')->where('session_year_id', $session_year_id)->latest();
+
+            if (!isset($request->type)) {
+                // No type filter: return only announcements accessible to this student
+                $subject_teacher_ids = SubjectTeacher::where('class_section_id', $student->class_section_id)->pluck('id');
+                $data = $data->where(function ($q) use ($class_id, $subject_teacher_ids) {
+                    $q->where('table_type', "")
+                        ->orWhere(function ($q) use ($class_id) {
+                            $q->where('table_type', "App\Models\ClassSchool")->where('table_id', $class_id);
+                        })
+                        ->orWhere(function ($q) use ($subject_teacher_ids) {
+                            $q->where('table_type', "App\Models\SubjectTeacher")->whereIn('table_id', $subject_teacher_ids);
+                        });
+                });
+            }
 
             if (isset($request->type) && $request->type == "noticeboard") {
                 $data = $data->where('table_type', "");
