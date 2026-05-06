@@ -239,9 +239,10 @@ class StudentController extends Controller
                     ]);
                 }
                 if (! intval($request->father_email)) {
+                    $father_plaintext_password = Str::random(12);
                     $father_user = new User;
                     $father_user->image = $request->file('father_image')->store('parents', 'public');
-                    $father_user->password = Hash::make(Str::random(12));
+                    $father_user->password = Hash::make($father_plaintext_password);
                     $father_user->first_name = $request->father_first_name;
                     $father_user->last_name = $request->father_last_name;
                     $father_user->email = $request->father_email;
@@ -269,9 +270,10 @@ class StudentController extends Controller
 
                 // Add Mother in User and Parent table data
                 if (! intval($request->mother_email)) {
+                    $mother_plaintext_password = Str::random(12);
                     $mother_user = new User;
                     $mother_user->image = $request->file('mother_image')->store('parents', 'public');
-                    $mother_user->password = Hash::make(Str::random(12));
+                    $mother_user->password = Hash::make($mother_plaintext_password);
                     $mother_user->first_name = $request->mother_first_name;
                     $mother_user->last_name = $request->mother_last_name;
                     $mother_user->email = $request->mother_email;
@@ -305,6 +307,7 @@ class StudentController extends Controller
                 }
                 if (isset($request->guardian_email)) {
                     if (! intval($request->guardian_email)) {
+                        $guardian_plaintext_password = Str::random(12);
                         $guardian_email = $request->guardian_email;
                         $guardian_user = new User;
 
@@ -320,7 +323,7 @@ class StudentController extends Controller
                         $guardian_image->move($destinationPath, $file_name);
 
                         $guardian_user->image = $file_path;
-                        $guardian_user->password = Hash::make(Str::random(12));
+                        $guardian_user->password = Hash::make($guardian_plaintext_password);
                         $guardian_user->first_name = $request->guardian_first_name;
                         $guardian_user->last_name = $request->guardian_last_name;
                         $guardian_user->email = $guardian_email;
@@ -449,16 +452,96 @@ class StudentController extends Controller
             $student->dynamic_fields = json_encode($data);
             $student->update();
 
+            // Send credentials to newly created parent accounts
+            $settings = getSettings();
+            $school_name = $settings['school_name'];
+            $school_email = $settings['school_email'];
+            $school_contact = $settings['school_phone'];
+            $class_section_name = '';
+            if ($request->class_section_id) {
+                $classSection = ClassSection::where('id', $request->class_section_id)->with('class.medium', 'class.streams', 'section')->first();
+                if ($classSection) {
+                    $class_section_name = $classSection->class->name.' - '.$classSection->section->name.' '.$classSection->class->medium->name.'  '.($classSection->class->streams->name ?? '');
+                }
+            }
+            if (isset($father_plaintext_password)) {
+                $father_data = [
+                    'subject' => 'Welcome to '.$school_name,
+                    'email' => $request->father_email,
+                    'name' => ' '.$request->father_first_name.' '.$request->father_last_name,
+                    'username' => ' '.$request->father_email,
+                    'password' => ' '.$father_plaintext_password,
+                    'child_name' => ' '.$request->first_name.' '.$request->last_name,
+                    'child_grnumber' => ' '.$user->email,
+                    'child_password' => '',
+                    'type' => 'application_accept',
+                    'class_name' => $class_section_name,
+                    'school_name' => $school_name,
+                    'school_email' => $school_email,
+                    'school_contact' => $school_contact,
+                ];
+                MailService::sendWithFallback('students.email', $father_data, function ($message) use ($father_data) {
+                    $message->to($father_data['email'])->subject($father_data['subject']);
+                });
+            }
+            if (isset($mother_plaintext_password)) {
+                $mother_data = [
+                    'subject' => 'Welcome to '.$school_name,
+                    'email' => $request->mother_email,
+                    'name' => ' '.$request->mother_first_name.' '.$request->mother_last_name,
+                    'username' => ' '.$request->mother_email,
+                    'password' => ' '.$mother_plaintext_password,
+                    'child_name' => ' '.$request->first_name.' '.$request->last_name,
+                    'child_grnumber' => ' '.$user->email,
+                    'child_password' => '',
+                    'type' => 'application_accept',
+                    'class_name' => $class_section_name,
+                    'school_name' => $school_name,
+                    'school_email' => $school_email,
+                    'school_contact' => $school_contact,
+                ];
+                MailService::sendWithFallback('students.email', $mother_data, function ($message) use ($mother_data) {
+                    $message->to($mother_data['email'])->subject($mother_data['subject']);
+                });
+            }
+            if (isset($guardian_plaintext_password)) {
+                $guardian_data = [
+                    'subject' => 'Welcome to '.$school_name,
+                    'email' => $request->guardian_email,
+                    'name' => ' '.$request->guardian_first_name.' '.$request->guardian_last_name,
+                    'username' => ' '.$request->guardian_email,
+                    'password' => ' '.$guardian_plaintext_password,
+                    'child_name' => ' '.$request->first_name.' '.$request->last_name,
+                    'child_grnumber' => ' '.$user->email,
+                    'child_password' => '',
+                    'type' => 'application_accept',
+                    'class_name' => $class_section_name,
+                    'school_name' => $school_name,
+                    'school_email' => $school_email,
+                    'school_contact' => $school_contact,
+                ];
+                MailService::sendWithFallback('students.email', $guardian_data, function ($message) use ($guardian_data) {
+                    $message->to($guardian_data['email'])->subject($guardian_data['subject']);
+                });
+            }
+
             $response = [
                 'error' => false,
                 'message' => trans('data_store_successfully'),
             ];
         } catch (Exception $e) {
-            $response = [
-                'error' => true,
-                'message' => trans('error_occurred'),
-                'data' => $e,
-            ];
+            if (Str::contains($e->getMessage(), ['Failed', 'Mail', 'Mailer', 'MailManager'])) {
+                $response = [
+                    'error' => false,
+                    'message' => trans('email_not_send'),
+                ];
+            } else {
+                $response = [
+                    'error' => true,
+                    'message' => trans('error_occurred'),
+                    'data' => $e,
+                ];
+            }
         }
 
         return response()->json($response);
@@ -1353,14 +1436,16 @@ class StudentController extends Controller
             return response()->json($response);
         }
         try {
+            $new_password = Str::random(12);
             $user = User::find($request->id);
             $user->reset_request = 0;
-            $user->password = Hash::make(Str::random(12));
+            $user->password = Hash::make($new_password);
             $user->save();
 
             $response = [
                 'error' => false,
                 'message' => trans('data_update_successfully'),
+                'data' => ['password' => $new_password],
             ];
         } catch (Throwable $e) {
             $response = [
