@@ -163,7 +163,7 @@ class SubjectTeacherController extends Controller {
                     $q->where('name', 'LIKE', "%$search%");
                 })
                 ->orWhereHas('teacher.user', function ($q) use ($search) {
-                    $q->whereRaw("concat(users.first_name,' ',users.last_name) LIKE '%" . $search . "%'")->orwhere('users.first_name', 'LIKE', "%$search%")->orwhere('users.last_name', 'LIKE', "%$search%");
+                    $q->whereRaw("concat(users.first_name,' ',users.last_name) LIKE ?", ["%{$search}%"])->orwhere('users.first_name', 'LIKE', "%$search%")->orwhere('users.last_name', 'LIKE', "%$search%");
                 });
         }
 
