@@ -17,6 +17,7 @@ use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -125,7 +126,7 @@ class StudentsImport extends DefaultValueBinder implements SkipsEmptyRows, ToCol
                 if ($row['parents'] == "yes") {
                     if (isset($row['father_email']) && isset($row['mother_email'])) {
                         $father_email_check = Parents::select('email')->where('email', $row['father_email'])->count();
-                        $father_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($row['father_dob'])));
+                        $father_plaintext_password = Str::random(12);
                         if ($father_email_check == 0) {
                             $father_user = new User();
                             $father_user->first_name = $row['father_first_name'];
@@ -161,7 +162,7 @@ class StudentsImport extends DefaultValueBinder implements SkipsEmptyRows, ToCol
                             $father_email = $row['father_email'];
                         }
                         $mother_email_check = Parents::select('email')->where('email', $row['mother_email'])->count();
-                        $mother_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($row['mother_dob'])));
+                        $mother_plaintext_password = Str::random(12);
                         if ($mother_email_check == 0) {
                             $mother_user = new User();
                             $mother_user->image = 'dummy_logo.jpg';
@@ -204,7 +205,7 @@ class StudentsImport extends DefaultValueBinder implements SkipsEmptyRows, ToCol
                 if ($row['guardian'] == "yes") {
                     if (isset($row['guardian_email'])) {
                         $guardian_email_check = Parents::select('email')->where('email', $row['guardian_email'])->count();
-                        $guardian_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($row['guardian_dob'])));
+                        $guardian_plaintext_password = Str::random(12);
                         if ($guardian_email_check == 0) {
                             $guardian_user = new User();
                             $guardian_user->image = 'dummy_logo.jpg';
@@ -261,7 +262,7 @@ class StudentsImport extends DefaultValueBinder implements SkipsEmptyRows, ToCol
                     $category_id = $category->id;
                 }
                 $user = new User();
-                $child_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($row['dob'])));
+                $child_plaintext_password = Str::random(12);
                 $user->password = Hash::make($child_plaintext_password);
                 $user->first_name = $row['first_name'];
                 $user->last_name = $row['last_name'];

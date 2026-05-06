@@ -241,7 +241,7 @@ class StudentController extends Controller
                 if (! intval($request->father_email)) {
                     $father_user = new User;
                     $father_user->image = $request->file('father_image')->store('parents', 'public');
-                    $father_user->password = Hash::make(str_replace('/', '', $request->father_dob));
+                    $father_user->password = Hash::make(Str::random(12));
                     $father_user->first_name = $request->father_first_name;
                     $father_user->last_name = $request->father_last_name;
                     $father_user->email = $request->father_email;
@@ -271,7 +271,7 @@ class StudentController extends Controller
                 if (! intval($request->mother_email)) {
                     $mother_user = new User;
                     $mother_user->image = $request->file('mother_image')->store('parents', 'public');
-                    $mother_user->password = Hash::make(str_replace('/', '', $request->mother_dob));
+                    $mother_user->password = Hash::make(Str::random(12));
                     $mother_user->first_name = $request->mother_first_name;
                     $mother_user->last_name = $request->mother_last_name;
                     $mother_user->email = $request->mother_email;
@@ -320,7 +320,7 @@ class StudentController extends Controller
                         $guardian_image->move($destinationPath, $file_name);
 
                         $guardian_user->image = $file_path;
-                        $guardian_user->password = Hash::make(str_replace('/', '', $request->guardian_dob));
+                        $guardian_user->password = Hash::make(Str::random(12));
                         $guardian_user->first_name = $request->guardian_first_name;
                         $guardian_user->last_name = $request->guardian_last_name;
                         $guardian_user->email = $guardian_email;
@@ -527,7 +527,7 @@ class StudentController extends Controller
                         'mother_image' => 'required|mimes:jpeg,png,jpg|image|max:2048',
                     ]);
                 }
-                $father_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($request->father_dob ?? '1990-01-01')));
+                $father_plaintext_password = Str::random(12);
 
                 if (! intval($request->father_email)) {
                     $father_email = $request->father_email;
@@ -622,7 +622,7 @@ class StudentController extends Controller
                 }
 
                 // Add Mother in User and Parent table data
-                $mother_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($request->mother_dob)));
+                $mother_plaintext_password = Str::random(12);
                 if (! intval($request->mother_email)) {
                     $mother_email = $request->mother_email;
                     $mother_user = new User;
@@ -729,7 +729,7 @@ class StudentController extends Controller
                             'guardian_image' => 'required|mimes:jpeg,png,jpg|image|max:2048',
                         ]);
                     }
-                    $guardian_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($request->guardian_dob)));
+                    $guardian_plaintext_password = Str::random(12);
                     if (! intval($request->guardian_email)) {
                         $guardian_email = $request->guardian_email;
                         $guardian_user = new User;
@@ -833,7 +833,7 @@ class StudentController extends Controller
             $roll_number_db = $roll_number_db['max(roll_number)'];
             $roll_number = $roll_number_db + 1;
 
-            $child_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($request->dob ?? '2000-01-01')));
+            $child_plaintext_password = Str::random(12);
 
             if ($request->hasFile('image')) {
                 $student_image = $request->file('image');
@@ -1353,10 +1353,9 @@ class StudentController extends Controller
             return response()->json($response);
         }
         try {
-            $dob = date('dmY', strtotime($request->dob));
             $user = User::find($request->id);
             $user->reset_request = 0;
-            $user->password = Hash::make($dob);
+            $user->password = Hash::make(Str::random(12));
             $user->save();
 
             $response = [
@@ -2495,7 +2494,9 @@ class StudentController extends Controller
             $class = ClassSchool::with('medium', 'streams')->where('id', $request->class_id)->first();
             $class_name = $class->name.' - '.$class->medium->name.' '.($class->streams->name ?? '');
 
-            $child_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($user->dob)));
+            $child_plaintext_password = Str::random(12);
+            $user->password = Hash::make($child_plaintext_password);
+            $user->save();
             $father_id = $user->student->father_id ?? null;
             $mother_id = $user->student->mother_id ?? null;
             $guardian_id = $user->student->guardian_id ?? null;
@@ -2536,8 +2537,10 @@ class StudentController extends Controller
 
                 foreach ($parents as $parent) {
                     $parent->user->status = 1;
+                    $parent_plaintext_password = Str::random(12);
+                    $parent->user->password = Hash::make($parent_plaintext_password);
+                    $parent->user->save();
                     $parent->update();
-                    $parent_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($parent->dob)));
 
                     $parent_data = [
                         'subject' => 'Welcome to '.$school_name,
