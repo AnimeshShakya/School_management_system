@@ -2625,7 +2625,6 @@ class StudentController extends Controller
                     $parent_plaintext_password = Str::random(12);
                     $parent->user->password = Hash::make($parent_plaintext_password);
                     $parent->user->save();
-                    $parent->update();
 
                     $parent_data = [
                         'subject' => 'Welcome to '.$school_name,
