@@ -2095,15 +2095,19 @@ class ParentApiController extends Controller
                 }
             }
             $fees_payment_transactions =  $fees_payment_transactions->toArray();
-            ResponseService::successResponse("Fees Payment Transactions Fetched Successfully", [
-                'current_page' => $fees_payment_transactions['current_page'],
-                'transaction-data' => $fees_payment_transactions['data'],
-                'from' => $fees_payment_transactions['from'],
-                'last_page' => $fees_payment_transactions['last_page'],
-                'per_page' => $fees_payment_transactions['per_page'],
-                'to' => $fees_payment_transactions['to'],
-                'total' => $fees_payment_transactions['total'],
-            ]);
+            ResponseService::successResponse("Fees Payment Transactions Fetched Successfully",
+                $fees_payment_transactions['data'],
+                [],
+                null,
+                [
+                    'current_page' => $fees_payment_transactions['current_page'],
+                    'from'         => $fees_payment_transactions['from'],
+                    'last_page'    => $fees_payment_transactions['last_page'],
+                    'per_page'     => $fees_payment_transactions['per_page'],
+                    'to'           => $fees_payment_transactions['to'],
+                    'total'        => $fees_payment_transactions['total'],
+                ]
+            );
         } catch (Throwable $e) {
             ResponseService::errorResponse("error_occurred", null, 103, $e);
         }
