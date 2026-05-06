@@ -509,13 +509,19 @@ class StudentApiController extends Controller
                 $q->where('class_id', $class_id)->whereIn('subject_id', $subject_id)->with(['subject'])->orderby('date');
             }])->limit(10)->get();
 
+            $examIds = $exam_data_db->pluck('id')->toArray();
+            $examDates = ExamTimetable::selectRaw('exam_id, MIN(date) as start_date, MAX(date) as end_date')
+                ->whereIn('exam_id', $examIds)
+                ->where('class_id', $class_id)
+                ->groupBy('exam_id')
+                ->get()
+                ->keyBy('exam_id');
+
             $exam_data = [];
             foreach ($exam_data_db as $data) {
                 $exam_timetable = [];
-                $starting_date_db = ExamTimetable::select(DB::raw("min(date)"))->where(['exam_id' => $data->id, 'class_id' => $class_id])->first();
-                $starting_date = $starting_date_db['min(date)'];
-                $ending_date_db = ExamTimetable::select(DB::raw("max(date)"))->where(['exam_id' => $data->id, 'class_id' => $class_id])->first();
-                $ending_date = $ending_date_db['max(date)'];
+                $starting_date = $examDates[$data->id]->start_date ?? null;
+                $ending_date = $examDates[$data->id]->end_date ?? null;
 
                 if (empty($starting_date) || empty($ending_date)) {
                     continue;
@@ -1240,12 +1246,18 @@ class StudentApiController extends Controller
                     $query->whereIn('subject_id', $subject_id);
                 })->get();
 
+            $examIds = $exam_data_db->pluck('exam_id')->toArray();
+            $examDates = ExamTimetable::selectRaw('exam_id, MIN(date) as start_date, MAX(date) as end_date')
+                ->whereIn('exam_id', $examIds)
+                ->where('class_id', $class_id)
+                ->groupBy('exam_id')
+                ->get()
+                ->keyBy('exam_id');
+
             foreach ($exam_data_db as $data) {
                 // date status
-                $starting_date_db = ExamTimetable::select(DB::raw("min(date)"))->where(['exam_id' => $data->exam->id, 'class_id' => $class_id])->first();
-                $starting_date = $starting_date_db['min(date)'];
-                $ending_date_db = ExamTimetable::select(DB::raw("max(date)"))->where(['exam_id' => $data->exam->id, 'class_id' => $class_id])->first();
-                $ending_date = $ending_date_db['max(date)'];
+                $starting_date = $examDates[$data->exam_id]->start_date ?? null;
+                $ending_date = $examDates[$data->exam_id]->end_date ?? null;
                 $currentTime = Carbon::now();
                 $current_date = date($currentTime->toDateString());
                 if ($current_date >= $starting_date && $current_date <= $ending_date) {
@@ -1468,9 +1480,16 @@ class StudentApiController extends Controller
 
 
             if (sizeof($exam_result_db)) {
+                $examIds = $exam_result_db->pluck('exam_id')->toArray();
+                $examStartDates = ExamTimetable::selectRaw('exam_id, MIN(date) as start_date')
+                    ->whereIn('exam_id', $examIds)
+                    ->where('class_id', $class_data->class_section->class_id)
+                    ->where('session_year_id', $session_year_id)
+                    ->groupBy('exam_id')
+                    ->pluck('start_date', 'exam_id');
+
                 foreach ($exam_result_db as $exam_result_data) {
-                    $starting_date_db = ExamTimetable::select(DB::raw("min(date)"))->where(['exam_id' => $exam_result_data->exam_id, 'class_id' => $class_data->class_section->class_id, 'session_year_id' => $session_year_id])->first();
-                    $starting_date = $starting_date_db['min(date)'];
+                    $starting_date = $examStartDates[$exam_result_data->exam_id] ?? null;
 
                     $exam_result = array(
                         'result_id' => $exam_result_data->id,
@@ -1835,12 +1854,11 @@ class StudentApiController extends Controller
                 $get_question_ids = OnlineExamQuestionChoice::whereIn('id', $online_exams_submitted_question_ids)->pluck('question_id');
 
                 //removes the question id of the question if one of the answer of particular question is wrong
-                foreach ($get_question_ids as $question_id) {
-                    $check_questions_answers_exists = OnlineExamQuestionAnswer::where('question_id', $question_id)->whereNotIn('answer', $online_exams_attempted_answers)->count();
-                    if ($check_questions_answers_exists) {
-                        unset($get_question_ids[array_search($question_id, $get_question_ids->toArray())]);
-                    }
-                }
+                $incorrectly_answered_question_ids = OnlineExamQuestionAnswer::whereIn('question_id', $get_question_ids)
+                    ->whereNotIn('answer', $online_exams_attempted_answers)
+                    ->pluck('question_id')
+                    ->unique();
+                $get_question_ids = $get_question_ids->diff($incorrectly_answered_question_ids);
                 //get the correct answers question id
                 $correct_answers_question_id = OnlineExamQuestionAnswer::whereIn('question_id', $get_question_ids)->whereIn('answer', $online_exams_attempted_answers)->pluck('question_id');
 
@@ -1877,28 +1895,51 @@ class StudentApiController extends Controller
 
                 $exam_list = array();
                 $total_obtained_marks_exam = '';
+
+                $examIdsForReport = collect($online_exams_db['data'])->pluck('id')->toArray();
+
+                // Batch-load all student answers for exams on this page
+                $allStudentAnswersByExam = OnlineExamStudentAnswer::where('student_id', $student->id)
+                    ->whereIn('online_exam_id', $examIdsForReport)
+                    ->get()
+                    ->groupBy('online_exam_id');
+
+                // Batch-load the mapping from choice ID to question ID
+                // Note: OnlineExamStudentAnswer.question_id stores OnlineExamQuestionChoice.id (choice IDs, not question IDs)
+                $allSubmittedChoiceIds = $allStudentAnswersByExam->flatten()->pluck('question_id')->unique();
+                $choiceIdToQuestionId = OnlineExamQuestionChoice::whereIn('id', $allSubmittedChoiceIds)
+                    ->pluck('question_id', 'id');
+
+                // Batch-load total marks per exam
+                $totalMarksByExam = OnlineExamQuestionChoice::selectRaw('online_exam_id, SUM(marks) as total_marks')
+                    ->whereIn('online_exam_id', $examIdsForReport)
+                    ->groupBy('online_exam_id')
+                    ->pluck('total_marks', 'online_exam_id');
+
                 foreach ($online_exams_db['data'] as $data) {
-                    $exam_submitted_question_ids = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $data['id']])->pluck('question_id');
-                    $get_exam_question_ids = OnlineExamQuestionChoice::whereIn('id', $exam_submitted_question_ids)->pluck('question_id');
+                    $exam_student_answers = $allStudentAnswersByExam->get($data['id'], collect());
+                    // Note: OnlineExamStudentAnswer.question_id stores OnlineExamQuestionChoice.id (choice IDs, not question IDs)
+                    $exam_submitted_question_ids = $exam_student_answers->pluck('question_id');
+                    $get_exam_question_ids = $exam_submitted_question_ids
+                        ->map(fn($id) => $choiceIdToQuestionId[$id] ?? null)
+                        ->filter()
+                        ->unique()
+                        ->values();
 
-
-                    $exam_attempted_answers = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $data['id']])->pluck('option_id');
-
+                    $exam_attempted_answers = $exam_student_answers->pluck('option_id');
 
                     //removes the question id of the question if one of the answer of particular question is wrong
-                    foreach ($get_exam_question_ids as $question_id) {
-                        $check_questions_answers_exists = OnlineExamQuestionAnswer::where('question_id', $question_id)->whereNotIn('answer', $exam_attempted_answers)->count();
-                        if ($check_questions_answers_exists) {
-                            unset($get_exam_question_ids[array_search($question_id, $get_exam_question_ids->toArray())]);
-                        }
-                    }
+                    $incorrectly_answered_exam_question_ids = OnlineExamQuestionAnswer::whereIn('question_id', $get_exam_question_ids)
+                        ->whereNotIn('answer', $exam_attempted_answers)
+                        ->pluck('question_id')
+                        ->unique();
+                    $get_exam_question_ids = $get_exam_question_ids->diff($incorrectly_answered_exam_question_ids);
 
                     $exam_correct_answers_question_id = OnlineExamQuestionAnswer::whereIn('question_id', $get_exam_question_ids)->whereIn('answer', $exam_attempted_answers)->pluck('question_id');
 
                     $total_obtained_marks_exam = OnlineExamQuestionChoice::select(DB::raw("sum(marks)"))->where('online_exam_id', $data['id'])->whereIn('question_id', $exam_correct_answers_question_id)->first();
                     $total_obtained_marks_exam = $total_obtained_marks_exam['sum(marks)'];
-                    $total_marks_exam = OnlineExamQuestionChoice::select(DB::raw("sum(marks)"))->where('online_exam_id', $data['id'])->first();
-                    $total_marks_exam = $total_marks_exam['sum(marks)'];
+                    $total_marks_exam = $totalMarksByExam[$data['id']] ?? null;
 
                     $exam_list[] = array(
                         'online_exam_id' => $data['id'],
