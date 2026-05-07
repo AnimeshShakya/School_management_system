@@ -1,58 +1,60 @@
 <?php
 
-use App\Models\Grade;
-use App\Models\ExamTimetable;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\WebController;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Storage;
-use App\Http\Controllers\ExamController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\RoleController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\EventController;
-use App\Http\Controllers\LeaveController;
-use App\Http\Controllers\MediaController;
-use App\Http\Controllers\ShiftController;
-use App\Http\Controllers\StaffController;
-use App\Http\Controllers\LessonController;
-use App\Http\Controllers\MediumController;
-use App\Http\Controllers\SliderController;
-use App\Http\Controllers\StreamController;
-use App\Http\Controllers\HolidayController;
-use App\Http\Controllers\ParentsController;
-use App\Http\Controllers\SectionController;
-use App\Http\Controllers\SettingController;
-use App\Http\Controllers\StudentController;
-use App\Http\Controllers\SubjectController;
-use App\Http\Controllers\TeacherController;
-use App\Http\Controllers\WebhookController;
-use App\Http\Controllers\CategoryController;
-use App\Http\Controllers\FeesTypeController;
-use App\Http\Controllers\LanguageController;
-use App\Http\Controllers\SemesterController;
-use App\Http\Controllers\FormFieldController;
-use App\Http\Controllers\TimetableController;
+use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\OnlineExamController;
-use App\Http\Controllers\WebSettingController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ClassSchoolController;
-use App\Http\Controllers\LeaveMasterController;
-use App\Http\Controllers\LessonTopicController;
-use App\Http\Controllers\SessionYearController;
-use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\ClassTeacherController;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\SystemUpdateController;
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\ExamController;
 use App\Http\Controllers\ExamTimetableController;
-use App\Http\Controllers\StudentSessionController;
-use App\Http\Controllers\SubjectTeacherController;
-use App\Http\Controllers\OnlineExamQuestionController;
+use App\Http\Controllers\FeesTypeController;
+use App\Http\Controllers\FormFieldController;
+use App\Http\Controllers\HolidayController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InstallPurchaseController;
+use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\LeaveController;
+use App\Http\Controllers\LeaveMasterController;
+use App\Http\Controllers\LessonController;
+use App\Http\Controllers\LessonTopicController;
+use App\Http\Controllers\MediaController;
+use App\Http\Controllers\MediumController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OnlineExamController;
+use App\Http\Controllers\OnlineExamQuestionController;
+use App\Http\Controllers\ParentsController;
+use App\Http\Controllers\RevenueAnalysisController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SectionController;
+use App\Http\Controllers\SemesterController;
+use App\Http\Controllers\SessionYearController;
+use App\Http\Controllers\SettingController;
+use App\Http\Controllers\ShiftController;
+use App\Http\Controllers\SliderController;
+use App\Http\Controllers\StaffController;
+use App\Http\Controllers\StreamController;
+use App\Http\Controllers\StudentController;
+use App\Http\Controllers\StudentSessionController;
+use App\Http\Controllers\SubjectController;
+use App\Http\Controllers\SubjectTeacherController;
+use App\Http\Controllers\SystemUpdateController;
+use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\TimetableController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\WebController;
+use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\WebSettingController;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,48 +73,19 @@ Route::group(['prefix' => 'install'], static function () {
     Route::post('/purchase', [InstallPurchaseController::class, 'setPurchase'])->name('install.setPurchase');
 });
 
-
-Route::get('login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
-Route::post('login', [App\Http\Controllers\Auth\LoginController::class, 'login']);
-Route::post('logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
+Route::get('login', [LoginController::class, 'showLoginForm'])->name('login');
+Route::post('login', [LoginController::class, 'login']);
+Route::post('logout', [LoginController::class, 'logout'])->name('logout');
 
 // Registration Routes (if needed)
-Route::get('register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])->name('register');
-
-// Temporary public debug route for development: shows staff table status and super admin users.
-Route::get('debug/staff-status', function () {
-    $hasStaffTable = \Illuminate\Support\Facades\Schema::hasTable((new \App\Models\Staff())->getTable());
-    if ($hasStaffTable) {
-        $staffCount = \App\Models\Staff::count();
-        $recentStaff = \App\Models\Staff::with('user')->orderBy('id', 'desc')->take(10)->get();
-    } else {
-        $staffCount = 0;
-        $recentStaff = [];
-    }
-    $superAdmins = \App\Models\User::whereHas('roles', function ($q) {
-        $q->where('name', 'Super Admin');
-    })->get();
-
-    return response()->json([
-        'has_staff_table' => $hasStaffTable,
-        'staff_count' => $staffCount,
-        'recent_staff' => $recentStaff,
-        'super_admin_users' => $superAdmins,
-    ]);
-});
-
-// Temporary debug route to output the staff listing JSON (bypasses auth for debugging only)
-Route::get('debug/staff-json', function () {
-    $controller = app(\App\Http\Controllers\StaffController::class);
-    return $controller->show(1);
-});
-Route::post('register', [App\Http\Controllers\Auth\RegisterController::class, 'register']);
+Route::get('register', [RegisterController::class, 'showRegistrationForm'])->name('register');
+Route::post('register', [RegisterController::class, 'register']);
 
 // Password Reset Routes (if needed)
-Route::get('password/reset', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
-Route::post('password/email', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
-Route::get('password/reset/{token}', [App\Http\Controllers\Auth\ResetPasswordController::class, 'showResetForm'])->name('password.reset');
-Route::post('password/reset', [App\Http\Controllers\Auth\ResetPasswordController::class, 'reset'])->name('password.update');
+Route::get('password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
+Route::post('password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
+Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
+Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
 Route::get('/', [WebController::class, 'index']);
 Route::get('about', [WebController::class, 'about'])->name('about.us');
 Route::get('contact', [WebController::class, 'contact_us'])->name('contact.us');
@@ -137,7 +110,7 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         Route::get('/logout', [HomeController::class, 'logout'])->name('home.logout');
         Route::get('subject-by-class-section', [HomeController::class, 'getSubjectByClassSection'])->name('class-section.by.subject');
         Route::get('teacher-by-class-subject', [HomeController::class, 'getTeacherByClassSubject'])->name('teacher.by.class.subject');
-        ///new reset password controller
+        // /new reset password controller
         Route::get('home/reset_password', [HomeController::class, 'resetPasswordView']);
 
         Route::get('roles-list/{id}', [RoleController::class, 'showList'])->name('roles-list');
@@ -157,7 +130,6 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         Route::resource('teachers', TeacherController::class);
         Route::get('teacher_details', [TeacherController::class, 'teacherListIndex'])->name('teacher.details');
         Route::get('teacher_list', [TeacherController::class, 'show']);
-
 
         Route::resource('section', SectionController::class);
         Route::get('section_list', [SectionController::class, 'show']);
@@ -212,7 +184,7 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         Route::post('students/store_bulk', [StudentController::class, 'storeBulkData'])->name('students.store-bulk-data');
         Route::resource('students', StudentController::class);
 
-        //student generate roll number
+        // student generate roll number
         Route::get('student/assign-roll-number', [StudentController::class, 'indexStudentRollNumber'])->name('students.index-students-roll-number');
         Route::get('student/list-assign-roll-number/{class_section_id}', [StudentController::class, 'listStudentRollNumber'])->name('students.list-students-roll-number');
         Route::post('student/store-roll-number', [StudentController::class, 'storeStudentRollNumber'])->name('students.store-roll-number');
@@ -240,7 +212,7 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         Route::post('link-url-update', [TimetableController::class, 'linkUpdate']);
 
         Route::resource('attendance', AttendanceController::class);
-        Route::get('view-attendance', [AttendanceController::class, 'view'])->name("attendance.view");
+        Route::get('view-attendance', [AttendanceController::class, 'view'])->name('attendance.view');
         Route::get('student-attendance-list', [AttendanceController::class, 'attendance_show']);
         Route::get('getAttendanceData', [AttendanceController::class, 'getAttendanceData']);
         Route::get('student-list', [AttendanceController::class, 'show']);
@@ -343,7 +315,6 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         // Route::post('fees/classes/update', [FeesTypeController::class, 'updateFeesClass'])->name('fees.class.update');
         Route::get('fees/classes/list', [FeesTypeController::class, 'feesClassList'])->name('fees.class.list');
 
-
         Route::post('class/fees-type', [FeesTypeController::class, 'updateFeesClass'])->name('class.fees.type.update');
         Route::delete('class/fees-type/{fees_class_id}', [FeesTypeController::class, 'removeFeesClass'])->name('class.fees.type.delete');
 
@@ -399,7 +370,6 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         Route::get('system-update', [SystemUpdateController::class, 'index'])->name('system-update.index');
         Route::post('system-update', [SystemUpdateController::class, 'update'])->name('system-update.update');
 
-
         Route::resource('stream', StreamController::class);
 
         Route::resource('shifts', ShiftController::class);
@@ -435,7 +405,6 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         Route::get('contact-us-list', [WebSettingController::class, 'contact_us_show'])->name('contact_us.show');
         Route::post('contact-us/reply/{id}', [WebSettingController::class, 'reply'])->name('contact_us.reply');
         Route::delete('contact-us/delete/{id}', [WebSettingController::class, 'contact_us_delete'])->name('contact_us.delete');
-
 
         Route::get('photos', [MediaController::class, 'photo_index'])->name('photo.index');
         Route::post('photos/store', [MediaController::class, 'photo_store'])->name('photos.store');
@@ -479,8 +448,12 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         })->name('debug.staff.status');
 
         Route::get('generate-id', [StudentController::class, 'generateIdCardIndex'])->name('generate_id.index');
+        Route::get('revenue-analysis', [RevenueAnalysisController::class, 'index'])->name('revenue.analysis');
         Route::get('id-card-settings', [StudentController::class, 'idCardSettingIndex'])->name('id_card_setting.index');
         Route::post('id-card-settings/update', [StudentController::class, 'updateIdCardSetting'])->name('id_card_settings.update');
+        Route::get('generate-id-card', static function () {
+            return redirect()->route('generate_id.index');
+        });
         Route::post('generate-id-card', [StudentController::class, 'generateIdCard']);
         Route::delete('remove-image/{type}', [StudentController::class, 'deleteImage']);
 
@@ -494,7 +467,6 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
 
         Route::get('get-student-list', [StudentController::class, 'studentList'])->name('get.student.list');
         Route::get('generate-result/{id}', [StudentController::class, 'generateResult'])->name('generate.result');
-
 
         Route::resource('leave-master', LeaveMasterController::class);
 
@@ -559,18 +531,18 @@ Route::get('clear', function () {
     Artisan::call('route:clear');
     Artisan::call('config:clear');
     Artisan::call('cache:clear');
+
     return redirect()->back();
 });
 
 Route::get('storage-link', function () {
     try {
         Artisan::call('storage:link');
-        echo "storage link created";
+        echo 'storage link created';
     } catch (Exception $e) {
-        echo "Storage Link already exists";
+        echo 'Storage Link already exists';
     }
 });
-
 
 Route::get('migrate', function () {
     Artisan::call('view:clear');
@@ -578,7 +550,7 @@ Route::get('migrate', function () {
     Artisan::call('config:clear');
     Artisan::call('cache:clear');
     Artisan::call('migrate');
-    echo "Migration Done";
+    echo 'Migration Done';
 });
 // Route::get('rollback', function () {
 //     Artisan::call('view:clear');
@@ -594,7 +566,7 @@ Route::get('seeder_install', function () {
     Artisan::call('config:clear');
     Artisan::call('cache:clear');
     Artisan::call('db:seed --class=InstallationSeeder');
-    echo "Seeders Insatlled Successfully";
+    echo 'Seeders Insatlled Successfully';
 });
 // Route::get('test', function () {
 //     //            return "working";
@@ -609,7 +581,6 @@ Route::get('seeder_install', function () {
 //     //        echo "file does not exists";
 //     //    }
 // });
-
 
 // Route::get('/storage-link', function(){
 //     $target = storage_path('app/public');

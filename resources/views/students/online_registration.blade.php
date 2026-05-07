@@ -65,6 +65,7 @@
                                             <th scope="col" data-field="category_id" data-sortable="false"data-visible="false">{{ __('category') . ' ' . __('id') }}</th>
                                             <th scope="col" data-field="category_name" data-sortable="false" data-visible="false">{{ __('category') }}</th>
                                             <th scope="col" data-field="admission_date" data-sortable="false">{{ __('admission_date') }}</th>
+                                            <th scope="col" data-field="registration_payment_status" data-sortable="false" data-formatter="studentRegistrationPaymentStatusFormatter">Registration Payment</th>
                                             <th scope="col" data-field="father_first_name" data-sortable="false"> {{ __('father') . ' ' . __('name') }}</th>
                                             <th scope="col" data-field="father_mobile" data-sortable="false">{{ __('father') . ' ' . __('mobile') }}</th>
                                             <th scope="col" data-field="father_occupation" data-sortable="false" data-visible="false">{{ __('father') . ' ' . __('occupation') }}</th>

@@ -16,6 +16,7 @@
 @else
     <link rel="stylesheet" href="{{ asset('/assets/css/style.css') }}">
 @endif
+<link rel="stylesheet" href="{{ asset('/assets/css/admin-modern.css') }}">
 <link rel="stylesheet" href="{{ asset('/assets/css/datepicker.min.css') }}" async>
 <link rel="stylesheet" href="{{ asset('/assets/css/daterangepicker.css') }}">
 <link rel="stylesheet" href="{{ asset('/assets/css/ekko-lightbox.css') }}">
@@ -35,12 +36,14 @@
     $secondary_color = $secondary_color['secondary_color'] ?? '#2c2c2c';
 @endphp
 @php
-    $login_image = getSettings('login_image');
-    if ($login_image != null) {
-        $path = $login_image['login_image'];
-        $login_image = url(Storage::url($path));
+    $login_image_setting = getSettings('login_image');
+    $login_image_path = $login_image_setting['login_image'] ?? env('LOGIN_IMAGE');
+    $default_login_image = asset('/assets/images/heroImg1.png');
+
+    if (!empty($login_image_path) && Storage::disk('public')->exists($login_image_path)) {
+        $login_image = asset('storage/' . $login_image_path);
     } else {
-        $login_image = url(Storage::url('eschool.jpg'));
+        $login_image = $default_login_image;
     }
 
 @endphp
