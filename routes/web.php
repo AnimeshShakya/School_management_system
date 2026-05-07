@@ -78,6 +78,34 @@ Route::post('logout', [App\Http\Controllers\Auth\LoginController::class, 'logout
 
 // Registration Routes (if needed)
 Route::get('register', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])->name('register');
+
+// Temporary public debug route for development: shows staff table status and super admin users.
+Route::get('debug/staff-status', function () {
+    $hasStaffTable = \Illuminate\Support\Facades\Schema::hasTable((new \App\Models\Staff())->getTable());
+    if ($hasStaffTable) {
+        $staffCount = \App\Models\Staff::count();
+        $recentStaff = \App\Models\Staff::with('user')->orderBy('id', 'desc')->take(10)->get();
+    } else {
+        $staffCount = 0;
+        $recentStaff = [];
+    }
+    $superAdmins = \App\Models\User::whereHas('roles', function ($q) {
+        $q->where('name', 'Super Admin');
+    })->get();
+
+    return response()->json([
+        'has_staff_table' => $hasStaffTable,
+        'staff_count' => $staffCount,
+        'recent_staff' => $recentStaff,
+        'super_admin_users' => $superAdmins,
+    ]);
+});
+
+// Temporary debug route to output the staff listing JSON (bypasses auth for debugging only)
+Route::get('debug/staff-json', function () {
+    $controller = app(\App\Http\Controllers\StaffController::class);
+    return $controller->show(1);
+});
 Route::post('register', [App\Http\Controllers\Auth\RegisterController::class, 'register']);
 
 // Password Reset Routes (if needed)
@@ -425,6 +453,30 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         Route::delete('videos/delete/{id}', [MediaController::class, 'video_delete'])->name('video.delete');
 
         Route::resource('staff', StaffController::class);
+
+        // Debug route to inspect staff table and super admin users during development.
+        // Accessible only to authenticated users who can view staff list.
+        Route::get('debug/staff-status', function () {
+            $hasStaffTable = \Illuminate\Support\Facades\Schema::hasTable((new \App\Models\Staff())->getTable());
+            if ($hasStaffTable) {
+                $staffCount = \App\Models\Staff::count();
+                $recentStaff = \App\Models\Staff::with('user')->orderBy('id', 'desc')->take(10)->get();
+            } else {
+                $staffCount = 0;
+                $recentStaff = [];
+            }
+
+            $superAdmins = \App\Models\User::whereHas('roles', function ($q) {
+                $q->where('name', 'Super Admin');
+            })->get();
+
+            return response()->json([
+                'has_staff_table' => $hasStaffTable,
+                'staff_count' => $staffCount,
+                'recent_staff' => $recentStaff,
+                'super_admin_users' => $superAdmins,
+            ]);
+        })->name('debug.staff.status');
 
         Route::get('generate-id', [StudentController::class, 'generateIdCardIndex'])->name('generate_id.index');
         Route::get('id-card-settings', [StudentController::class, 'idCardSettingIndex'])->name('id_card_setting.index');

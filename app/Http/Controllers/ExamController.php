@@ -118,12 +118,16 @@ class ExamController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified resource (or list for AJAX table).
+     * Accepts an optional id because the resource route may pass an id when
+     * the frontend uses route('exams.show', 1) to generate a URL for the
+     * AJAX listing. Making the parameter optional avoids argument count
+     * errors when the route supplies an id that this method doesn't use.
      *
-     * @param int $id
+     * @param int|null $id
      * @return JsonResponse
      */
-    public function show()
+    public function show($id = null)
     {
         if (!Auth::user()->can('exam-create')) {
             $response = array(
@@ -448,7 +452,18 @@ class ExamController extends Controller
             return redirect(route('home'))->withErrors($response);
         }
 
-        $teacher_id = Auth::user()->teacher->id;
+        // Guard: ensure the authenticated user has a teacher relation
+        $user = Auth::user();
+        $teacher = $user->teacher ?? null;
+        if (!$teacher) {
+            // No teacher record attached to user; return a friendly error instead of a server error
+            $response = array(
+                'message' => trans('no_teacher_attached') ?? 'No teacher record attached to your account.'
+            );
+            return redirect(route('home'))->withErrors($response);
+        }
+
+        $teacher_id = $teacher->id;
         $class_section_id = ClassTeacher::where('class_teacher_id', $teacher_id)->pluck('class_section_id');
         $class_ids = ClassSection::whereIn('id', $class_section_id)->pluck('class_id');
         $classes = ClassSection::with('class', 'section', 'class.medium', 'streams')->whereIn('id', $class_section_id)->whereIn('class_id', $class_ids)->get();
@@ -459,7 +474,13 @@ class ExamController extends Controller
     public function getExamSubjects($exam_id)
     {
         try {
-            $teacher_id = Auth::user()->teacher->id;
+            $user = Auth::user();
+            $teacher = $user->teacher ?? null;
+            if (!$teacher) {
+                throw new \Exception('No teacher record attached to user');
+            }
+
+            $teacher_id = $teacher->id;
             $class_section_id = ClassTeacher::where('class_teacher_id', $teacher_id)->pluck('class_section_id');
             $class_id = ClassSection::whereIn('id', $class_section_id)->pluck('class_id');
             $subjects = ExamTimetable::with('subject')->where('exam_id', $exam_id)->whereIn('class_id', $class_id)->get();
@@ -786,7 +807,19 @@ class ExamController extends Controller
             );
             return redirect(route('home'))->withErrors($response);
         }
-        $teacher_id = Auth::user()->teacher->id;
+
+        // Guard: ensure the authenticated user has a teacher relation
+        $user = Auth::user();
+        $teacher = $user->teacher ?? null;
+        if (!$teacher) {
+            // No teacher record attached to user; return a friendly error instead of a server error
+            $response = array(
+                'message' => trans('no_teacher_attached') ?? 'No teacher record attached to your account.'
+            );
+            return redirect(route('home'))->withErrors($response);
+        }
+
+        $teacher_id = $teacher->id;
         $class_section_id = ClassTeacher::where('class_teacher_id', $teacher_id)->pluck('class_section_id');
         $class_ids = ClassSection::whereIn('id', $class_section_id)->pluck('class_id');
         $classes = ClassSection::with('class', 'section', 'class.medium', 'streams')->whereIn('id', $class_section_id)->whereIn('class_id', $class_ids)->get();
@@ -826,7 +859,18 @@ class ExamController extends Controller
         }
 
         // Verify teacher has access to this class section
-        $teacher_id = Auth::user()->teacher->id;
+        $user = Auth::user();
+        $teacher = $user->teacher ?? null;
+        if (!$teacher) {
+            return response()->json([
+                'error' => true,
+                'message' => 'No teacher record attached to your account.',
+                'total' => 0,
+                'rows' => []
+            ]);
+        }
+
+        $teacher_id = $teacher->id;
         $teacherClassSections = ClassTeacher::where('class_teacher_id', $teacher_id)
             ->pluck('class_section_id')
             ->toArray();

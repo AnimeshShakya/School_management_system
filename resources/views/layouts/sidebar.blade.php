@@ -604,12 +604,15 @@
                             </li>
                         @endcan
                         @can('exam-upload-marks')
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('exams.upload-marks') ? 'active' : '' }}"
-                                    href="{{ route('exams.upload-marks') }}">
-                                    {{ __('upload') }} {{ __('exam_marks') }}
-                                </a>
-                            </li>
+                            @php $hasTeacher = optional(Auth::user())->teacher ? true : false; @endphp
+                            @if($hasTeacher || Auth::user()->hasRole('super-admin') ?? false)
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('exams.upload-marks') ? 'active' : '' }}"
+                                        href="{{ route('exams.upload-marks') }}">
+                                        {{ __('upload') }} {{ __('exam_marks') }}
+                                    </a>
+                                </li>
+                            @endif
                         @endcan
                         @can('exam-result')
                             <li class="nav-item">
