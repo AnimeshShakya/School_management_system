@@ -318,6 +318,15 @@
                             <td style="text-transform: capitalize">{{ $student->user->permanent_address ?? '' }}</td>
                         </tr>
                     @endif
+                    @if ($student->qr_token)
+                        <tr>
+                            <th class="student-data">QR Code :</th>
+                            <td>
+                                <img src="data:image/png;base64,{{ base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(80)->margin(1)->generate(base64_encode(json_encode(['s' => $student->id, 't' => $student->qr_token])))) }}"
+                                    width="80" height="80" alt="QR">
+                            </td>
+                        </tr>
+                    @endif
                     <tr>
                         <td></td>
                         <td colspan="">
@@ -447,6 +456,14 @@
                         <tr>
                             <th class="vertical-student-data">Address :</th>
                             <td style="text-transform: capitalize">{{ $student->user->permanent_address }}</td>
+                        </tr>
+                    @endif
+                    @if ($student->qr_token)
+                        <tr>
+                            <td colspan="2" style="text-align:center;padding:6px 0;">
+                                <img src="data:image/png;base64,{{ base64_encode(\SimpleSoftwareIO\QrCode\Facades\QrCode::format('png')->size(80)->margin(1)->generate(base64_encode(json_encode(['s' => $student->id, 't' => $student->qr_token])))) }}"
+                                    width="80" height="80" alt="QR">
+                            </td>
                         </tr>
                     @endif
                     <tr>

@@ -2007,7 +2007,7 @@ class StudentController extends Controller
         $width = $settings['card_width'] * 2.8346456693;
         // $customPaper = array(0,0,360,200);
         $customPaper = [0, 0, $width, $height];
-        $students = Students::select('admission_no', 'roll_number', 'blood_group', 'user_id', 'class_section_id', 'guardian_id', 'father_id')->with('user:id,first_name,last_name,gender,image,dob,permanent_address', 'class_section.class:id,name,medium_id,stream_id', 'class_section.class.medium:id,name', 'class_section.class.streams:id,name', 'father:id,first_name,last_name,mobile', 'guardian:id,first_name,last_name,mobile')->whereIn('id', $ids)->get();
+        $students = Students::select('id', 'admission_no', 'roll_number', 'blood_group', 'user_id', 'class_section_id', 'guardian_id', 'father_id', 'qr_token')->with('user:id,first_name,last_name,gender,image,dob,permanent_address', 'class_section.class:id,name,medium_id,stream_id', 'class_section.class.medium:id,name', 'class_section.class.streams:id,name', 'father:id,first_name,last_name,mobile', 'guardian:id,first_name,last_name,mobile')->whereIn('id', $ids)->get();
 
         $settings['card_height'] = ($settings['card_height'] * 3.7795275591).'px';
 

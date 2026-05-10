@@ -30,6 +30,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnlineExamController;
 use App\Http\Controllers\OnlineExamQuestionController;
 use App\Http\Controllers\ParentsController;
+use App\Http\Controllers\QrAttendanceController;
 use App\Http\Controllers\RevenueAnalysisController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectionController;
@@ -51,9 +52,12 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\WebController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\WebSettingController;
+use App\Models\Staff;
+use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 /*
@@ -219,6 +223,11 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         Route::get('add-bulk-attendance', [AttendanceController::class, 'createBulkData'])->name('attendance.add-bulk-data');
         Route::post('attendance/store_bulk', [AttendanceController::class, 'storeBulkData'])->name('attendance.store-bulk-data');
         Route::post('student/export', [AttendanceController::class, 'studentExport'])->name('student-export');
+
+        // QR Code Attendance
+        Route::get('qr-attendance', [QrAttendanceController::class, 'index'])->name('qr-attendance.index');
+        Route::post('qr-attendance/scan', [QrAttendanceController::class, 'scan'])->name('qr-attendance.scan');
+        Route::get('qr-attendance/history', [QrAttendanceController::class, 'history'])->name('qr-attendance.history');
 
         Route::resource('lesson', LessonController::class);
         Route::get('search-lesson', [LessonController::class, 'search']);
@@ -430,16 +439,16 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         // Debug route to inspect staff table and super admin users during development.
         // Accessible only to authenticated users who can view staff list.
         Route::get('debug/staff-status', function () {
-            $hasStaffTable = \Illuminate\Support\Facades\Schema::hasTable((new \App\Models\Staff())->getTable());
+            $hasStaffTable = Schema::hasTable((new Staff)->getTable());
             if ($hasStaffTable) {
-                $staffCount = \App\Models\Staff::count();
-                $recentStaff = \App\Models\Staff::with('user')->orderBy('id', 'desc')->take(10)->get();
+                $staffCount = Staff::count();
+                $recentStaff = Staff::with('user')->orderBy('id', 'desc')->take(10)->get();
             } else {
                 $staffCount = 0;
                 $recentStaff = [];
             }
 
-            $superAdmins = \App\Models\User::whereHas('roles', function ($q) {
+            $superAdmins = User::whereHas('roles', function ($q) {
                 $q->where('name', 'Super Admin');
             })->get();
 

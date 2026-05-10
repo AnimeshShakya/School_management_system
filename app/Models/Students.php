@@ -4,24 +4,20 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Models\Semester;
-use App\Models\Attendance;
-use App\Models\ClassSchool;
-use App\Models\ClassSection;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class Students extends Model
 {
-    use SoftDeletes, HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -47,15 +43,27 @@ class Students extends Model
         'mother_id',
         'guardian_id',
         'dynamic_fields',
-        'application_type'
+        'application_type',
+        'qr_token',
     ];
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (Students $student) {
+            if (empty($student->qr_token)) {
+                $student->qr_token = bin2hex(random_bytes(32));
+            }
+        });
+    }
 
     /**
      * The attributes that should be hidden for serialization.
      *
      * @var array<int, string>
      */
-    protected $hidden = ["deleted_at", "created_at", "updated_at"];
+    protected $hidden = ['deleted_at', 'created_at', 'updated_at'];
 
     /**
      * Get the attributes that should be cast.
@@ -77,9 +85,10 @@ class Students extends Model
      */
     public function getHeightAttribute($value)
     {
-        if (empty($value) || !is_numeric($value)) {
+        if (empty($value) || ! is_numeric($value)) {
             return null;
         }
+
         return (string) $value;
     }
 
@@ -88,9 +97,10 @@ class Students extends Model
      */
     public function getWeightAttribute($value)
     {
-        if (empty($value) || !is_numeric($value)) {
+        if (empty($value) || ! is_numeric($value)) {
             return null;
         }
+
         return (string) $value;
     }
 
@@ -190,7 +200,7 @@ class Students extends Model
 
         $core_subjects = $coreSubjectsQuery
             ? $coreSubjectsQuery
-                ->filter(fn($classSubject) => $classSubject->subject !== null)
+                ->filter(fn ($classSubject) => $classSubject->subject !== null)
                 ->values()
                 ->toArray()
             : [];
@@ -198,7 +208,7 @@ class Students extends Model
         $electiveSubjectQuery = StudentSubject::where('student_id', $this->id)
             ->where('class_section_id', $class_section_id)
             ->where('session_year_id', $session_year_id)
-            ->select("subject_id")
+            ->select('subject_id')
             ->with('subject')
             ->whereHas('subject');
 
@@ -211,12 +221,12 @@ class Students extends Model
         }
 
         $elective_subjects = $electiveSubjectQuery->get()
-            ->filter(fn($studentSubject) => $studentSubject->subject !== null)
+            ->filter(fn ($studentSubject) => $studentSubject->subject !== null)
             ->values();
 
         return [
             'core_subject' => $core_subjects,
-            'elective_subject' => $elective_subject_count > 0 ? $elective_subjects : []
+            'elective_subject' => $elective_subject_count > 0 ? $elective_subjects : [],
         ];
     }
 
@@ -235,7 +245,7 @@ class Students extends Model
         if ($includesSemesters) {
             $core_subjects = $this->class_section->class->coreSubject
                 ->where('semester_id', $currentSemester->id)
-                ->filter(fn($classSubject) => $classSubject->subject !== null)
+                ->filter(fn ($classSubject) => $classSubject->subject !== null)
                 ->values();
 
             $elective_subjects = $this->class_section->class->electiveSubjectGroup
@@ -246,14 +256,15 @@ class Students extends Model
                     $subjectGroup->setRelation(
                         'electiveSubjects',
                         $subjectGroup->electiveSubjects
-                            ->filter(fn($classSubject) => $classSubject->subject !== null)
+                            ->filter(fn ($classSubject) => $classSubject->subject !== null)
                             ->values()
                     );
+
                     return $subjectGroup;
                 });
         } else {
             $core_subjects = $this->class_section->class->coreSubject
-                ->filter(fn($classSubject) => $classSubject->subject !== null)
+                ->filter(fn ($classSubject) => $classSubject->subject !== null)
                 ->values();
 
             $elective_subjects = $this->class_section->class->electiveSubjectGroup
@@ -262,16 +273,17 @@ class Students extends Model
                     $subjectGroup->setRelation(
                         'electiveSubjects',
                         $subjectGroup->electiveSubjects
-                            ->filter(fn($classSubject) => $classSubject->subject !== null)
+                            ->filter(fn ($classSubject) => $classSubject->subject !== null)
                             ->values()
                     );
+
                     return $subjectGroup;
                 });
         }
 
         return [
             'core_subject' => $core_subjects,
-            'elective_subject_group' => $elective_subjects
+            'elective_subject_group' => $elective_subjects,
         ];
     }
 
@@ -280,7 +292,7 @@ class Students extends Model
      */
     private function getCurrentSemester(): ?Semester
     {
-        return Semester::get()->first(fn($semester) => $semester->current);
+        return Semester::get()->first(fn ($semester) => $semester->current);
     }
 
     /**
@@ -304,7 +316,7 @@ class Students extends Model
         }
 
         // If not a teacher, return empty result
-        if (!$user->hasRole('Teacher')) {
+        if (! $user->hasRole('Teacher')) {
             return $query->where('class_section_id', 0); // No access
         }
 

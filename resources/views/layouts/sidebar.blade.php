@@ -47,7 +47,7 @@
                 'student-leave-request.*',
             );
             $timetableOpen = $isRoute('timetable.*', 'class-timetable*', 'teacher-timetable*');
-            $attendanceOpen = $isRoute('attendance*', 'attendace_report.*');
+            $attendanceOpen = $isRoute('attendance*', 'attendace_report.*', 'qr-attendance.*');
             $subjectLessonOpen = $isRoute('lesson*', 'lesson-topic*');
             $assignmentOpen = $isRoute('assignment.*');
             $examOpen = $isRoute('exams.*', 'exam-timetable.*', 'grades');
@@ -476,7 +476,7 @@
         @endcanany
 
         {{-- attendance --}}
-        @canany(['class-teacher', 'attendance-report'])
+        @canany(['class-teacher', 'attendance-report', 'qr-attendance-scan'])
             <li class="nav-item {{ $attendanceOpen ? 'active' : '' }}">
                 <a class="nav-link" data-toggle="collapse" href="#attendance-menu"
                     aria-expanded="{{ $attendanceOpen ? 'true' : 'false' }}" aria-controls="attendance-menu"><i
@@ -515,6 +515,14 @@
                                 <a class="nav-link {{ request()->routeIs('attendace_report.*') ? 'active' : '' }}"
                                     href="{{ route('attendace_report.index') }}">
                                     {{ __('attendance_report') }}
+                                </a>
+                            </li>
+                        @endcan
+                        @can('qr-attendance-scan')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('qr-attendance.*') ? 'active' : '' }}"
+                                    href="{{ route('qr-attendance.index') }}">
+                                    <i class="fa fa-qrcode me-1"></i> {{ __('QR Attendance') }}
                                 </a>
                             </li>
                         @endcan

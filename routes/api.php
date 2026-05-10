@@ -2,10 +2,11 @@
 
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\ParentApiController;
+use App\Http\Controllers\Api\QrAttendanceApiController;
 use App\Http\Controllers\Api\StudentApiController;
 use App\Http\Controllers\Api\TeacherApiController;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Password;
+use App\Http\Middleware\CheckChild;
+use App\Http\Middleware\CheckStudent;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -28,13 +29,13 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
  **/
 Route::group(['prefix' => 'student'], function () {
 
-    //Non Authenticated APIs
+    // Non Authenticated APIs
     Route::middleware('throttle:sensitive-api')->group(function () {
         Route::post('login', [StudentApiController::class, 'login']);
         Route::post('forgot-password', [StudentApiController::class, 'forgotPassword']);
     });
 
-    //Authenticated APIs
+    // Authenticated APIs
     Route::group([
         'middleware' => [
             'auth:sanctum',
@@ -66,7 +67,7 @@ Route::group(['prefix' => 'student'], function () {
         Route::get('get-online-exam-result-list', [StudentApiController::class, 'getOnlineExamResultList']); // Online exam result list Route
         Route::get('get-online-exam-result', [StudentApiController::class, 'getOnlineExamResult']); // Online exam result  Route
 
-        //reports
+        // reports
         Route::get('get-online-exam-report', [StudentApiController::class, 'getOnlineExamReport']); // Online Exam Report Route
         Route::get('get-assignments-report', [StudentApiController::class, 'getAssignmentReport']); // Assignment Report Route
 
@@ -79,19 +80,19 @@ Route::group(['prefix' => 'student'], function () {
         Route::post('get-user-message', [StudentApiController::class, 'getUserChatMessage']);
         Route::post('read-all-message', [StudentApiController::class, 'readAllMessages']);
 
-        //fees
-        Route::get('fees-details', [StudentApiController::class, 'getFeesDetails']); //Fees Details
-        Route::middleware('throttle:sensitive-api')->post('add-fees-transaction', [StudentApiController::class, 'storeFeesTransaction']); //Fees Details
-        Route::post('store-fees', [StudentApiController::class, 'storeFees']); //Store Fees
-        Route::get('fees-paid-list', [StudentApiController::class, 'feesPaidList']); //Fees Details
-        Route::get('fees-paid-receipt-pdf', [StudentApiController::class, 'feesPaidReceiptPDF']); //Fees Receipt
-        Route::get('fees-transactions-list', [StudentApiController::class, 'getFeesPaymentTransactions']); //Fees Payment Transaction Details
+        // fees
+        Route::get('fees-details', [StudentApiController::class, 'getFeesDetails']); // Fees Details
+        Route::middleware('throttle:sensitive-api')->post('add-fees-transaction', [StudentApiController::class, 'storeFeesTransaction']); // Fees Details
+        Route::post('store-fees', [StudentApiController::class, 'storeFees']); // Store Fees
+        Route::get('fees-paid-list', [StudentApiController::class, 'feesPaidList']); // Fees Details
+        Route::get('fees-paid-receipt-pdf', [StudentApiController::class, 'feesPaidReceiptPDF']); // Fees Receipt
+        Route::get('fees-transactions-list', [StudentApiController::class, 'getFeesPaymentTransactions']); // Fees Payment Transaction Details
         Route::post('fail-payment-transaction', [StudentApiController::class, 'failPaymentTransactionStatus']); // Make Payment Transaction Fail API
 
-        //Academic calendar
+        // Academic calendar
         Route::get('academic-calendar-pdf', [StudentApiController::class, 'getAcademicCalendarPdf']);
 
-        //fee notification
+        // fee notification
         Route::get('send-fee-notification', [StudentApiController::class, 'sendFeeNotification']);
 
         Route::post('apply-leave', [StudentApiController::class, 'applyLeave']);
@@ -105,9 +106,9 @@ Route::group(['prefix' => 'student'], function () {
  * PARENT APIs
  **/
 Route::group(['prefix' => 'parent'], function () {
-    //Non Authenticated APIs
+    // Non Authenticated APIs
     Route::middleware('throttle:sensitive-api')->post('login', [ParentApiController::class, 'login']);
-    //Authenticated APIs
+    // Authenticated APIs
     Route::group([
         'middleware' => [
             'auth:sanctum',
@@ -115,10 +116,10 @@ Route::group(['prefix' => 'parent'], function () {
         ],
     ], function () {
 
-        //APIS Without Child ID
-        Route::get('announcements', [ParentApiController::class, 'getAnnouncements']); //Get Announcementes
-        Route::get('fees-paid-receipt-pdf', [ParentApiController::class, 'feesPaidReceiptPDF']); //Fees Receipt
-        Route::get('fees-transactions-list', [ParentApiController::class, 'getFeesPaymentTransactions']); //Fees Payment Transaction Details
+        // APIS Without Child ID
+        Route::get('announcements', [ParentApiController::class, 'getAnnouncements']); // Get Announcementes
+        Route::get('fees-paid-receipt-pdf', [ParentApiController::class, 'feesPaidReceiptPDF']); // Fees Receipt
+        Route::get('fees-transactions-list', [ParentApiController::class, 'getFeesPaymentTransactions']); // Fees Payment Transaction Details
         Route::get('get-profile-data', [ParentApiController::class, 'getProfileDetails']); // Get Profile Data
         Route::post('fail-payment-transaction', [ParentApiController::class, 'failPaymentTransactionStatus']); // Make Payment Transaction Fail API
         Route::get('get-notification', [ParentApiController::class, 'getNotifications']); // Get Notification Data
@@ -128,7 +129,7 @@ Route::group(['prefix' => 'parent'], function () {
         Route::post('get-user-message', [ParentApiController::class, 'getUserChatMessage']);
         Route::post('read-all-message', [ParentApiController::class, 'readAllMessages']);
 
-        Route::group(['middleware' => ['auth:sanctum', \App\Http\Middleware\CheckChild::class]], function () {
+        Route::group(['middleware' => ['auth:sanctum', CheckChild::class]], function () {
 
             Route::get('subjects', [ParentApiController::class, 'subjects']);
             Route::get('class-subjects', [ParentApiController::class, 'classSubjects']);
@@ -141,24 +142,24 @@ Route::group(['prefix' => 'parent'], function () {
             Route::get('teachers', [ParentApiController::class, 'getTeachers']);
             Route::get('get-exam-list', [ParentApiController::class, 'getExamList']); // Exam list Route
             Route::get('get-exam-details', [ParentApiController::class, 'getExamDetails']); // Exam Details Route
-            Route::get('exam-marks', [ParentApiController::class, 'getExamMarks']); //Exam Marks
+            Route::get('exam-marks', [ParentApiController::class, 'getExamMarks']); // Exam Marks
 
-            //fees
-            Route::get('fees-details', [ParentApiController::class, 'getFeesDetails']); //Fees Details
-            Route::middleware('throttle:sensitive-api')->post('add-fees-transaction', [ParentApiController::class, 'storeFeesTransaction']); //Fees Details
-            Route::post('store-fees', [ParentApiController::class, 'storeFees']); //Store Fees
-            Route::get('fees-paid-list', [ParentApiController::class, 'feesPaidList']); //Fees Details
+            // fees
+            Route::get('fees-details', [ParentApiController::class, 'getFeesDetails']); // Fees Details
+            Route::middleware('throttle:sensitive-api')->post('add-fees-transaction', [ParentApiController::class, 'storeFeesTransaction']); // Fees Details
+            Route::post('store-fees', [ParentApiController::class, 'storeFees']); // Store Fees
+            Route::get('fees-paid-list', [ParentApiController::class, 'feesPaidList']); // Fees Details
 
             // online exam routes
             Route::get('get-online-exam-list', [ParentApiController::class, 'getOnlineExamList']); // Get Online Exam List Route
             Route::get('get-online-exam-result-list', [ParentApiController::class, 'getOnlineExamResultList']); // Online exam result list Route
             Route::get('get-online-exam-result', [ParentApiController::class, 'getOnlineExamResult']); // Online exam result  Route
 
-            //reports
+            // reports
             Route::get('get-online-exam-report', [ParentApiController::class, 'getOnlineExamReport']); // Online Exam Report Route
             Route::get('get-assignments-report', [ParentApiController::class, 'getAssignmentReport']); // Assignment Report Route
 
-            //Academic calendar
+            // Academic calendar
             Route::get('academic-calendar-pdf', [ParentApiController::class, 'getAcademicCalendarPdf']);
 
             Route::post('apply-leave', [ParentApiController::class, 'applyLeave']);
@@ -172,42 +173,42 @@ Route::group(['prefix' => 'parent'], function () {
  * TEACHER APIs
  **/
 Route::group(['prefix' => 'teacher'], function () {
-    //Non Authenticated APIs
+    // Non Authenticated APIs
     Route::middleware('throttle:sensitive-api')->post('login', [TeacherApiController::class, 'login']);
-    //Authenticated APIs
-    Route::group(['middleware' => ['auth:sanctum',]], function () {
+    // Authenticated APIs
+    Route::group(['middleware' => ['auth:sanctum']], function () {
         Route::get('dashboard', [TeacherApiController::class, 'dashboard']);
         Route::get('classes', [TeacherApiController::class, 'classes']);
 
         Route::get('subjects', [TeacherApiController::class, 'subjects']);
 
-        //Assignment
+        // Assignment
         Route::get('get-assignment', [TeacherApiController::class, 'getAssignment']);
         Route::post('create-assignment', [TeacherApiController::class, 'createAssignment']);
         Route::post('update-assignment', [TeacherApiController::class, 'updateAssignment']);
         Route::post('delete-assignment', [TeacherApiController::class, 'deleteAssignment']);
 
-        //Assignment Submission
+        // Assignment Submission
         Route::get('get-assignment-submission', [TeacherApiController::class, 'getAssignmentSubmission']);
         Route::post('update-assignment-submission', [TeacherApiController::class, 'updateAssignmentSubmission']);
 
-        //File
+        // File
         Route::post('delete-file', [TeacherApiController::class, 'deleteFile']);
         Route::post('update-file', [TeacherApiController::class, 'updateFile']);
 
-        //Lesson
+        // Lesson
         Route::get('get-lesson', [TeacherApiController::class, 'getLesson']);
         Route::post('create-lesson', [TeacherApiController::class, 'createLesson']);
         Route::post('update-lesson', [TeacherApiController::class, 'updateLesson']);
         Route::post('delete-lesson', [TeacherApiController::class, 'deleteLesson']);
 
-        //Topic
+        // Topic
         Route::get('get-topic', [TeacherApiController::class, 'getTopic']);
         Route::post('create-topic', [TeacherApiController::class, 'createTopic']);
         Route::post('update-topic', [TeacherApiController::class, 'updateTopic']);
         Route::post('delete-topic', [TeacherApiController::class, 'deleteTopic']);
 
-        //Announcement
+        // Announcement
         Route::get('get-announcement', [TeacherApiController::class, 'getAnnouncement']);
         Route::post('send-announcement', [TeacherApiController::class, 'sendAnnouncement']);
         Route::post('update-announcement', [TeacherApiController::class, 'updateAnnouncement']);
@@ -216,29 +217,28 @@ Route::group(['prefix' => 'teacher'], function () {
         Route::get('get-attendance', [TeacherApiController::class, 'getAttendance']);
         Route::post('submit-attendance', [TeacherApiController::class, 'submitAttendance']);
 
-
-        //Exam
+        // Exam
         Route::get('get-exam-list', [TeacherApiController::class, 'getExamList']); // Exam list Route
         Route::get('get-exam-details', [TeacherApiController::class, 'getExamDetails']); // Exam Details Route
         Route::post('submit-exam-marks/subject', [TeacherApiController::class, 'submitExamMarksBySubjects']); // Submit Exam Marks By Subjects Route
         Route::post('submit-exam-marks/student', [TeacherApiController::class, 'submitExamMarksByStudent']); // Submit Exam Marks By Students Route
 
-        Route::group(['middleware' => ['auth:sanctum', \App\Http\Middleware\CheckStudent::class]], function () {
+        Route::group(['middleware' => ['auth:sanctum', CheckStudent::class]], function () {
             Route::get('get-student-result', [TeacherApiController::class, 'GetStudentExamResult']); // Student Exam Result
             Route::get('get-student-marks', [TeacherApiController::class, 'GetStudentExamMarks']); // Student Exam Marks
         });
 
-        //Student List
+        // Student List
         Route::get('student-list', [TeacherApiController::class, 'getStudentList']);
         Route::get('student-details', [TeacherApiController::class, 'getStudentDetails']);
 
-        //Academic calendar
+        // Academic calendar
         Route::get('academic-calendar-pdf', [TeacherApiController::class, 'getAcademicCalendarPdf']);
 
-        //Schedule List
+        // Schedule List
         Route::get('teacher_timetable', [TeacherApiController::class, 'getTeacherTimetable']);
 
-        //Profile Detials
+        // Profile Detials
         Route::get('get-profile-details', [TeacherApiController::class, 'getProfileDetails']);
         Route::get('get-notification', [TeacherApiController::class, 'getNotifications']); // Get Notification Data
 
@@ -272,6 +272,14 @@ Route::get('get-events-list', [ApiController::class, 'getEvents']);
 Route::get('get-events-details', [ApiController::class, 'getEventsDetails']);
 Route::get('get-session-year', [ApiController::class, 'getSessionYear']);
 
-Route::group(['middleware' => ['auth:sanctum',]], function () {
+Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('change-password', [ApiController::class, 'changePassword']);
+});
+
+/**
+ * QR ATTENDANCE APIs (Attendee Teacher)
+ **/
+Route::group(['prefix' => 'qr-attendance', 'middleware' => ['auth:sanctum']], function () {
+    Route::post('scan', [QrAttendanceApiController::class, 'scan']);
+    Route::get('class-sections', [QrAttendanceApiController::class, 'classSections']);
 });
