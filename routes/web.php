@@ -250,6 +250,10 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         Route::get('exams/upload-marks', [ExamController::class, 'uploadMarks'])->name('exams.upload-marks');
         Route::get('exams/marks-list', [ExamController::class, 'marksList'])->name('exams.marks-list');
 
+        Route::get('exams/import-marks', [ExamController::class, 'importMarksForm'])->name('exams.import-marks');
+        Route::post('exams/import-marks/preview', [ExamController::class, 'importMarksPreview'])->name('exams.import-marks-preview');
+        Route::get('exams/download-marks-template', [ExamController::class, 'downloadMarksTemplate'])->name('exams.download-marks-template');
+
         Route::get('exams/get-exams/{class_id}', [ExamController::class, 'getExamByClass'])->name('exams.classes');
         Route::delete('/delete-exam-class/{exam_id}/{class_id}', [ExamController::class, 'deleteExamClass']);
         Route::get('exams/get-subjects/{class_id}/{exam_id}', [ExamController::class, 'getSubjectByExam'])->name('exams.subject');
@@ -422,6 +426,30 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         Route::delete('videos/delete/{id}', [MediaController::class, 'video_delete'])->name('video.delete');
 
         Route::resource('staff', StaffController::class);
+
+        // Debug route to inspect staff table and super admin users during development.
+        // Accessible only to authenticated users who can view staff list.
+        Route::get('debug/staff-status', function () {
+            $hasStaffTable = \Illuminate\Support\Facades\Schema::hasTable((new \App\Models\Staff())->getTable());
+            if ($hasStaffTable) {
+                $staffCount = \App\Models\Staff::count();
+                $recentStaff = \App\Models\Staff::with('user')->orderBy('id', 'desc')->take(10)->get();
+            } else {
+                $staffCount = 0;
+                $recentStaff = [];
+            }
+
+            $superAdmins = \App\Models\User::whereHas('roles', function ($q) {
+                $q->where('name', 'Super Admin');
+            })->get();
+
+            return response()->json([
+                'has_staff_table' => $hasStaffTable,
+                'staff_count' => $staffCount,
+                'recent_staff' => $recentStaff,
+                'super_admin_users' => $superAdmins,
+            ]);
+        })->name('debug.staff.status');
 
         Route::get('generate-id', [StudentController::class, 'generateIdCardIndex'])->name('generate_id.index');
         Route::get('revenue-analysis', [RevenueAnalysisController::class, 'index'])->name('revenue.analysis');

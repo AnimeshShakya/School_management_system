@@ -90,7 +90,7 @@ class LessonController extends Controller
         try {
             $lesson = new Lesson();
             $lesson->name = $request->name;
-            $lesson->description = $request->description;
+            $lesson->description = sanitize_html_input($request->description);
             $lesson->class_section_id = $request->class_section_id;
             $lesson->subject_id = $request->subject_id;
             $lesson->save();
@@ -360,7 +360,7 @@ class LessonController extends Controller
         try {
             $lesson = Lesson::find($request->edit_id);
             $lesson->name = $request->name;
-            $lesson->description = $request->description;
+            $lesson->description = sanitize_html_input($request->description);
             $lesson->class_section_id = $request->class_section_id;
             $lesson->subject_id = $request->subject_id;
             $lesson->save();

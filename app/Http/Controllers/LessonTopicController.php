@@ -91,7 +91,7 @@ class LessonTopicController extends Controller {
         try {
             $topic = new LessonTopic();
             $topic->name = $request->name;
-            $topic->description = $request->description;
+            $topic->description = sanitize_html_input($request->description);
             $topic->lesson_id = $request->lesson_id;
             $topic->save();
 
@@ -321,7 +321,7 @@ class LessonTopicController extends Controller {
         try {
             $topic = LessonTopic::find($request->edit_id);
             $topic->name = $request->name;
-            $topic->description = $request->description;
+            $topic->description = sanitize_html_input($request->description);
             $topic->save();
 
             // Update the Old Files

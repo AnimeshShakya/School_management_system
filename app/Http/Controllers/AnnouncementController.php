@@ -90,8 +90,8 @@ class AnnouncementController extends Controller {
             }
             for ($i = 0; $i < $getdata; $i++) {
                 $announcement = new Announcement();
-                $announcement->title = $request->title;
-                $announcement->description = $request->description;
+                $announcement->title = sanitize_html_input($request->title);
+                $announcement->description = sanitize_html_input($request->description);
                 $announcement->session_year_id = $data['session_year'];
                 if (!empty($request->set_data)) {
                     if ($request->set_data == 'class_section') {
@@ -202,8 +202,8 @@ class AnnouncementController extends Controller {
                 $teacher_id = Auth::user()->teacher->id;
             }
             $announcement = Announcement::find($request->edit_id);
-            $announcement->title = $request->title;
-            $announcement->description = $request->description;
+            $announcement->title = sanitize_html_input($request->title);
+            $announcement->description = sanitize_html_input($request->description);
             $announcement->session_year_id = $data['session_year'];
             if (!empty($request->set_data)) {
                 if ($request->set_data == 'class_section') {

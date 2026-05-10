@@ -62,9 +62,11 @@ use App\Models\OnlineExamQuestionAnswer;
 use App\Models\OnlineExamQuestionChoice;
 use App\Models\OnlineExamQuestionOption;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use App\Http\Resources\TimetableCollection;
 use App\Services\Payment\PaymentService;
 use App\Services\ResponseService;
+use App\Models\ElectiveSubjectGroup;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -585,6 +587,7 @@ class StudentApiController extends Controller
                 ->limit(3)
                 ->get();
 
+            $event = [];
             foreach ($events as $row) {
                 if ($row->type == 'multiple') {
                     $hasdaySchedule = MultipleEvent::where('event_id', $row->id)->first();
@@ -706,9 +709,20 @@ class StudentApiController extends Controller
 
     public function selectSubjects(Request $request)
     {
+        $student = $request->user()->student;
+        $class_section = $student->class_section;
+        $class_id = $class_section->class->id;
+
         $validator = Validator::make($request->all(), [
-            'subject_group.*.id' => 'required',
+            'subject_group' => 'required|array',
+            'subject_group.*.id' => 'required|integer|exists:elective_subject_groups,id',
             'subject_group.*.subject_id' => 'required|array',
+            'subject_group.*.subject_id.*' => [
+                'required',
+                'integer',
+                'distinct',
+                Rule::exists('class_subjects', 'subject_id')->where('class_id', $class_id),
+            ],
         ]);
 
         if ($validator->fails()) {
@@ -720,9 +734,6 @@ class StudentApiController extends Controller
                 return $semester->current;
             });
             $semester_id = null;
-            $student = $request->user()->student;
-            $class_section = $student->class_section;
-            $class_id = $class_section->class->id;
             $class = ClassSchool::where('id', $class_id)->first();
 
             $include_semester = $class->include_semesters;
@@ -731,8 +742,29 @@ class StudentApiController extends Controller
             }
             $student_subject = array();
             $session_year_id = Settings::select('message')->where('type', 'session_year')->pluck('message')->first();
+
+            $groupIds = collect($request->subject_group)->pluck('id')->all();
+            $electiveGroups = ElectiveSubjectGroup::whereIn('id', $groupIds)
+                ->where('class_id', $class_id)
+                ->get()
+                ->keyBy('id');
+
             foreach ($request->subject_group as $key => $subject_group) {
-                // $subject_group_id = $subject_group['id'];
+                $group = $electiveGroups->get($subject_group['id']);
+
+                if (!$group) {
+                    ResponseService::errorResponse("Invalid elective subject group for your class.");
+                    return;
+                }
+
+                $selectedCount = count($subject_group['subject_id']);
+                if ($selectedCount > $group->total_selectable_subjects) {
+                    ResponseService::errorResponse(
+                        "You can select at most {$group->total_selectable_subjects} subject(s) from this group."
+                    );
+                    return;
+                }
+
                 foreach ($subject_group['subject_id'] as $subject_id) {
 
                     $if_subject_already_selected = StudentSubject::where([
@@ -1439,6 +1471,7 @@ class StudentApiController extends Controller
             }
 
 
+            $exam_data = [];
             foreach ($exam_data_db->timetable as $data) {
                 $exam_data[] = array(
                     'id' => $data->id,
@@ -2820,6 +2853,7 @@ class StudentApiController extends Controller
                     // $time = $datetime->format('H:i:s');
                     $addHour = $datetime->copy()->addHour();
                     if (Carbon::now()->gt($addHour)) {
+                        $payment_transaction_db->previous_status = $payment_transaction_db->payment_status;
                         $payment_transaction_db->payment_status = 0;
                         $payment_transaction_db->save();
                     }
@@ -2949,6 +2983,9 @@ class StudentApiController extends Controller
             $payment_transaction_db->total_amount = $request->amount;
             $payment_transaction_db->date = date('Y-m-d H:i:s');
             $payment_transaction_db->session_year_id = $session_year_id;
+            $payment_transaction_db->initiated_by = Auth::id();
+            $payment_transaction_db->ip_address = $request->ip();
+            $payment_transaction_db->user_agent = $request->userAgent();
             $payment_transaction_db->save();
 
             // If Optional Fees Passed then insert data
@@ -3139,6 +3176,7 @@ class StudentApiController extends Controller
                     $time = $datetime->format('H:i:s');
                     $addHour = $datetime->copy()->addHour();
                     if (Carbon::now()->gt($addHour)) {
+                        $transaction->previous_status = $transaction->payment_status;
                         $transaction->payment_status = 0;
                         $transaction->save();
                     }
@@ -3146,15 +3184,19 @@ class StudentApiController extends Controller
             }
             $fees_payment_transactions =  $fees_payment_transactions->toArray();
 
-            ResponseService::successResponse("Fees Payment Transactions Fetched Successfully", null, [
-                'current_page' => $fees_payment_transactions['current_page'],
-                'transaction-data' => $fees_payment_transactions['data'],
-                'from' => $fees_payment_transactions['from'],
-                'last_page' => $fees_payment_transactions['last_page'],
-                'per_page' => $fees_payment_transactions['per_page'],
-                'to' => $fees_payment_transactions['to'],
-                'total' => $fees_payment_transactions['total'],
-            ]);
+            ResponseService::successResponse("Fees Payment Transactions Fetched Successfully",
+                $fees_payment_transactions['data'],
+                [],
+                null,
+                [
+                    'current_page' => $fees_payment_transactions['current_page'],
+                    'from'         => $fees_payment_transactions['from'],
+                    'last_page'    => $fees_payment_transactions['last_page'],
+                    'per_page'     => $fees_payment_transactions['per_page'],
+                    'to'           => $fees_payment_transactions['to'],
+                    'total'        => $fees_payment_transactions['total'],
+                ]
+            );
         } catch (Throwable $e) {
             ResponseService::errorResponse("error_occurred", null, 103, $e);
         }
@@ -3166,6 +3208,7 @@ class StudentApiController extends Controller
         try {
             $update_status = PaymentTransaction::findOrFail($request->payment_transaction_id);
             $total_amount = $update_status->total_amount;
+            $update_status->previous_status = $update_status->payment_status;
             $update_status->payment_status = 0;
             $update_status->save();
 

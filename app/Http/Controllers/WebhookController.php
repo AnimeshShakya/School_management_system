@@ -80,6 +80,7 @@ class WebhookController extends Controller {
 
                         //udpate the values in payment transaction
                         $transaction_db->payment_id = $payment_id;
+                        $transaction_db->previous_status = $transaction_db->payment_status;
                         $transaction_db->payment_status = 1;
                         $transaction_db->save();
 
@@ -186,6 +187,7 @@ class WebhookController extends Controller {
                 if (!empty($transaction_db)) {
                     $total_amount = $transaction_db->total_amount;
                     $transaction_db->payment_id = $payment_id;
+                    $transaction_db->previous_status = $transaction_db->payment_status;
                     $transaction_db->payment_status = 0;
                     $transaction_db->save();
                     http_response_code(400);
@@ -288,6 +290,7 @@ class WebhookController extends Controller {
                         $total_amount = $transaction_db->total_amount;
 
                         //udpate the values in transaction table local
+                        $transaction_db->previous_status = $transaction_db->payment_status;
                         $transaction_db->payment_status = 1;
                         $transaction_db->save();
 
@@ -394,6 +397,7 @@ class WebhookController extends Controller {
                 $transaction_db = PaymentTransaction::find($payment_transaction_id);
                 if (!empty($transaction_db)) {
                     $total_amount = $transaction_db->total_amount;
+                    $transaction_db->previous_status = $transaction_db->payment_status;
                     $transaction_db->payment_status = 0;
                     $transaction_db->save();
                     http_response_code(400);
@@ -498,6 +502,7 @@ class WebhookController extends Controller {
 
                             //udpate the values in transaction table local
                             $transaction_db->order_id = $event->data->id;
+                            $transaction_db->previous_status = $transaction_db->payment_status;
                             $transaction_db->payment_status = 1;
                             $transaction_db->save();
                             Log::info("Update Payment Transaction Table");
@@ -665,6 +670,7 @@ class WebhookController extends Controller {
 
                 //udpate the values in payment transaction
                 $transaction_db->order_id = $transactionId;
+                $transaction_db->previous_status = $transaction_db->payment_status;
                 $transaction_db->payment_status = 1;
                 $transaction_db->save();
 
@@ -767,6 +773,7 @@ class WebhookController extends Controller {
                 if (!empty($transaction_db)) {
                     $total_amount = $transaction_db->total_amount;
                     $transaction_db->payment_id = null;
+                    $transaction_db->previous_status = $transaction_db->payment_status;
                     $transaction_db->payment_status = 0;
                     $transaction_db->save();
                     http_response_code(400);
