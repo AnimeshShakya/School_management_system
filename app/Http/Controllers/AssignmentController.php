@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Str;
 use Throwable;
 use Carbon\Carbon;
 use App\Models\File;
@@ -165,6 +166,8 @@ class AssignmentController extends Controller
             "points" => 'nullable',
             "resubmission" => 'nullable|boolean',
             "extra_days_for_resubmission" => 'nullable|numeric',
+            'file' => 'nullable|array',
+            'file.*' => 'mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
         ]);
 
 
@@ -184,7 +187,7 @@ class AssignmentController extends Controller
             $assignment->class_section_id = $request->class_section_id;
             $assignment->subject_id = $request->subject_id;
             $assignment->name = $request->name;
-            $assignment->instructions = $request->instructions;
+            $assignment->instructions = sanitize_html_input($request->instructions);
             $assignment->due_date = $request->due_date;
             $assignment->points = $request->points;
             if ($request->resubmission) {
@@ -228,7 +231,9 @@ class AssignmentController extends Controller
                     $file = new File();
                     $file->file_name = $file_upload->getClientOriginalName();
                     $file->type = 1;
-                    $file->file_url = $file_upload->store('assignment', 'public');
+                    $uuid = Str::uuid();
+                    $extension = $file_upload->extension();
+                    $file->file_url = $file_upload->storeAs('assignment', $uuid . '.' . $extension, 'public');
                     $file->modal()->associate($assignment);
                     $file->save();
                 }
@@ -273,9 +278,8 @@ class AssignmentController extends Controller
             "points" => 'nullable',
             "resubmission" => 'nullable|boolean',
             "extra_days_for_resubmission" => 'nullable|numeric',
-
-            // 'file_upload' => 'required|numeric',
-            // 'video_upload' => 'required|numeric',
+            'file' => 'nullable|array',
+            'file.*' => 'mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
         ], [
             'subject_id.numeric' => 'The Subject id is Required'
         ]);
@@ -297,7 +301,7 @@ class AssignmentController extends Controller
             $assignment->class_section_id = $request->class_section_id;
             $assignment->subject_id = $request->subject_id;
             $assignment->name = $request->name;
-            $assignment->instructions = $request->instructions;
+            $assignment->instructions = sanitize_html_input($request->instructions);
             $assignment->due_date = $request->due_date;
             $assignment->points = $request->points;
             if ($request->resubmission) {
@@ -359,7 +363,9 @@ class AssignmentController extends Controller
                     $file = new File();
                     $file->file_name = $file_upload->getClientOriginalName();
                     $file->type = 1;
-                    $file->file_url = $file_upload->store('assignment', 'public');
+                    $uuid = Str::uuid();
+                    $extension = $file_upload->extension();
+                    $file->file_url = $file_upload->storeAs('assignment', $uuid . '.' . $extension, 'public');
                     $file->modal()->associate($assignment);
                     $file->save();
                 }
@@ -479,7 +485,7 @@ class AssignmentController extends Controller
                         })->orWhereHas('assignment', function ($query) use ($search) {
                             $query->where('name', 'LIKE', "%$search%");
                         })->orWhereHas('student.user', function ($query) use ($search) {
-                            $query->whereRaw("concat(users.first_name,' ',users.last_name) LIKE '%" . $search . "%'");
+                            $query->whereRaw("concat(users.first_name,' ',users.last_name) LIKE ?", ["%{$search}%"]);
                         });
                 });
             })

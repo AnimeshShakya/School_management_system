@@ -242,7 +242,7 @@ class OnlineExamQuestionController extends Controller {
                                     });
                             })
                                 ->orWhereHas('subject', function ($c) use ($search) {
-                                    $c->whereRaw("concat(name,' - ',type) LIKE '%" . $search . "%'");
+                                    $c->whereRaw("concat(name,' - ',type) LIKE ?", ["%{$search}%"]);
                                 });
                         })
                         ->orWhereHas('options', function ($p) use ($search) {
