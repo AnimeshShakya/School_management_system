@@ -2090,12 +2090,17 @@ class ParentApiController extends Controller
                 $date = $transaction->date;
                 if ($date) {
                     $datetime = Carbon::parse($date);
-                    $time = $datetime->format('H:i:s');
                     $addHour = $datetime->copy()->addHour();
-                    if (Carbon::now()->gt($addHour)) {
-                        $transaction->previous_status = $transaction->payment_status;
-                        $transaction->payment_status = 0;
-                        $transaction->save();
+                    if (Carbon::now()->gt($addHour) && $transaction->payment_status == 2) {
+                        DB::transaction(function () use ($transaction) {
+                            $locked = PaymentTransaction::lockForUpdate()->find($transaction->id);
+                            if ($locked && $locked->payment_status == 2) {
+                                $locked->payment_status = 0;
+                                $locked->save();
+                                // Sync in-memory status so toArray() below reflects the change
+                                $transaction->payment_status = 0;
+                            }
+                        });
                     }
                 }
             }

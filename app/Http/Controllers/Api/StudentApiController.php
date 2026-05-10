@@ -2854,10 +2854,16 @@ class StudentApiController extends Controller
                     $datetime = Carbon::parse($payment_transaction_db->date);
                     // $time = $datetime->format('H:i:s');
                     $addHour = $datetime->copy()->addHour();
-                    if (Carbon::now()->gt($addHour)) {
-                        $payment_transaction_db->previous_status = $payment_transaction_db->payment_status;
-                        $payment_transaction_db->payment_status = 0;
-                        $payment_transaction_db->save();
+                    if (Carbon::now()->gt($addHour) && $payment_transaction_db->payment_status == 2) {
+                        DB::transaction(function () use ($payment_transaction_db) {
+                            $locked = PaymentTransaction::lockForUpdate()->find($payment_transaction_db->id);
+                            if ($locked && $locked->payment_status == 2) {
+                                $locked->payment_status = 0;
+                                $locked->save();
+                                // Sync in-memory status so $payment_transaction_status below reflects the change
+                                $payment_transaction_db->payment_status = 0;
+                            }
+                        });
                     }
                 }
                 $payment_transaction_status = $payment_transaction_db->payment_status;
@@ -3175,12 +3181,17 @@ class StudentApiController extends Controller
                 $date = $transaction->date;
                 if ($date) {
                     $datetime = Carbon::parse($date);
-                    $time = $datetime->format('H:i:s');
                     $addHour = $datetime->copy()->addHour();
-                    if (Carbon::now()->gt($addHour)) {
-                        $transaction->previous_status = $transaction->payment_status;
-                        $transaction->payment_status = 0;
-                        $transaction->save();
+                    if (Carbon::now()->gt($addHour) && $transaction->payment_status == 2) {
+                        DB::transaction(function () use ($transaction) {
+                            $locked = PaymentTransaction::lockForUpdate()->find($transaction->id);
+                            if ($locked && $locked->payment_status == 2) {
+                                $locked->payment_status = 0;
+                                $locked->save();
+                                // Sync in-memory status so toArray() below reflects the change
+                                $transaction->payment_status = 0;
+                            }
+                        });
                     }
                 }
             }
