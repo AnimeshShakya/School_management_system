@@ -14,6 +14,13 @@ class PaymentTransaction extends Model
 
     protected $hidden = ["deleted_at", "created_at", "updated_at"];
 
+    protected $fillable = [
+        'initiated_by',
+        'ip_address',
+        'user_agent',
+        'notes',
+    ];
+
     public function student(){
         return $this->belongsTo(Students::class ,'student_id')->withTrashed();
     }
@@ -22,5 +29,8 @@ class PaymentTransaction extends Model
     }
     public function session_year() {
         return $this->belongsTo(SessionYear::class);
+    }
+    public function initiatedBy() {
+        return $this->belongsTo(User::class, 'initiated_by')->withTrashed();
     }
 }
