@@ -485,7 +485,7 @@ class AssignmentController extends Controller
                         })->orWhereHas('assignment', function ($query) use ($search) {
                             $query->where('name', 'LIKE', "%$search%");
                         })->orWhereHas('student.user', function ($query) use ($search) {
-                            $query->whereRaw("concat(users.first_name,' ',users.last_name) LIKE '%" . $search . "%'");
+                            $query->whereRaw("concat(users.first_name,' ',users.last_name) LIKE ?", ["%{$search}%"]);
                         });
                 });
             })
