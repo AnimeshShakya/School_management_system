@@ -25,11 +25,11 @@ class ClassSection extends Model
     protected $appends = ["name", "full_name"];
 
     public function class() {
-        return $this->belongsTo(ClassSchool::class)->withTrashed();
+        return $this->belongsTo(ClassSchool::class);
     }
 
     public function section() {
-        return $this->belongsTo(Section::class)->withTrashed();
+        return $this->belongsTo(Section::class);
     }
 
     public function classTeachers()
@@ -43,7 +43,7 @@ class ClassSection extends Model
     }
 
     public function streams(){
-        return $this->belongsTo(Stream::class)->withTrashed();
+        return $this->belongsTo(Stream::class);
     }
 
     public function announcement() {

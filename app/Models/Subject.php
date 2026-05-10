@@ -18,7 +18,7 @@ class Subject extends Model
     protected $hidden = ["deleted_at", "created_at", "updated_at"];
 
     public function medium() {
-        return $this->belongsTo(Mediums::class)->withTrashed();
+        return $this->belongsTo(Mediums::class);
     }
 
     public function scopeSubjectTeacher($query) {
