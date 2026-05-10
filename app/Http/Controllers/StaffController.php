@@ -17,6 +17,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class StaffController extends Controller {
     private array $userColumns = [];
@@ -131,7 +132,7 @@ class StaffController extends Controller {
                     $user->image = "";
                 }
 
-                $staff_plain_text_password = str_replace('-', '', date('d-m-Y', strtotime($request->dob)));
+                $staff_plain_text_password = Str::random(12);
                 $this->fillUserFromRequest($user, $request, $staff_plain_text_password);
                 $user->save();
 
@@ -183,7 +184,7 @@ class StaffController extends Controller {
                     $user->image = "";
                 }
 
-                $staff_plain_text_password = str_replace('-', '', date('d-m-Y', strtotime($request->dob)));
+                $staff_plain_text_password = Str::random(12);
                 $this->fillUserFromRequest($user, $request, $staff_plain_text_password);
                 $user->save();
 

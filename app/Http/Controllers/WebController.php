@@ -27,6 +27,7 @@ use App\Models\EducationalProgram;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class WebController extends Controller
 {
@@ -266,7 +267,7 @@ class WebController extends Controller
                 }
                 $fatherParent = Parents::with('user')->where('email', $request->father_email)->first();
                 $motherParent = Parents::with('user')->where('email', $request->mother_email)->first();
-                $father_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($request->father_dob)));
+                $father_plaintext_password = Str::random(12);
 
                 if ($fatherParent) {
                     $father_parent_id = $fatherParent->id;
@@ -315,7 +316,7 @@ class WebController extends Controller
                 }
 
                 //Add Mother in User and Parent table data
-                $mother_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($request->mother_dob)));
+                $mother_plaintext_password = Str::random(12);
                 if ($motherParent) {
                     $mother_parent_id = $motherParent->id;
                 } else {
@@ -378,7 +379,7 @@ class WebController extends Controller
                 if ($guardianParent) {
                     $guardian_parent_id = $guardianParent->id;
                 } else {
-                    $guardian_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($request->guardian_dob)));
+                    $guardian_plaintext_password = Str::random(12);
 
                     $guardian_image = $request->file('guardian_image');
                     $file_name = time() . '-' . $guardian_image->getClientOriginalName();
@@ -423,7 +424,7 @@ class WebController extends Controller
             }
             //Create Student User First
 
-            $child_plaintext_password = str_replace('-', '', date('d-m-Y', strtotime($request->dob)));
+            $child_plaintext_password = Str::random(12);
 
             $student_image = $request->file('image');
             // made file name with combination of current time

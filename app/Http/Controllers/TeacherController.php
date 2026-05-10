@@ -15,6 +15,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use App\Services\MailService;
 use Exception;
 use Illuminate\Support\Facades\Schema;
@@ -124,7 +125,7 @@ class TeacherController extends Controller {
                 } else {
                     $user->image = "";
                 }
-                $teacher_plain_text_password = str_replace('-', '', date('d-m-Y', strtotime($request->dob)));
+                $teacher_plain_text_password = Str::random(12);
                 $user->password = Hash::make($teacher_plain_text_password);
 
                 $user->first_name = $request->first_name;
@@ -246,7 +247,7 @@ class TeacherController extends Controller {
                 } else {
                     $user->image = "";
                 }
-                $teacher_plain_text_password = str_replace('-', '', date('d-m-Y', strtotime($request->dob)));
+                $teacher_plain_text_password = Str::random(12);
                 $user->password = Hash::make($teacher_plain_text_password);
 
                 $user->first_name = $request->first_name;
