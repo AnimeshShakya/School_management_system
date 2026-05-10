@@ -29,8 +29,10 @@ Route::group(['middleware' => 'auth:sanctum'], function () {
 Route::group(['prefix' => 'student'], function () {
 
     //Non Authenticated APIs
-    Route::post('login', [StudentApiController::class, 'login']);
-    Route::post('forgot-password', [StudentApiController::class, 'forgotPassword'])->middleware('throttle:5,60');
+    Route::middleware('throttle:sensitive-api')->group(function () {
+        Route::post('login', [StudentApiController::class, 'login']);
+        Route::post('forgot-password', [StudentApiController::class, 'forgotPassword']);
+    });
 
     //Authenticated APIs
     Route::group([
@@ -79,7 +81,7 @@ Route::group(['prefix' => 'student'], function () {
 
         //fees
         Route::get('fees-details', [StudentApiController::class, 'getFeesDetails']); //Fees Details
-        Route::post('add-fees-transaction', [StudentApiController::class, 'storeFeesTransaction']); //Fees Details
+        Route::middleware('throttle:sensitive-api')->post('add-fees-transaction', [StudentApiController::class, 'storeFeesTransaction']); //Fees Details
         Route::post('store-fees', [StudentApiController::class, 'storeFees']); //Store Fees
         Route::get('fees-paid-list', [StudentApiController::class, 'feesPaidList']); //Fees Details
         Route::get('fees-paid-receipt-pdf', [StudentApiController::class, 'feesPaidReceiptPDF']); //Fees Receipt
@@ -104,7 +106,7 @@ Route::group(['prefix' => 'student'], function () {
  **/
 Route::group(['prefix' => 'parent'], function () {
     //Non Authenticated APIs
-    Route::post('login', [ParentApiController::class, 'login']);
+    Route::middleware('throttle:sensitive-api')->post('login', [ParentApiController::class, 'login']);
     //Authenticated APIs
     Route::group([
         'middleware' => [
@@ -143,7 +145,7 @@ Route::group(['prefix' => 'parent'], function () {
 
             //fees
             Route::get('fees-details', [ParentApiController::class, 'getFeesDetails']); //Fees Details
-            Route::post('add-fees-transaction', [ParentApiController::class, 'storeFeesTransaction']); //Fees Details
+            Route::middleware('throttle:sensitive-api')->post('add-fees-transaction', [ParentApiController::class, 'storeFeesTransaction']); //Fees Details
             Route::post('store-fees', [ParentApiController::class, 'storeFees']); //Store Fees
             Route::get('fees-paid-list', [ParentApiController::class, 'feesPaidList']); //Fees Details
 
@@ -171,7 +173,7 @@ Route::group(['prefix' => 'parent'], function () {
  **/
 Route::group(['prefix' => 'teacher'], function () {
     //Non Authenticated APIs
-    Route::post('login', [TeacherApiController::class, 'login']);
+    Route::middleware('throttle:sensitive-api')->post('login', [TeacherApiController::class, 'login']);
     //Authenticated APIs
     Route::group(['middleware' => ['auth:sanctum',]], function () {
         Route::get('dashboard', [TeacherApiController::class, 'dashboard']);
