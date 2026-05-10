@@ -62,9 +62,11 @@ use App\Models\OnlineExamQuestionAnswer;
 use App\Models\OnlineExamQuestionChoice;
 use App\Models\OnlineExamQuestionOption;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use App\Http\Resources\TimetableCollection;
 use App\Services\Payment\PaymentService;
 use App\Services\ResponseService;
+use App\Models\ElectiveSubjectGroup;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -701,9 +703,20 @@ class StudentApiController extends Controller
 
     public function selectSubjects(Request $request)
     {
+        $student = $request->user()->student;
+        $class_section = $student->class_section;
+        $class_id = $class_section->class->id;
+
         $validator = Validator::make($request->all(), [
-            'subject_group.*.id' => 'required',
+            'subject_group' => 'required|array',
+            'subject_group.*.id' => 'required|integer|exists:elective_subject_groups,id',
             'subject_group.*.subject_id' => 'required|array',
+            'subject_group.*.subject_id.*' => [
+                'required',
+                'integer',
+                'distinct',
+                Rule::exists('class_subjects', 'subject_id')->where('class_id', $class_id),
+            ],
         ]);
 
         if ($validator->fails()) {
@@ -715,9 +728,6 @@ class StudentApiController extends Controller
                 return $semester->current;
             });
             $semester_id = null;
-            $student = $request->user()->student;
-            $class_section = $student->class_section;
-            $class_id = $class_section->class->id;
             $class = ClassSchool::where('id', $class_id)->first();
 
             $include_semester = $class->include_semesters;
@@ -726,8 +736,29 @@ class StudentApiController extends Controller
             }
             $student_subject = array();
             $session_year_id = Settings::select('message')->where('type', 'session_year')->pluck('message')->first();
+
+            $groupIds = collect($request->subject_group)->pluck('id')->all();
+            $electiveGroups = ElectiveSubjectGroup::whereIn('id', $groupIds)
+                ->where('class_id', $class_id)
+                ->get()
+                ->keyBy('id');
+
             foreach ($request->subject_group as $key => $subject_group) {
-                // $subject_group_id = $subject_group['id'];
+                $group = $electiveGroups->get($subject_group['id']);
+
+                if (!$group) {
+                    ResponseService::errorResponse("Invalid elective subject group for your class.");
+                    return;
+                }
+
+                $selectedCount = count($subject_group['subject_id']);
+                if ($selectedCount > $group->total_selectable_subjects) {
+                    ResponseService::errorResponse(
+                        "You can select at most {$group->total_selectable_subjects} subject(s) from this group."
+                    );
+                    return;
+                }
+
                 foreach ($subject_group['subject_id'] as $subject_id) {
 
                     $if_subject_already_selected = StudentSubject::where([
