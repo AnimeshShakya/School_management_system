@@ -184,7 +184,7 @@ class AssignmentController extends Controller
             $assignment->class_section_id = $request->class_section_id;
             $assignment->subject_id = $request->subject_id;
             $assignment->name = $request->name;
-            $assignment->instructions = $request->instructions;
+            $assignment->instructions = sanitize_html_input($request->instructions);
             $assignment->due_date = $request->due_date;
             $assignment->points = $request->points;
             if ($request->resubmission) {
@@ -297,7 +297,7 @@ class AssignmentController extends Controller
             $assignment->class_section_id = $request->class_section_id;
             $assignment->subject_id = $request->subject_id;
             $assignment->name = $request->name;
-            $assignment->instructions = $request->instructions;
+            $assignment->instructions = sanitize_html_input($request->instructions);
             $assignment->due_date = $request->due_date;
             $assignment->points = $request->points;
             if ($request->resubmission) {
