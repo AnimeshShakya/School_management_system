@@ -10,6 +10,11 @@
             <h3 class="page-title">
                 {{ __('manage') . ' ' . __('exam_marks') }}
             </h3>
+            <div class="page-header-right">
+                <a href="{{ route('exams.import-marks') }}" class="btn btn-theme">
+                    <i class="fa fa-upload"></i> {{ __('import_marks') }}
+                </a>
+            </div>
         </div>
         <div class="row">
             <div class="col-md-12 grid-margin stretch-card search-container">

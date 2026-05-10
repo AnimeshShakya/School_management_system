@@ -22,11 +22,14 @@ use App\Models\ExamTimetable;
 use Illuminate\Http\Response;
 use App\Models\StudentSubject;
 use App\Services\ResponseService;
+use App\Imports\ExamMarksImport;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ExamController extends Controller
 {
@@ -469,6 +472,96 @@ class ExamController extends Controller
         $classes = ClassSection::with('class', 'section', 'class.medium', 'streams')->whereIn('id', $class_section_id)->whereIn('class_id', $class_ids)->get();
 
         return response(view('exams.upload-marks', compact('classes')));
+    }
+
+    public function importMarksForm()
+    {
+        if (!Auth::user()->can('exam-upload-marks')) {
+            $response = array(
+                'message' => trans('no_permission_message')
+            );
+            return redirect(route('home'))->withErrors($response);
+        }
+
+        $teacher_id = Auth::user()->teacher->id;
+        $class_section_id = ClassTeacher::where('class_teacher_id', $teacher_id)->pluck('class_section_id');
+        $class_ids = ClassSection::whereIn('id', $class_section_id)->pluck('class_id');
+        $classes = ClassSection::with('class', 'section', 'class.medium', 'streams')->whereIn('id', $class_section_id)->whereIn('class_id', $class_ids)->get();
+
+        return response(view('exams.import-marks', compact('classes')));
+    }
+
+    public function importMarksPreview(Request $request)
+    {
+        if (!Auth::user()->can('exam-upload-marks')) {
+            return response()->json(['error' => true, 'message' => trans('no_permission_message')]);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'class_section_id' => 'required|exists:class_sections,id',
+            'class_id'         => 'required|exists:classes,id',
+            'exam_id'          => 'required|exists:exams,id',
+            'subject_id'       => 'required|exists:subjects,id',
+            'file'             => 'required|file|mimes:csv,txt,xlsx,xls',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => true, 'message' => $validator->errors()->first()]);
+        }
+
+        try {
+            // Verify the exam timetable exists for this combination
+            $examTimetable = ExamTimetable::where([
+                'exam_id'    => $request->exam_id,
+                'class_id'   => $request->class_id,
+                'subject_id' => $request->subject_id,
+            ])->first();
+
+            if (!$examTimetable) {
+                return response()->json(['error' => true, 'message' => trans('exam_timetable_does_not_exists')]);
+            }
+
+            $import = new ExamMarksImport(
+                (int) $request->class_section_id,
+                (int) $request->class_id,
+                (int) $request->exam_id,
+                (int) $request->subject_id
+            );
+
+            Excel::import($import, $request->file('file'));
+
+            return response()->json([
+                'error'       => false,
+                'valid'       => $import->valid,
+                'errors'      => $import->errors,
+                'total_marks' => $examTimetable->total_marks,
+            ]);
+        } catch (Throwable $e) {
+            Log::error('ExamMarksImport error', ['exception' => $e]);
+            return response()->json(['error' => true, 'message' => trans('error_occurred')]);
+        }
+    }
+
+    public function downloadMarksTemplate()
+    {
+        if (!Auth::user()->can('exam-upload-marks')) {
+            return redirect(route('home'));
+        }
+
+        $headers = ['Content-Type' => 'text/csv'];
+        $filename = 'exam_marks_template.csv';
+
+        $callback = function () {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['admission_no', 'student_name', 'marks_obtained']);
+            fputcsv($handle, ['2024001', 'John Doe', '85']);
+            fputcsv($handle, ['2024002', 'Jane Smith', '90']);
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, array_merge($headers, [
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]));
     }
 
     public function getExamSubjects($exam_id)

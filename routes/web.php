@@ -250,6 +250,10 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         Route::get('exams/upload-marks', [ExamController::class, 'uploadMarks'])->name('exams.upload-marks');
         Route::get('exams/marks-list', [ExamController::class, 'marksList'])->name('exams.marks-list');
 
+        Route::get('exams/import-marks', [ExamController::class, 'importMarksForm'])->name('exams.import-marks');
+        Route::post('exams/import-marks/preview', [ExamController::class, 'importMarksPreview'])->name('exams.import-marks-preview');
+        Route::get('exams/download-marks-template', [ExamController::class, 'downloadMarksTemplate'])->name('exams.download-marks-template');
+
         Route::get('exams/get-exams/{class_id}', [ExamController::class, 'getExamByClass'])->name('exams.classes');
         Route::delete('/delete-exam-class/{exam_id}/{class_id}', [ExamController::class, 'deleteExamClass']);
         Route::get('exams/get-subjects/{class_id}/{exam_id}', [ExamController::class, 'getSubjectByExam'])->name('exams.subject');
