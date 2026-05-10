@@ -383,30 +383,13 @@ class ApiController extends Controller
             'event_id' => 'required|nullable',
         ]);
         if ($validator->fails()) {
-            $response = array(
-                'error' => true,
-                'message' => $validator->errors()->first(),
-                'code' => 102,
-            );
-            return response()->json($response);
+            ResponseService::validationError($validator->errors()->first());
         }
         try {
-
             $data = MultipleEvent::where('event_id', $request->event_id)->get();
-
-            $response = array(
-                'error' => false,
-                'message' => "Events Details Fetched Successfully",
-                'data' => $data,
-                'code' => 200,
-            );
+            ResponseService::successResponse("Events Details Fetched Successfully", $data);
         } catch (\Throwable $e) {
-            $response = array(
-                'error' => true,
-                'message' => trans('error_occurred'),
-                'code' => 103,
-            );
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
-        return response()->json($response);
     }
 }

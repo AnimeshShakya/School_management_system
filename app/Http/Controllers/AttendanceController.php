@@ -255,7 +255,7 @@ class AttendanceController extends Controller
             $sql->where(function ($query) use ($search) {
                 $query->where('id', 'LIKE', "%$search%")
                     ->orWhereHas('user', function ($q) use ($search) {
-                        $q->whereRaw("concat(first_name,' ',last_name) LIKE '%" . $search . "%'")
+                        $q->whereRaw("concat(first_name,' ',last_name) LIKE ?", ["%{$search}%"])
                             ->orWhere('first_name', 'LIKE', "%$search%")
                             ->orWhere('last_name', 'LIKE', "%$search%");
                     });
@@ -348,7 +348,7 @@ class AttendanceController extends Controller
             $sql->where('id', 'LIKE', "%$search%")
                 ->orwhere('student_id', 'LIKE', "%$search%")
                 ->orWhereHas('student.user', function ($q) use ($search) {
-                    $q->whereRaw("concat(users.first_name,' ',users.last_name) LIKE '%" . $search . "%'")
+                    $q->whereRaw("concat(users.first_name,' ',users.last_name) LIKE ?", ["%{$search}%"])
                         ->orwhere('users.first_name', 'LIKE', "%$search%")
                         ->orwhere('users.last_name', 'LIKE', "%$search%");
                 })
@@ -615,7 +615,7 @@ class AttendanceController extends Controller
             $sql->where(function ($query) use ($search) {
                 $query->where('id', 'LIKE', "%$search%")
                     ->orWhereHas('user', function ($q) use ($search) {
-                        $q->whereRaw("concat(first_name,' ',last_name) LIKE '%" . $search . "%'")
+                        $q->whereRaw("concat(first_name,' ',last_name) LIKE ?", ["%{$search}%"])
                             ->orWhere('first_name', 'LIKE', "%$search%")
                             ->orWhere('last_name', 'LIKE', "%$search%");
                     });

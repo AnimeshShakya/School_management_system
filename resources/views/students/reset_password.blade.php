@@ -79,7 +79,16 @@
                                 if (response.error == true) {
                                     showErrorToast(response.message);
                                 } else {
-                                    showSuccessToast(response.message);
+                                    if (response.data && response.data.password) {
+                                        Swal.fire({
+                                            title: "{{ __('password_reset_successfully') }}",
+                                            html: "{{ __('new_password') }}: <strong>" + response.data.password + "</strong>",
+                                            icon: 'success',
+                                            confirmButtonColor: '#3085d6',
+                                        });
+                                    } else {
+                                        showSuccessToast(response.message);
+                                    }
                                     $('#table_list').bootstrapTable('refresh');
                                 }
                             }

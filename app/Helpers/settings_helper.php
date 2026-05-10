@@ -309,3 +309,20 @@ function safe_htmlspecialchars_decode($string, $flags = ENT_QUOTES | ENT_SUBSTIT
     
     return $result;
 }
+
+/**
+ * Sanitize user-supplied text content by stripping all HTML tags.
+ * Use this for plain-text description/content fields to prevent stored XSS.
+ * All HTML tags are removed; only the text content is preserved.
+ *
+ * @param string|null $string
+ * @return string|null
+ */
+function sanitize_html_input($string)
+{
+    if ($string === null) {
+        return null;
+    }
+
+    return trim(strip_tags((string) $string));
+}

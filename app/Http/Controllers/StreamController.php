@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Stream;
+use App\Models\ClassSchool;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -219,11 +220,19 @@ class StreamController extends Controller
             return response()->json($response);
         }
         try {
-            Stream::find($id)->delete();
-            $response = array(
-                'error' => false,
-                'message' => trans('data_delete_successfully')
-            );
+            $associatedClasses = ClassSchool::where('stream_id', $id)->count();
+            if ($associatedClasses > 0) {
+                $response = array(
+                    'error' => true,
+                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data')
+                );
+            } else {
+                Stream::find($id)->delete();
+                $response = array(
+                    'error' => false,
+                    'message' => trans('data_delete_successfully')
+                );
+            }
         } catch (\Throwable $e) {
             $response = array(
                 'error' => true,

@@ -1421,6 +1421,9 @@ class FeesTypeController extends Controller {
             $payment_transaction_store->payment_status = 1;
             $payment_transaction_store->total_amount = $request->total_amount;
             $payment_transaction_store->session_year_id = $session_year_id;
+            $payment_transaction_store->initiated_by = Auth::id();
+            $payment_transaction_store->ip_address = $request->ip();
+            $payment_transaction_store->user_agent = $request->userAgent();
             $payment_transaction_store->save();
 
 
@@ -1637,6 +1640,9 @@ class FeesTypeController extends Controller {
             $payment_transaction_store->date = $date;
             $payment_transaction_store->total_amount = $request->total_amount;
             $payment_transaction_store->session_year_id = $session_year_id;
+            $payment_transaction_store->initiated_by = Auth::id();
+            $payment_transaction_store->ip_address = $request->ip();
+            $payment_transaction_store->user_agent = $request->userAgent();
             $payment_transaction_store->save();
 
 
