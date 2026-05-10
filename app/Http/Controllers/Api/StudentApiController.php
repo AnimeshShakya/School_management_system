@@ -62,7 +62,7 @@ use App\Models\OnlineExamQuestionAnswer;
 use App\Models\OnlineExamQuestionChoice;
 use App\Models\OnlineExamQuestionOption;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 use App\Http\Resources\TimetableCollection;
 use App\Services\Payment\PaymentService;
 use App\Services\ResponseService;
@@ -1048,8 +1048,8 @@ class StudentApiController extends Controller
             'assignment_id' => 'required|numeric',
             'subject_id' => 'nullable|numeric',
             'text_submission' => 'required_without:files',
-            'files' => 'required_without:text_submission|array'
-
+            'files' => 'required_without:text_submission|array',
+            'files.*' => 'mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
         ]);
 
         if ($validator->fails()) {
@@ -1120,7 +1120,9 @@ class StudentApiController extends Controller
                     $file->file_name = $image->getClientOriginalName();
                     $file->modal()->associate($assignment_submission);
                     $file->type = 1;
-                    $file->file_url = $image->store('assignment', 'public');
+                    $uuid = Str::uuid();
+                    $extension = $image->extension();
+                    $file->file_url = $image->storeAs('assignment', $uuid . '.' . $extension, 'public');
                     $file->save();
                 }
             }
