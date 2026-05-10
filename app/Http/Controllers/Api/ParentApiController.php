@@ -1179,6 +1179,7 @@ class ParentApiController extends Controller
                     $time = $datetime->format('H:i:s');
                     $addHour = $datetime->copy()->addHour();
                     if (Carbon::now()->gt($addHour)) {
+                        $payment_transaction_db->previous_status = $payment_transaction_db->payment_status;
                         $payment_transaction_db->payment_status = 0;
                         $payment_transaction_db->save();
                     }
@@ -1303,6 +1304,9 @@ class ParentApiController extends Controller
             $payment_transaction_db->total_amount = $request->amount;
             $payment_transaction_db->date = date('Y-m-d H:i:s');
             $payment_transaction_db->session_year_id = $session_year_id;
+            $payment_transaction_db->initiated_by = Auth::id();
+            $payment_transaction_db->ip_address = $request->ip();
+            $payment_transaction_db->user_agent = $request->userAgent();
             $payment_transaction_db->save();
 
             // If Optional Fees Passed then insert data
@@ -2101,15 +2105,19 @@ class ParentApiController extends Controller
                 }
             }
             $fees_payment_transactions =  $fees_payment_transactions->toArray();
-            ResponseService::successResponse("Fees Payment Transactions Fetched Successfully", [
-                'current_page' => $fees_payment_transactions['current_page'],
-                'transaction-data' => $fees_payment_transactions['data'],
-                'from' => $fees_payment_transactions['from'],
-                'last_page' => $fees_payment_transactions['last_page'],
-                'per_page' => $fees_payment_transactions['per_page'],
-                'to' => $fees_payment_transactions['to'],
-                'total' => $fees_payment_transactions['total'],
-            ]);
+            ResponseService::successResponse("Fees Payment Transactions Fetched Successfully",
+                $fees_payment_transactions['data'],
+                [],
+                null,
+                [
+                    'current_page' => $fees_payment_transactions['current_page'],
+                    'from'         => $fees_payment_transactions['from'],
+                    'last_page'    => $fees_payment_transactions['last_page'],
+                    'per_page'     => $fees_payment_transactions['per_page'],
+                    'to'           => $fees_payment_transactions['to'],
+                    'total'        => $fees_payment_transactions['total'],
+                ]
+            );
         } catch (Throwable $e) {
             ResponseService::errorResponse("error_occurred", null, 103, $e);
         }
@@ -2335,6 +2343,7 @@ class ParentApiController extends Controller
         try {
             $update_status = PaymentTransaction::findOrFail($request->payment_transaction_id);
             $total_amount = $update_status->total_amount;
+            $update_status->previous_status = $update_status->payment_status;
             $update_status->payment_status = 0;
             $update_status->save();
 

@@ -7,6 +7,7 @@ namespace App\Services;
 use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Pagination\AbstractPaginator;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -129,15 +130,44 @@ class ResponseService {
      * @param $data
      * @param array $customData
      * @param $code
+     * @param array $meta
      * @return void
      */
-    #[NoReturn] public static function successResponse(string $message = "Success", $data = null, array $customData = array(), $code = null) {
-        response()->json(array_merge([
-            'error'   => false,
+    #[NoReturn] public static function successResponse(string $message = "Success", $data = null, array $customData = array(), $code = null, array $meta = []) {
+        // Merge customData into data to enforce a consistent envelope
+        if (!empty($customData)) {
+            if (is_null($data)) {
+                $data = $customData;
+            } elseif (is_array($data)) {
+                $data = array_merge($data, $customData);
+            }
+        }
+
+        // Auto-extract pagination meta from paginator objects
+        if ($data instanceof AbstractPaginator && empty($meta)) {
+            $meta = [
+                'current_page' => $data->currentPage(),
+                'last_page'    => $data->lastPage(),
+                'per_page'     => $data->perPage(),
+                'total'        => $data->total(),
+                'from'         => $data->firstItem(),
+                'to'           => $data->lastItem(),
+            ];
+            $data = $data->items();
+        }
+
+        $response = [
+            'status'  => true,
             'message' => trans($message),
             'data'    => $data,
-            'code'    => $code ?? 200
-        ], $customData))->send();
+            'code'    => $code ?? 200,
+        ];
+
+        if (!empty($meta)) {
+            $response['meta'] = $meta;
+        }
+
+        response()->json($response)->send();
         exit();
     }
 
@@ -170,7 +200,7 @@ class ResponseService {
         }
 
         response()->json([
-            'error'   => true,
+            'status'  => false,
             'message' => trans($message),
             'data'    => $data,
             'code'    => $code ?? config('constants.RESPONSE_CODE.EXCEPTION_ERROR'),
@@ -198,7 +228,7 @@ class ResponseService {
      */
     #[NoReturn] public static function warningResponse(string $message = 'Error Occurred', $data = null, $code = null) {
         response()->json([
-            'error'   => false,
+            'status'  => false,
             'warning' => true,
             'code'    => $code,
             'message' => trans($message),
