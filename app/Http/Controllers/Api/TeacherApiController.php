@@ -771,7 +771,7 @@ class TeacherApiController extends Controller
         try {
             $lesson = new Lesson();
             $lesson->name = $request->name;
-            $lesson->description = $request->description;
+            $lesson->description = sanitize_html_input($request->description);
             $lesson->class_section_id = $request->class_section_id;
             $lesson->subject_id = $request->subject_id;
             $lesson->save();
@@ -870,7 +870,7 @@ class TeacherApiController extends Controller
         try {
             $lesson = Lesson::find($request->lesson_id);
             $lesson->name = $request->name;
-            $lesson->description = $request->description;
+            $lesson->description = sanitize_html_input($request->description);
             $lesson->class_section_id = $request->class_section_id;
             $lesson->subject_id = $request->subject_id;
             $lesson->save();
@@ -1054,7 +1054,7 @@ class TeacherApiController extends Controller
         try {
             $topic = new LessonTopic();
             $topic->name = $request->name;
-            $topic->description = $request->description;
+            $topic->description = sanitize_html_input($request->description);
             $topic->lesson_id = $request->lesson_id;
             $topic->save();
 
@@ -1145,7 +1145,7 @@ class TeacherApiController extends Controller
             $topic = LessonTopic::find($request->topic_id);
 
             $topic->name = $request->name;
-            $topic->description = $request->description;
+            $topic->description = sanitize_html_input($request->description);
             $topic->save();
 
             // Update the Old Files
@@ -1442,8 +1442,8 @@ class TeacherApiController extends Controller
 
             $data = getSettings('session_year');
             $announcement = new Announcement();
-            $announcement->title = trim($request->title);
-            $announcement->description = trim($request->description);
+            $announcement->title = sanitize_html_input($request->title);
+            $announcement->description = sanitize_html_input($request->description);
             $announcement->session_year_id = $data['session_year'];
 
             // Get subject teacher record
@@ -1516,8 +1516,8 @@ class TeacherApiController extends Controller
         try {
             $teacher_id = Auth::user()->teacher->id;
             $announcement = Announcement::findOrFail($request->announcement_id);
-            $announcement->title = $request->title;
-            $announcement->description = $request->description;
+            $announcement->title = sanitize_html_input($request->title);
+            $announcement->description = sanitize_html_input($request->description);
 
             $subject_teacher = SubjectTeacher::where(['teacher_id' => $teacher_id, 'class_section_id' => $request->class_section_id, 'subject_id' => $request->subject_id])->with('subject')->firstOrFail();
             $announcement->table()->associate($subject_teacher);

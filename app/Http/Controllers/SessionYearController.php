@@ -23,6 +23,7 @@ use App\Models\PaymentTransaction;
 use App\Models\AssignmentSubmission;
 use App\Models\InstallmentFee;
 use App\Models\PaidInstallmentFee;
+use App\Services\ResponseService;
 use Illuminate\Support\Facades\Auth;
 
 class SessionYearController extends Controller
@@ -394,15 +395,9 @@ class SessionYearController extends Controller
             ->find($id);
 
         if (!$session) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Session not found.'
-            ], 404);
+            ResponseService::errorResponse('Session not found.', null, 404);
         }
 
-        return response()->json([
-            'status' => true,
-            'data' => $session
-        ]);
+        ResponseService::successResponse('Session Year Fetched Successfully.', $session);
     }
 }

@@ -52,7 +52,12 @@ class StaffController extends Controller {
             }
         }
 
-        // Fallback for fresh/legacy setups with no custom roles yet.
+        // If the current user is Super Admin, return all roles (so they can assign Super Admin too).
+        // Otherwise fall back to excluding core high-privilege roles from assignment.
+        if (Auth::check() && Auth::user()->hasRole('Super Admin')) {
+            return $query->orderBy('id', 'DESC')->get();
+        }
+
         return Role::whereNotIn('name', ['Super Admin', 'Teacher', 'Student', 'Parent'])
             ->orderBy('id', 'DESC')
             ->get();
@@ -217,7 +222,7 @@ class StaffController extends Controller {
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show() {
+    public function show($id = null) {
         if (!Auth::user()->can('staff-list')) {
             $response = array(
                 'message' => trans('no_permission_message')
@@ -243,10 +248,45 @@ class StaffController extends Controller {
 
 
         if (!$this->hasStaffTable()) {
-            return response()->json([
-                'total' => 0,
-                'rows' => [],
-            ]);
+            // If the staffs table doesn't exist, still return Super Admin users so the UI isn't empty.
+            try {
+                $superAdmins = User::whereHas('roles', function ($q) {
+                    $q->where('name', 'Super Admin');
+                })->whereNull('deleted_at')->get();
+
+                $data = getSettings('date_formate');
+                $rows = [];
+                $no = 1;
+                foreach ($superAdmins as $sa) {
+                    $tempRow = [];
+                    $tempRow['id'] = 0;
+                    $tempRow['no'] = $no++;
+                    $tempRow['user_id'] = $sa->id;
+                    $tempRow['role_id'] = $sa->roles->pluck('id')->implode(', ');
+                    $tempRow['roles'] = $sa->roles->pluck('name')->implode(', ');
+                    $tempRow['first_name'] = $sa->first_name ?? explode(' ', $sa->name ?? '')[0] ?? '';
+                    $tempRow['last_name'] = $sa->last_name ?? (isset($sa->name) ? implode(' ', array_slice(explode(' ', $sa->name), 1)) : '');
+                    $tempRow['gender'] = $sa->gender ?? '';
+                    $tempRow['address'] = $sa->current_address ?? '';
+                    $tempRow['email'] = $sa->email ?? '';
+                    $tempRow['dob'] = !empty($sa->dob) && !empty($data['date_formate']) ? date($data['date_formate'], strtotime($sa->dob)) : '';
+                    $tempRow['mobile'] = $sa->mobile ?? '';
+                    $tempRow['image'] = $sa->image ?? '';
+                    // For appended rows there's no operate buttons by default; leave operate empty or add conditional actions.
+                    $tempRow['operate'] = '';
+                    $rows[] = $tempRow;
+                }
+
+                return response()->json([
+                    'total' => count($rows),
+                    'rows' => $rows,
+                ]);
+            } catch (\Throwable $e) {
+                return response()->json([
+                    'total' => 0,
+                    'rows' => [],
+                ]);
+            }
         }
 
         $sql = Staff::with('user', 'user.roles');
@@ -276,6 +316,48 @@ class StaffController extends Controller {
 
         $sql->orderBy($sort, $order)->skip($offset)->take($limit);
         $res = $sql->get();
+
+        // Include users who have the 'Super Admin' role but don't have a corresponding staff row.
+        // This ensures Super Admin accounts are visible in the staff listing even if no staff record was created.
+        try {
+            $existingUserIds = $res->pluck('user_id')->filter()->unique()->toArray();
+            $extraSuperAdmins = User::whereHas('roles', function ($q) {
+                $q->where('name', 'Super Admin');
+            })->whereNull('deleted_at')
+              ->whereNotIn('id', $existingUserIds)
+              ->get();
+
+            foreach ($extraSuperAdmins as $sa) {
+                if ($this->hasStaffTable()) {
+                    // Create a staff record for this super admin if one doesn't exist
+                    $existing = Staff::where('user_id', $sa->id)->first();
+                    if (!$existing) {
+                        $staff = new Staff();
+                        $staff->user_id = $sa->id;
+                        $staff->save();
+                        // attach the user relation for consistency
+                        $staff->user = $sa;
+                        $res->push($staff);
+                    } else {
+                        // ensure user relation is loaded and push existing
+                        $existing->user = $sa;
+                        $res->push($existing);
+                    }
+                } else {
+                    // fallback: create a lightweight object if staff table doesn't exist
+                    $obj = new \stdClass();
+                    $obj->id = 0;
+                    $obj->user_id = $sa->id;
+                    $obj->user = $sa;
+                    $res->push($obj);
+                }
+            }
+
+            // Increment total to account for the appended super admins (created or fallback)
+            $total += $extraSuperAdmins->count();
+        } catch (\Throwable $e) {
+            // If anything goes wrong, silently continue with existing results.
+        }
 
         $bulkData = array();
         $bulkData['total'] = $total;

@@ -133,7 +133,7 @@ Use the included deployment scripts for easy production setup:
 ### Manual Deployment
 1. Upload files to your web server
 2. Configure web server to point to `public` directory
-3. Set up environment variables
+3. Set up environment vari
 4. Run production commands:
    ```bash
    composer install --optimize-autoloader --no-dev

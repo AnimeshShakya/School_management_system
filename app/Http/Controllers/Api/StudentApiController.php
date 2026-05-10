@@ -66,6 +66,7 @@ use Illuminate\Support\Str;
 use App\Http\Resources\TimetableCollection;
 use App\Services\Payment\PaymentService;
 use App\Services\ResponseService;
+use App\Models\ElectiveSubjectGroup;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
@@ -510,13 +511,19 @@ class StudentApiController extends Controller
                 $q->where('class_id', $class_id)->whereIn('subject_id', $subject_id)->with(['subject'])->orderby('date');
             }])->limit(10)->get();
 
+            $examIds = $exam_data_db->pluck('id')->toArray();
+            $examDates = ExamTimetable::selectRaw('exam_id, MIN(date) as start_date, MAX(date) as end_date')
+                ->whereIn('exam_id', $examIds)
+                ->where('class_id', $class_id)
+                ->groupBy('exam_id')
+                ->get()
+                ->keyBy('exam_id');
+
             $exam_data = [];
             foreach ($exam_data_db as $data) {
                 $exam_timetable = [];
-                $starting_date_db = ExamTimetable::select(DB::raw("min(date)"))->where(['exam_id' => $data->id, 'class_id' => $class_id])->first();
-                $starting_date = $starting_date_db['min(date)'];
-                $ending_date_db = ExamTimetable::select(DB::raw("max(date)"))->where(['exam_id' => $data->id, 'class_id' => $class_id])->first();
-                $ending_date = $ending_date_db['max(date)'];
+                $starting_date = $examDates[$data->id]->start_date ?? null;
+                $ending_date = $examDates[$data->id]->end_date ?? null;
 
                 if (empty($starting_date) || empty($ending_date)) {
                     continue;
@@ -580,6 +587,7 @@ class StudentApiController extends Controller
                 ->limit(3)
                 ->get();
 
+            $event = [];
             foreach ($events as $row) {
                 if ($row->type == 'multiple') {
                     $hasdaySchedule = MultipleEvent::where('event_id', $row->id)->first();
@@ -701,9 +709,20 @@ class StudentApiController extends Controller
 
     public function selectSubjects(Request $request)
     {
+        $student = $request->user()->student;
+        $class_section = $student->class_section;
+        $class_id = $class_section->class->id;
+
         $validator = Validator::make($request->all(), [
-            'subject_group.*.id' => 'required',
+            'subject_group' => 'required|array',
+            'subject_group.*.id' => 'required|integer|exists:elective_subject_groups,id',
             'subject_group.*.subject_id' => 'required|array',
+            'subject_group.*.subject_id.*' => [
+                'required',
+                'integer',
+                'distinct',
+                Rule::exists('class_subjects', 'subject_id')->where('class_id', $class_id),
+            ],
         ]);
 
         if ($validator->fails()) {
@@ -715,9 +734,6 @@ class StudentApiController extends Controller
                 return $semester->current;
             });
             $semester_id = null;
-            $student = $request->user()->student;
-            $class_section = $student->class_section;
-            $class_id = $class_section->class->id;
             $class = ClassSchool::where('id', $class_id)->first();
 
             $include_semester = $class->include_semesters;
@@ -726,8 +742,29 @@ class StudentApiController extends Controller
             }
             $student_subject = array();
             $session_year_id = Settings::select('message')->where('type', 'session_year')->pluck('message')->first();
+
+            $groupIds = collect($request->subject_group)->pluck('id')->all();
+            $electiveGroups = ElectiveSubjectGroup::whereIn('id', $groupIds)
+                ->where('class_id', $class_id)
+                ->get()
+                ->keyBy('id');
+
             foreach ($request->subject_group as $key => $subject_group) {
-                // $subject_group_id = $subject_group['id'];
+                $group = $electiveGroups->get($subject_group['id']);
+
+                if (!$group) {
+                    ResponseService::errorResponse("Invalid elective subject group for your class.");
+                    return;
+                }
+
+                $selectedCount = count($subject_group['subject_id']);
+                if ($selectedCount > $group->total_selectable_subjects) {
+                    ResponseService::errorResponse(
+                        "You can select at most {$group->total_selectable_subjects} subject(s) from this group."
+                    );
+                    return;
+                }
+
                 foreach ($subject_group['subject_id'] as $subject_id) {
 
                     $if_subject_already_selected = StudentSubject::where([
@@ -1243,12 +1280,18 @@ class StudentApiController extends Controller
                     $query->whereIn('subject_id', $subject_id);
                 })->get();
 
+            $examIds = $exam_data_db->pluck('exam_id')->toArray();
+            $examDates = ExamTimetable::selectRaw('exam_id, MIN(date) as start_date, MAX(date) as end_date')
+                ->whereIn('exam_id', $examIds)
+                ->where('class_id', $class_id)
+                ->groupBy('exam_id')
+                ->get()
+                ->keyBy('exam_id');
+
             foreach ($exam_data_db as $data) {
                 // date status
-                $starting_date_db = ExamTimetable::select(DB::raw("min(date)"))->where(['exam_id' => $data->exam->id, 'class_id' => $class_id])->first();
-                $starting_date = $starting_date_db['min(date)'];
-                $ending_date_db = ExamTimetable::select(DB::raw("max(date)"))->where(['exam_id' => $data->exam->id, 'class_id' => $class_id])->first();
-                $ending_date = $ending_date_db['max(date)'];
+                $starting_date = $examDates[$data->exam_id]->start_date ?? null;
+                $ending_date = $examDates[$data->exam_id]->end_date ?? null;
                 $currentTime = Carbon::now();
                 $current_date = date($currentTime->toDateString());
                 if ($current_date >= $starting_date && $current_date <= $ending_date) {
@@ -1430,6 +1473,7 @@ class StudentApiController extends Controller
             }
 
 
+            $exam_data = [];
             foreach ($exam_data_db->timetable as $data) {
                 $exam_data[] = array(
                     'id' => $data->id,
@@ -1471,9 +1515,16 @@ class StudentApiController extends Controller
 
 
             if (sizeof($exam_result_db)) {
+                $examIds = $exam_result_db->pluck('exam_id')->toArray();
+                $examStartDates = ExamTimetable::selectRaw('exam_id, MIN(date) as start_date')
+                    ->whereIn('exam_id', $examIds)
+                    ->where('class_id', $class_data->class_section->class_id)
+                    ->where('session_year_id', $session_year_id)
+                    ->groupBy('exam_id')
+                    ->pluck('start_date', 'exam_id');
+
                 foreach ($exam_result_db as $exam_result_data) {
-                    $starting_date_db = ExamTimetable::select(DB::raw("min(date)"))->where(['exam_id' => $exam_result_data->exam_id, 'class_id' => $class_data->class_section->class_id, 'session_year_id' => $session_year_id])->first();
-                    $starting_date = $starting_date_db['min(date)'];
+                    $starting_date = $examStartDates[$exam_result_data->exam_id] ?? null;
 
                     $exam_result = array(
                         'result_id' => $exam_result_data->id,
@@ -1838,12 +1889,11 @@ class StudentApiController extends Controller
                 $get_question_ids = OnlineExamQuestionChoice::whereIn('id', $online_exams_submitted_question_ids)->pluck('question_id');
 
                 //removes the question id of the question if one of the answer of particular question is wrong
-                foreach ($get_question_ids as $question_id) {
-                    $check_questions_answers_exists = OnlineExamQuestionAnswer::where('question_id', $question_id)->whereNotIn('answer', $online_exams_attempted_answers)->count();
-                    if ($check_questions_answers_exists) {
-                        unset($get_question_ids[array_search($question_id, $get_question_ids->toArray())]);
-                    }
-                }
+                $incorrectly_answered_question_ids = OnlineExamQuestionAnswer::whereIn('question_id', $get_question_ids)
+                    ->whereNotIn('answer', $online_exams_attempted_answers)
+                    ->pluck('question_id')
+                    ->unique();
+                $get_question_ids = $get_question_ids->diff($incorrectly_answered_question_ids);
                 //get the correct answers question id
                 $correct_answers_question_id = OnlineExamQuestionAnswer::whereIn('question_id', $get_question_ids)->whereIn('answer', $online_exams_attempted_answers)->pluck('question_id');
 
@@ -1880,28 +1930,51 @@ class StudentApiController extends Controller
 
                 $exam_list = array();
                 $total_obtained_marks_exam = '';
+
+                $examIdsForReport = collect($online_exams_db['data'])->pluck('id')->toArray();
+
+                // Batch-load all student answers for exams on this page
+                $allStudentAnswersByExam = OnlineExamStudentAnswer::where('student_id', $student->id)
+                    ->whereIn('online_exam_id', $examIdsForReport)
+                    ->get()
+                    ->groupBy('online_exam_id');
+
+                // Batch-load the mapping from choice ID to question ID
+                // Note: OnlineExamStudentAnswer.question_id stores OnlineExamQuestionChoice.id (choice IDs, not question IDs)
+                $allSubmittedChoiceIds = $allStudentAnswersByExam->flatten()->pluck('question_id')->unique();
+                $choiceIdToQuestionId = OnlineExamQuestionChoice::whereIn('id', $allSubmittedChoiceIds)
+                    ->pluck('question_id', 'id');
+
+                // Batch-load total marks per exam
+                $totalMarksByExam = OnlineExamQuestionChoice::selectRaw('online_exam_id, SUM(marks) as total_marks')
+                    ->whereIn('online_exam_id', $examIdsForReport)
+                    ->groupBy('online_exam_id')
+                    ->pluck('total_marks', 'online_exam_id');
+
                 foreach ($online_exams_db['data'] as $data) {
-                    $exam_submitted_question_ids = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $data['id']])->pluck('question_id');
-                    $get_exam_question_ids = OnlineExamQuestionChoice::whereIn('id', $exam_submitted_question_ids)->pluck('question_id');
+                    $exam_student_answers = $allStudentAnswersByExam->get($data['id'], collect());
+                    // Note: OnlineExamStudentAnswer.question_id stores OnlineExamQuestionChoice.id (choice IDs, not question IDs)
+                    $exam_submitted_question_ids = $exam_student_answers->pluck('question_id');
+                    $get_exam_question_ids = $exam_submitted_question_ids
+                        ->map(fn($id) => $choiceIdToQuestionId[$id] ?? null)
+                        ->filter()
+                        ->unique()
+                        ->values();
 
-
-                    $exam_attempted_answers = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $data['id']])->pluck('option_id');
-
+                    $exam_attempted_answers = $exam_student_answers->pluck('option_id');
 
                     //removes the question id of the question if one of the answer of particular question is wrong
-                    foreach ($get_exam_question_ids as $question_id) {
-                        $check_questions_answers_exists = OnlineExamQuestionAnswer::where('question_id', $question_id)->whereNotIn('answer', $exam_attempted_answers)->count();
-                        if ($check_questions_answers_exists) {
-                            unset($get_exam_question_ids[array_search($question_id, $get_exam_question_ids->toArray())]);
-                        }
-                    }
+                    $incorrectly_answered_exam_question_ids = OnlineExamQuestionAnswer::whereIn('question_id', $get_exam_question_ids)
+                        ->whereNotIn('answer', $exam_attempted_answers)
+                        ->pluck('question_id')
+                        ->unique();
+                    $get_exam_question_ids = $get_exam_question_ids->diff($incorrectly_answered_exam_question_ids);
 
                     $exam_correct_answers_question_id = OnlineExamQuestionAnswer::whereIn('question_id', $get_exam_question_ids)->whereIn('answer', $exam_attempted_answers)->pluck('question_id');
 
                     $total_obtained_marks_exam = OnlineExamQuestionChoice::select(DB::raw("sum(marks)"))->where('online_exam_id', $data['id'])->whereIn('question_id', $exam_correct_answers_question_id)->first();
                     $total_obtained_marks_exam = $total_obtained_marks_exam['sum(marks)'];
-                    $total_marks_exam = OnlineExamQuestionChoice::select(DB::raw("sum(marks)"))->where('online_exam_id', $data['id'])->first();
-                    $total_marks_exam = $total_marks_exam['sum(marks)'];
+                    $total_marks_exam = $totalMarksByExam[$data['id']] ?? null;
 
                     $exam_list[] = array(
                         'online_exam_id' => $data['id'],
@@ -2782,6 +2855,7 @@ class StudentApiController extends Controller
                     // $time = $datetime->format('H:i:s');
                     $addHour = $datetime->copy()->addHour();
                     if (Carbon::now()->gt($addHour)) {
+                        $payment_transaction_db->previous_status = $payment_transaction_db->payment_status;
                         $payment_transaction_db->payment_status = 0;
                         $payment_transaction_db->save();
                     }
@@ -2911,6 +2985,9 @@ class StudentApiController extends Controller
             $payment_transaction_db->total_amount = $request->amount;
             $payment_transaction_db->date = date('Y-m-d H:i:s');
             $payment_transaction_db->session_year_id = $session_year_id;
+            $payment_transaction_db->initiated_by = Auth::id();
+            $payment_transaction_db->ip_address = $request->ip();
+            $payment_transaction_db->user_agent = $request->userAgent();
             $payment_transaction_db->save();
 
             // If Optional Fees Passed then insert data
@@ -3101,6 +3178,7 @@ class StudentApiController extends Controller
                     $time = $datetime->format('H:i:s');
                     $addHour = $datetime->copy()->addHour();
                     if (Carbon::now()->gt($addHour)) {
+                        $transaction->previous_status = $transaction->payment_status;
                         $transaction->payment_status = 0;
                         $transaction->save();
                     }
@@ -3108,15 +3186,19 @@ class StudentApiController extends Controller
             }
             $fees_payment_transactions =  $fees_payment_transactions->toArray();
 
-            ResponseService::successResponse("Fees Payment Transactions Fetched Successfully", null, [
-                'current_page' => $fees_payment_transactions['current_page'],
-                'transaction-data' => $fees_payment_transactions['data'],
-                'from' => $fees_payment_transactions['from'],
-                'last_page' => $fees_payment_transactions['last_page'],
-                'per_page' => $fees_payment_transactions['per_page'],
-                'to' => $fees_payment_transactions['to'],
-                'total' => $fees_payment_transactions['total'],
-            ]);
+            ResponseService::successResponse("Fees Payment Transactions Fetched Successfully",
+                $fees_payment_transactions['data'],
+                [],
+                null,
+                [
+                    'current_page' => $fees_payment_transactions['current_page'],
+                    'from'         => $fees_payment_transactions['from'],
+                    'last_page'    => $fees_payment_transactions['last_page'],
+                    'per_page'     => $fees_payment_transactions['per_page'],
+                    'to'           => $fees_payment_transactions['to'],
+                    'total'        => $fees_payment_transactions['total'],
+                ]
+            );
         } catch (Throwable $e) {
             ResponseService::errorResponse("error_occurred", null, 103, $e);
         }
@@ -3128,6 +3210,7 @@ class StudentApiController extends Controller
         try {
             $update_status = PaymentTransaction::findOrFail($request->payment_transaction_id);
             $total_amount = $update_status->total_amount;
+            $update_status->previous_status = $update_status->payment_status;
             $update_status->payment_status = 0;
             $update_status->save();
 
