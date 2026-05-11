@@ -32,7 +32,7 @@ class TeacherSeeder extends Seeder
             [
                 'email' => 'teacher.science@gmail.com',
                 'first_name' => 'Priya',
-                'last_name' => 'Patel',
+                'last_name' => 'Desar',
                 'gender' => 'Female',
                 'mobile' => '9876500002',
                 'image' => 'teachers/user.png',
@@ -43,7 +43,7 @@ class TeacherSeeder extends Seeder
             [
                 'email' => 'teacher.social@gmail.com',
                 'first_name' => 'Amit',
-                'last_name' => 'Verma',
+                'last_name' => 'Chapagain',
                 'gender' => 'Male',
                 'mobile' => '9876500003',
                 'image' => 'teachers/user.png',

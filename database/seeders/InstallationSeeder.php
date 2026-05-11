@@ -510,16 +510,22 @@ class InstallationSeeder extends Seeder
         $parent_permissions_list = [
             'class-timetable',
             'student-assignment',
+            'assignment-submission',
             'subject-lesson',
             'class-attendance',
             'holiday-list',
             'announcement-list',
             'exam-result',
-            'fees-paid',
+            'student-change-password',
+            'leave-create',
+            'leave-edit',
+            'leave-delete',
+            'leave-list',
             'privacy-policy',
             'terms-condition',
             'contact-us',
             'about-us',
+            'fees-paid',
         ];
         $parent_role->syncPermissions($parent_permissions_list);
 
@@ -543,6 +549,7 @@ class InstallationSeeder extends Seeder
             'terms-condition',
             'contact-us',
             'about-us',
+            'fees-paid',
         ];
         $student_role->syncPermissions($student_permissions_list);
 
