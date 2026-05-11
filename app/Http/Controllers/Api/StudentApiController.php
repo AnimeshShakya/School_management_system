@@ -117,106 +117,66 @@ class StudentApiController extends Controller
 
             if ($studentSession->status == 0) {
                 ResponseService::errorResponse('Your Account is Deactivate Please contact Admin for Further Help.', null, null);
+            }
+
+            if (! $user->student->registration_payment_status) {
+                Auth::logout();
+                ResponseService::errorResponse('Registration payment is pending. Login access is disabled until payment is completed.', null, null);
+            }
+            if ($request->fcm_id) {
+                $auth->fcm_id = $request->fcm_id;
+                $auth->save();
+            }
+
+            if ($request->device_type) {
+                $auth->device_type = $request->device_type;
+                $auth->save();
+            }
+
+            $classSectionName = $user->student->class_section->class->name.' '.$user->student->class_section->section->name;
+
+            // Set Class Section name
+            $streamName = $user->student->class_section->class->streams->name ?? null;
+            if ($streamName !== null) {
+                $user->class_section_name = $classSectionName.' '.$streamName;
             } else {
-                if ($request->fcm_id) {
-                    $auth->fcm_id = $request->fcm_id;
-                    $auth->save();
-                }
+                $user->class_section_name = $classSectionName;
+            }
+            $user->is_semester_on_in_class = $user->student->class_section->class->include_semesters;
+            // Set Medium name
+            $user->medium_name = $user->student->class_section->class->medium->name;
 
-                if ($request->device_type) {
-                    $auth->device_type = $request->device_type;
-                    $auth->save();
-                }
+            // Set Shift name
+            $user->shift_id = $user->student->class_section->class->shifts->id ?? '';
+            $user->shift = Shift::find($user->shift_id);
+            if ($user->shift) {
+                $user->shift->id;
+                $user->shift->title;
+                $user->shift->start_time;
+            }
 
-                $classSectionName = $user->student->class_section->class->name.' '.$user->student->class_section->section->name;
+            // $user->dynamic_field = $dynamicFields;
+            unset($user->student->class_section);
 
-                // Set Class Section name
-                $streamName = $user->student->class_section->class->streams->name ?? null;
-                if ($streamName !== null) {
-                    $user->class_section_name = $classSectionName.' '.$streamName;
-                } else {
-                    $user->class_section_name = $classSectionName;
-                }
-                $user->is_semester_on_in_class = $user->student->class_section->class->include_semesters;
-                // Set Medium name
-                $user->medium_name = $user->student->class_section->class->medium->name;
+            // Set Category name
+            $user->category_name = $user->student->category->name;
+            unset($user->student->category);
+            $class_id = $user->student->class_section->class_id;
 
-                // Set Shift name
-                $user->shift_id = $user->student->class_section->class->shifts->id ?? '';
-                $user->shift = Shift::find($user->shift_id);
-                if ($user->shift) {
-                    $user->shift->id;
-                    $user->shift->title;
-                    $user->shift->start_time;
-                }
-
-                // $user->dynamic_field = $dynamicFields;
-                unset($user->student->class_section);
-
-                // Set Category name
-                $user->category_name = $user->student->category->name;
-                unset($user->student->category);
-                $class_id = $user->student->class_section->class_id;
-
-                if ($compulsory_fees_mode == 1) {
-                    if (isset($free_app_use_date)) {
-                        if ($current_date >= $free_app_use_date) {
-                            $fees_paid = FeesPaid::where('student_id', $user->student->id)->where('session_year_id', $session_year_id)->first();
-
-                            if ($isInstallment == 0) {
-                                if ($fees_paid) {
-                                    if (isset($fees_paid) && $fees_paid->is_fully_paid == 0) {
-                                        $user->is_fee_payment_due = ($current_date >= $due_date) ? 1 : 0;
-                                    } else {
-                                        $user->is_fee_payment_due = 0;
-                                    }
-                                } else {
-                                    $user->is_fee_payment_due = ($current_date >= $due_date) ? 1 : 0;
-                                }
-                            } else {
-
-                                if (isset($fees_paid) && $fees_paid->is_fully_paid == 1) {
-                                    $user->is_fee_payment_due = 0;
-                                } else {
-                                    // Installment case
-                                    $installment_db = InstallmentFee::where('session_year_id', $session_year_id);
-                                    if ($installment_db->count()) {
-                                        $installment_db_data = $installment_db->get();
-                                        foreach ($installment_db_data as $data) {
-                                            $paid_installment_data = PaidInstallmentFee::where(['student_id' => $user->student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'installment_fee_id' => $data['id'], 'status' => 1])->first();
-                                            $installment_data[] = [
-                                                'id' => $data->id,
-                                                'name' => $data->name,
-                                                'due_date' => date('Y-m-d', strtotime($data->due_date)),
-                                                'due_charges' => $data->due_charges,
-                                                'is_paid' => $paid_installment_data->status ?? 0,
-                                            ];
-                                        }
-                                    }
-                                    // Find the first unpaid installment and set its due date
-                                    foreach ($installment_data as $data) {
-                                        if ($data['is_paid'] == 0) {
-                                            $due_date = $data['due_date'];
-                                            break; // Stop after the first unpaid installment
-                                        }
-                                    }
-                                    $user->is_fee_payment_due = ($current_date >= $due_date) ? 1 : 0;
-                                }
-                            }
-                            // $user->is_fee_payment_due = 1;
-                        } else {
-
-                            $user->is_fee_payment_due = 0;
-                        }
-                    } else {
+            if ($compulsory_fees_mode == 1) {
+                if (isset($free_app_use_date)) {
+                    if ($current_date >= $free_app_use_date) {
                         $fees_paid = FeesPaid::where('student_id', $user->student->id)->where('session_year_id', $session_year_id)->first();
 
                         if ($isInstallment == 0) {
-                            // Non-installment case
-                            if (isset($fees_paid) && $fees_paid->is_fully_paid == 0) {
-                                $user->is_fee_payment_due = ($current_date >= $due_date) ? 1 : 0;
+                            if ($fees_paid) {
+                                if (isset($fees_paid) && $fees_paid->is_fully_paid == 0) {
+                                    $user->is_fee_payment_due = ($current_date >= $due_date) ? 1 : 0;
+                                } else {
+                                    $user->is_fee_payment_due = 0;
+                                }
                             } else {
-                                $user->is_fee_payment_due = 0;
+                                $user->is_fee_payment_due = ($current_date >= $due_date) ? 1 : 0;
                             }
                         } else {
 
@@ -248,41 +208,85 @@ class StudentApiController extends Controller
                                 $user->is_fee_payment_due = ($current_date >= $due_date) ? 1 : 0;
                             }
                         }
+                        // $user->is_fee_payment_due = 1;
+                    } else {
+
+                        $user->is_fee_payment_due = 0;
                     }
                 } else {
-                    $user->is_fee_payment_due = 0;
-                }
+                    $fees_paid = FeesPaid::where('student_id', $user->student->id)->where('session_year_id', $session_year_id)->first();
 
-                $dynamicFields = null;
-                $dynamicField = $user->student->dynamic_fields;
-
-                // Compute QR payload before flattening the model
-                $qrPayload = null;
-                if (! empty($user->student->qr_token)) {
-                    $qrPayload = base64_encode(json_encode(['s' => $user->student->id, 't' => $user->student->qr_token]));
-                }
-
-                $user = flattenMyModel($user);
-                if (! empty($dynamicField)) {
-                    $data = json_decode($dynamicField, true);
-                    if (is_array($data)) {
-                        foreach ($data as $item) {
-                            if ($item != null) {
-                                foreach ($item as $key => $value) {
-                                    $dynamicFields[$key] = $value;
-                                }
-                            }
+                    if ($isInstallment == 0) {
+                        // Non-installment case
+                        if (isset($fees_paid) && $fees_paid->is_fully_paid == 0) {
+                            $user->is_fee_payment_due = ($current_date >= $due_date) ? 1 : 0;
+                        } else {
+                            $user->is_fee_payment_due = 0;
                         }
                     } else {
-                        $dynamicFields = $data;
+
+                        if (isset($fees_paid) && $fees_paid->is_fully_paid == 1) {
+                            $user->is_fee_payment_due = 0;
+                        } else {
+                            // Installment case
+                            $installment_db = InstallmentFee::where('session_year_id', $session_year_id);
+                            if ($installment_db->count()) {
+                                $installment_db_data = $installment_db->get();
+                                foreach ($installment_db_data as $data) {
+                                    $paid_installment_data = PaidInstallmentFee::where(['student_id' => $user->student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'installment_fee_id' => $data['id'], 'status' => 1])->first();
+                                    $installment_data[] = [
+                                        'id' => $data->id,
+                                        'name' => $data->name,
+                                        'due_date' => date('Y-m-d', strtotime($data->due_date)),
+                                        'due_charges' => $data->due_charges,
+                                        'is_paid' => $paid_installment_data->status ?? 0,
+                                    ];
+                                }
+                            }
+                            // Find the first unpaid installment and set its due date
+                            foreach ($installment_data as $data) {
+                                if ($data['is_paid'] == 0) {
+                                    $due_date = $data['due_date'];
+                                    break; // Stop after the first unpaid installment
+                                }
+                            }
+                            $user->is_fee_payment_due = ($current_date >= $due_date) ? 1 : 0;
+                        }
+                    }
+                }
+            } else {
+                $user->is_fee_payment_due = 0;
+            }
+
+            $dynamicFields = null;
+            $dynamicField = $user->student->dynamic_fields;
+
+            // Compute QR payload before flattening the model
+            $qrPayload = null;
+            if (! empty($user->student->qr_token)) {
+                $qrPayload = base64_encode(json_encode(['s' => $user->student->id, 't' => $user->student->qr_token]));
+            }
+
+            $user = flattenMyModel($user);
+            if (! empty($dynamicField)) {
+                $data = json_decode($dynamicField, true);
+                if (is_array($data)) {
+                    foreach ($data as $item) {
+                        if ($item != null) {
+                            foreach ($item as $key => $value) {
+                                $dynamicFields[$key] = $value;
+                            }
+                        }
                     }
                 } else {
-                    $dynamicFields = null;
+                    $dynamicFields = $data;
                 }
-
-                $data = array_merge($user, ['dynamic_fields' => $dynamicFields, 'qr_payload' => $qrPayload]);
-                ResponseService::successResponse('User logged-in!', $data, ['token' => $token]);
+            } else {
+                $dynamicFields = null;
             }
+
+            $data = array_merge($user, ['dynamic_fields' => $dynamicFields, 'qr_payload' => $qrPayload]);
+            ResponseService::successResponse('User logged-in!', $data, ['token' => $token]);
         } else {
             ResponseService::errorResponse('Invalid Login Credentials', null, 101);
         }

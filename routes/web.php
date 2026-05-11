@@ -462,6 +462,7 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         })->name('debug.staff.status');
 
         Route::get('generate-id', [StudentController::class, 'generateIdCardIndex'])->name('generate_id.index');
+        Route::post('students/{id}/registration-payment-status', [StudentController::class, 'updateRegistrationPaymentStatus'])->name('students.registration-payment-status.update');
         Route::get('revenue-analysis', [RevenueAnalysisController::class, 'index'])->name('revenue.analysis');
         Route::get('id-card-settings', [StudentController::class, 'idCardSettingIndex'])->name('id_card_setting.index');
         Route::post('id-card-settings/update', [StudentController::class, 'updateIdCardSetting'])->name('id_card_settings.update');
@@ -504,6 +505,8 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
 
         Route::get('online-registration', [StudentController::class, 'onlineRegistrationIndex'])->name('online-registration.index');
         Route::get('online-registration-list', [StudentController::class, 'onlineRegistrationList'])->name('online-registration.list');
+        Route::post('online-registration/store', [StudentController::class, 'storeOnlineRegistration'])->name('online-registration.store');
+        Route::post('online-registration/update', [StudentController::class, 'updateOnlineRegistration'])->name('online-registration.update');
         Route::delete('permanent-delete/{id}', [StudentController::class, 'permanentDelete'])->name('permanent-delete');
         Route::post('update-active-status', [StudentController::class, 'updateStatus'])->name('update-active-status');
         Route::get('get-class-section-by-class/{class_id}', [StudentController::class, 'getClassSectionByClass']);

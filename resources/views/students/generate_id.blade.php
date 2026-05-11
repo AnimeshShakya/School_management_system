@@ -83,6 +83,40 @@
         var selections = []
         var user_list = [];
 
+        @can('student-edit')
+        // Override global formatter to make the badge a clickable toggle button
+        function studentRegistrationPaymentStatusFormatter(value, row, index) {
+            if (value === 'paid') {
+                return "<button type='button' class='btn btn-xs btn-success toggle-reg-payment' data-id='" + row.id + "' data-status='paid' title='Click to mark as Unpaid'>Paid</button>";
+            }
+            return "<button type='button' class='btn btn-xs btn-danger toggle-reg-payment' data-id='" + row.id + "' data-status='unpaid' title='Click to mark as Paid'>Unpaid</button>";
+        }
+
+        $(document).on('click', '.toggle-reg-payment', function () {
+            var $btn = $(this);
+            var studentId = $btn.data('id');
+            $.ajax({
+                url: '{{ route("students.registration-payment-status.update", ":id") }}'.replace(':id', studentId),
+                type: 'POST',
+                data: { _token: '{{ csrf_token() }}' },
+                beforeSend: function () { $btn.prop('disabled', true); },
+                success: function (response) {
+                    if (response.error) {
+                        showErrorToast(response.message);
+                    } else {
+                        showSuccessToast(response.message);
+                        $tableList.bootstrapTable('refresh');
+                    }
+                },
+                error: function (xhr) {
+                    var msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'An error occurred';
+                    showErrorToast(msg);
+                },
+                complete: function () { $btn.prop('disabled', false); }
+            });
+        });
+        @endcan
+
         function responseHandler(res) {
             $.each(res.rows, function(i, row) {
                 row.state = $.inArray(row.id, selections) !== -1

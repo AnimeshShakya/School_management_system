@@ -36,6 +36,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -1255,8 +1256,7 @@ class StudentController extends Controller
             $tempRow['permanent_address'] = $row->user->permanent_address;
             $tempRow['is_new_admission'] = $row->is_new_admission;
             $tempRow['dynamic_data_field'] = json_decode($row->dynamic_fields ?? '[]', true);
-            $registrationPaid = (float) ($row->fees_paid->total_amount ?? 0) > 0;
-            $tempRow['registration_payment_status'] = $registrationPaid ? 'paid' : 'unpaid';
+            $tempRow['registration_payment_status'] = $row->registration_payment_status ? 'paid' : 'unpaid';
             $tempRow['registration_payment_amount'] = (float) ($row->fees_paid->total_amount ?? 0);
 
             // Father Data
@@ -1834,6 +1834,23 @@ class StudentController extends Controller
         }
 
         return view('students.generate_id', compact('class_section'));
+    }
+
+    public function updateRegistrationPaymentStatus(Request $request, int $id): JsonResponse
+    {
+        if (! Auth::user()->can('student-edit')) {
+            return response()->json(['error' => true, 'message' => trans('no_permission_message')]);
+        }
+
+        $student = Students::findOrFail($id);
+        $student->registration_payment_status = ! $student->registration_payment_status;
+        $student->save();
+
+        return response()->json([
+            'error' => false,
+            'message' => trans('data_saved_successfully'),
+            'status' => $student->registration_payment_status ? 'paid' : 'unpaid',
+        ]);
     }
 
     public function idCardSettingIndex()
@@ -2570,8 +2587,7 @@ class StudentController extends Controller
             $tempRow['permanent_address'] = $row->user->permanent_address;
             $tempRow['is_new_admission'] = $row->is_new_admission;
             $tempRow['dynamic_data_field'] = json_decode($row->dynamic_fields ?? '[]', true);
-            $registrationPaid = (float) ($row->fees_paid->total_amount ?? 0) > 0;
-            $tempRow['registration_payment_status'] = $registrationPaid ? 'paid' : 'unpaid';
+            $tempRow['registration_payment_status'] = $row->registration_payment_status ? 'paid' : 'unpaid';
             $tempRow['registration_payment_amount'] = (float) ($row->fees_paid->total_amount ?? 0);
 
             // Father Data
@@ -2615,6 +2631,417 @@ class StudentController extends Controller
         $bulkData['rows'] = $rows;
 
         return response()->json($bulkData);
+    }
+
+    public function storeOnlineRegistration(Request $request): JsonResponse
+    {
+        if (! Auth::user()->can('student-create')) {
+            return response()->json(['message' => trans('no_permission_message')]);
+        }
+
+        $request->validate(
+            [
+                'first_name' => 'required',
+                'last_name' => 'required',
+                'mobile' => 'nullable|numeric|regex:/^[0-9]{7,16}$/',
+                'image' => 'required|mimes:jpeg,png,jpg|image|max:2048',
+                'dob' => 'required',
+                'class_id' => 'required',
+                'category_id' => 'required',
+                'admission_no' => 'required|unique:users,email',
+                'admission_date' => 'required',
+                'current_address' => 'required',
+                'permanent_address' => 'required',
+                'parent_guardian_type' => 'required|in:Parent,Guardian',
+            ],
+            [
+                'mobile.regex' => __('The mobile number must be a length of 7 to 15 digits.'),
+            ]
+        );
+
+        try {
+            $parentRole = Role::where('name', 'Parent')->first();
+            $studentRole = Role::where('name', 'Student')->first();
+
+            $father_parent_id = null;
+            $mother_parent_id = null;
+            $guardian_parent_id = null;
+
+            if ($request->parent_guardian_type === 'Parent') {
+                if (! intval($request->father_email)) {
+                    $request->validate([
+                        'father_email' => 'required|email',
+                        'father_image' => 'required|mimes:jpeg,png,jpg|image|max:2048',
+                    ]);
+                }
+                if (! intval($request->mother_email)) {
+                    $request->validate([
+                        'mother_email' => 'required|email',
+                        'mother_image' => 'required|mimes:jpeg,png,jpg|image|max:2048',
+                    ]);
+                }
+
+                // Father
+                $fatherParent = Parents::where('email', $request->father_email)->first();
+                if ($fatherParent) {
+                    $father_parent_id = $fatherParent->id;
+                } else {
+                    $fatherUser = new User;
+                    $fatherUser->image = $request->file('father_image')->store('parents', 'public');
+                    $fatherUser->password = Hash::make(Str::random(12));
+                    $fatherUser->first_name = $request->father_first_name;
+                    $fatherUser->last_name = $request->father_last_name;
+                    $fatherUser->email = $request->father_email;
+                    $fatherUser->mobile = $request->father_mobile;
+                    $fatherUser->dob = date('Y-m-d', strtotime($request->father_dob ?? '1990-01-01'));
+                    $fatherUser->gender = 'Male';
+                    $fatherUser->status = 0;
+                    $fatherUser->save();
+                    $fatherUser->assignRole($parentRole);
+
+                    $father = Parents::create([
+                        'user_id' => $fatherUser->id,
+                        'first_name' => $request->father_first_name,
+                        'last_name' => $request->father_last_name,
+                        'gender' => 'Male',
+                        'email' => $request->father_email,
+                        'mobile' => $request->father_mobile,
+                        'image' => $fatherUser->getRawOriginal('image'),
+                        'dob' => date('Y-m-d', strtotime($request->father_dob ?? '1990-01-01')),
+                        'occupation' => $request->father_occupation,
+                    ]);
+                    $father_parent_id = $father->id;
+                }
+
+                // Mother
+                $motherParent = Parents::where('email', $request->mother_email)->first();
+                if ($motherParent) {
+                    $mother_parent_id = $motherParent->id;
+                } else {
+                    $motherUser = new User;
+                    $motherUser->image = $request->file('mother_image')->store('parents', 'public');
+                    $motherUser->password = Hash::make(Str::random(12));
+                    $motherUser->first_name = $request->mother_first_name;
+                    $motherUser->last_name = $request->mother_last_name;
+                    $motherUser->email = $request->mother_email;
+                    $motherUser->mobile = $request->mother_mobile;
+                    $motherUser->dob = date('Y-m-d', strtotime($request->mother_dob ?? '1990-01-01'));
+                    $motherUser->gender = 'Female';
+                    $motherUser->status = 0;
+                    $motherUser->save();
+                    $motherUser->assignRole($parentRole);
+
+                    $mother = Parents::create([
+                        'user_id' => $motherUser->id,
+                        'first_name' => $request->mother_first_name,
+                        'last_name' => $request->mother_last_name,
+                        'gender' => 'Female',
+                        'email' => $request->mother_email,
+                        'mobile' => $request->mother_mobile,
+                        'image' => $motherUser->getRawOriginal('image'),
+                        'dob' => date('Y-m-d', strtotime($request->mother_dob ?? '1990-01-01')),
+                        'occupation' => $request->mother_occupation,
+                    ]);
+                    $mother_parent_id = $mother->id;
+                }
+            } elseif ($request->parent_guardian_type === 'Guardian') {
+                $request->validate([
+                    'guardian_email' => 'required|email',
+                    'guardian_image' => 'required|mimes:jpeg,png,jpg|image|max:2048',
+                ]);
+
+                $guardianParent = Parents::where('email', $request->guardian_email)->first();
+                if ($guardianParent) {
+                    $guardian_parent_id = $guardianParent->id;
+                } else {
+                    $guardianUser = new User;
+                    $guardianUser->image = $request->file('guardian_image')->store('parents', 'public');
+                    $guardianUser->password = Hash::make(Str::random(12));
+                    $guardianUser->first_name = $request->guardian_first_name;
+                    $guardianUser->last_name = $request->guardian_last_name;
+                    $guardianUser->email = $request->guardian_email;
+                    $guardianUser->mobile = $request->guardian_mobile;
+                    $guardianUser->dob = date('Y-m-d', strtotime($request->guardian_dob ?? '1990-01-01'));
+                    $guardianUser->gender = $request->guardian_gender ?? 'Male';
+                    $guardianUser->status = 0;
+                    $guardianUser->save();
+                    $guardianUser->assignRole($parentRole);
+
+                    $guardian = Parents::create([
+                        'user_id' => $guardianUser->id,
+                        'first_name' => $request->guardian_first_name,
+                        'last_name' => $request->guardian_last_name,
+                        'gender' => $request->guardian_gender ?? 'Male',
+                        'email' => $request->guardian_email,
+                        'mobile' => $request->guardian_mobile,
+                        'image' => $guardianUser->getRawOriginal('image'),
+                        'dob' => date('Y-m-d', strtotime($request->guardian_dob ?? '1990-01-01')),
+                        'occupation' => $request->guardian_occupation,
+                    ]);
+                    $guardian_parent_id = $guardian->id;
+                }
+            }
+
+            // Store student image
+            $studentImage = $request->file('image');
+            $fileName = time().'-'.$studentImage->getClientOriginalName();
+            resizeImage($studentImage);
+            $studentImage->move(storage_path('app/public/students'), $fileName);
+
+            $studentUser = User::create([
+                'image' => 'students/'.$fileName,
+                'password' => Hash::make(Str::random(12)),
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'email' => $request->admission_no,
+                'gender' => $request->gender,
+                'mobile' => $request->mobile ?? '',
+                'dob' => date('Y-m-d', strtotime($request->dob ?? '2000-01-01')),
+                'status' => 0,
+                'current_address' => $request->current_address,
+                'permanent_address' => $request->permanent_address,
+            ]);
+            $studentUser->assignRole($studentRole);
+
+            // Dynamic fields
+            $formFields = FormField::where('for', 4)->orderBy('rank', 'ASC')->get();
+            $dynamicData = [];
+            $checkboxAdded = false;
+            foreach ($formFields as $formField) {
+                if ($formField->type === 'checkbox') {
+                    if (! $checkboxAdded) {
+                        $dynamicData[] = $request->input('checkbox', []);
+                        $checkboxAdded = true;
+                    }
+                } elseif ($formField->type === 'file') {
+                    $field = str_replace(' ', '_', $formField->name);
+                    if ($request->hasFile($field)) {
+                        $dynamicData[] = [$field => $request->file($field)->store('students', 'public')];
+                    }
+                } else {
+                    $field = str_replace(' ', '_', $formField->name);
+                    $dynamicData[] = [$field => $request->$field];
+                }
+            }
+
+            Students::create([
+                'user_id' => $studentUser->id,
+                'class_id' => $request->class_id,
+                'application_type' => 'online',
+                'category_id' => $request->category_id,
+                'admission_no' => $request->admission_no,
+                'admission_date' => date('Y-m-d', strtotime($request->admission_date ?? date('Y-m-d'))),
+                'father_id' => $father_parent_id,
+                'mother_id' => $mother_parent_id,
+                'guardian_id' => $guardian_parent_id,
+                'dynamic_fields' => json_encode($dynamicData),
+            ]);
+
+            $response = ['error' => false, 'message' => trans('user_registered_successfully')];
+        } catch (Throwable $e) {
+            $response = ['error' => true, 'message' => trans('error_occurred'), 'data' => $e->getMessage()];
+        }
+
+        return response()->json($response);
+    }
+
+    public function updateOnlineRegistration(Request $request): JsonResponse
+    {
+        if (! Auth::user()->can('student-edit')) {
+            return response()->json(['message' => trans('no_permission_message')]);
+        }
+
+        $request->validate(
+            [
+                'edit_id' => 'required',
+                'first_name' => 'required',
+                'last_name' => 'required',
+                'mobile' => 'nullable|numeric|regex:/^[0-9]{7,16}$/',
+                'dob' => 'required',
+                'class_id' => 'required',
+                'category_id' => 'required',
+                'status' => 'required|in:0,1',
+                'class_section_id' => 'required_if:status,1',
+            ],
+            [
+                'mobile.regex' => __('The mobile number must be a length of 7 to 15 digits.'),
+            ]
+        );
+
+        try {
+            $user = User::with('student')->findOrFail($request->edit_id);
+            $previousStatus = $user->status;
+
+            $user->first_name = $request->first_name;
+            $user->last_name = $request->last_name;
+            $user->mobile = $request->mobile ?? '';
+            $user->dob = date('Y-m-d', strtotime($request->dob ?? '2000-01-01'));
+            $user->gender = $request->gender;
+            $user->current_address = $request->current_address;
+            $user->permanent_address = $request->permanent_address;
+
+            if ($request->hasFile('image')) {
+                if (Storage::disk('public')->exists($user->getRawOriginal('image'))) {
+                    Storage::disk('public')->delete($user->getRawOriginal('image'));
+                }
+                $studentImage = $request->file('image');
+                $fileName = time().'-'.$studentImage->getClientOriginalName();
+                resizeImage($studentImage);
+                $studentImage->move(storage_path('app/public/students'), $fileName);
+                $user->image = 'students/'.$fileName;
+            }
+
+            $student = $user->student;
+            $student->class_id = $request->class_id;
+            $student->category_id = $request->category_id;
+            $student->admission_date = date('Y-m-d', strtotime($request->admission_date ?? date('Y-m-d')));
+
+            // Dynamic fields
+            $formFields = FormField::where('for', 4)->orderBy('rank', 'ASC')->get();
+            $dynamicData = [];
+            $checkboxAdded = false;
+            $existingDynamic = json_decode($student->dynamic_fields ?? '[]', true);
+            foreach ($formFields as $formField) {
+                if ($formField->type === 'checkbox') {
+                    if (! $checkboxAdded) {
+                        $dynamicData[] = $request->input('checkbox', []);
+                        $checkboxAdded = true;
+                    }
+                } elseif ($formField->type === 'file') {
+                    $field = str_replace(' ', '_', $formField->name);
+                    $existingFile = '';
+                    foreach ($existingDynamic as $fieldData) {
+                        if (isset($fieldData[$field])) {
+                            $existingFile = $fieldData[$field];
+                        }
+                    }
+                    if ($request->hasFile($field)) {
+                        if ($existingFile) {
+                            Storage::disk('public')->delete($existingFile);
+                        }
+                        $dynamicData[] = [$field => $request->file($field)->store('students', 'public')];
+                    } elseif ($request->$field) {
+                        $dynamicData[] = [$field => $request->$field];
+                    }
+                } else {
+                    $field = str_replace(' ', '_', $formField->name);
+                    $dynamicData[] = [$field => $request->$field];
+                }
+            }
+            if (! empty($dynamicData)) {
+                $student->dynamic_fields = json_encode($dynamicData);
+            }
+
+            // Status change: 0 (pending/rejected) → 1 (accepted)
+            if ($request->status == 1) {
+                $student->class_section_id = $request->class_section_id;
+                $user->status = 1;
+            } else {
+                $user->status = 0;
+            }
+
+            $student->save();
+            $user->save();
+
+            $settings = getSettings();
+            $schoolName = $settings['school_name'];
+            $schoolEmail = $settings['school_email'];
+            $schoolContact = $settings['school_phone'];
+
+            $parentIds = array_filter([$student->father_id, $student->mother_id, $student->guardian_id]);
+            $parents = Parents::with('user')->whereIn('id', $parentIds)->get();
+
+            // Send acceptance email when transitioning from pending → accepted
+            if ($request->status == 1 && $previousStatus == 0) {
+                $childPassword = Str::random(12);
+                $user->password = Hash::make($childPassword);
+                $user->save();
+
+                $classSectionName = '';
+                if ($request->class_section_id) {
+                    $classSection = ClassSection::where('id', $request->class_section_id)
+                        ->with('class.medium', 'class.streams', 'section')
+                        ->first();
+                    if ($classSection) {
+                        $classSectionName = $classSection->class->name.' - '.$classSection->section->name.' '.$classSection->class->medium->name.' '.($classSection->class->streams->name ?? '');
+                    }
+                }
+
+                $currentSessionId = getSettings('session_year')['session_year'];
+                StudentSessions::create([
+                    'student_id' => $student->id,
+                    'session_year_id' => $currentSessionId,
+                    'previous_session_year_id' => null,
+                    'class_section_id' => $request->class_section_id,
+                    'status' => 1,
+                    'result' => 1,
+                ]);
+
+                foreach ($parents as $parent) {
+                    $parentPassword = Str::random(12);
+                    $parent->user->status = 1;
+                    $parent->user->password = Hash::make($parentPassword);
+                    $parent->user->save();
+
+                    $mailData = [
+                        'subject' => 'Welcome to '.$schoolName,
+                        'email' => $parent->email,
+                        'name' => $parent->first_name.' '.$parent->last_name,
+                        'username' => $parent->email,
+                        'password' => $parentPassword,
+                        'child_name' => $user->first_name.' '.$user->last_name,
+                        'child_grnumber' => $user->email,
+                        'child_password' => $childPassword,
+                        'class_name' => $classSectionName,
+                        'type' => 'application_accept',
+                        'school_name' => $schoolName,
+                        'school_email' => $schoolEmail,
+                        'school_contact' => $schoolContact,
+                    ];
+                    MailService::sendWithFallback('students.email', $mailData, function ($message) use ($mailData) {
+                        $message->to($mailData['email'])->subject($mailData['subject']);
+                    });
+                }
+
+                $response = ['error' => false, 'message' => trans('user_activate_successfully')];
+            } elseif ($request->status == 0 && $previousStatus == 1) {
+                // Rejection after acceptance — deactivate parents and notify
+                $class = ClassSchool::with('medium', 'streams')->find($student->class_id);
+                $className = $class ? $class->name.' - '.$class->medium->name.' '.($class->streams->name ?? '') : '';
+
+                foreach ($parents as $parent) {
+                    $parent->user->status = 0;
+                    $parent->user->save();
+
+                    $mailData = [
+                        'subject' => 'Response To Online Registration',
+                        'email' => $parent->email,
+                        'name' => $parent->first_name.' '.$parent->last_name,
+                        'child_name' => $user->first_name.' '.$user->last_name,
+                        'class_name' => $className,
+                        'type' => 'application_reject',
+                        'school_name' => $schoolName,
+                        'school_email' => $schoolEmail,
+                        'school_contact' => $schoolContact,
+                    ];
+                    MailService::sendWithFallback('students.email', $mailData, function ($message) use ($mailData) {
+                        $message->to($mailData['email'])->subject($mailData['subject']);
+                    });
+                }
+
+                $response = ['error' => false, 'message' => trans('data_update_successfully')];
+            } else {
+                $response = ['error' => false, 'message' => trans('data_update_successfully')];
+            }
+        } catch (Throwable $e) {
+            if (Str::contains($e->getMessage(), ['Failed', 'Mail', 'Mailer', 'MailManager'])) {
+                $response = ['error' => false, 'message' => 'Updated successfully. But email not sent.'];
+            } else {
+                $response = ['error' => true, 'message' => trans('error_occurred'), 'data' => $e->getMessage()];
+            }
+        }
+
+        return response()->json($response);
     }
 
     public function updateStatus(Request $request)

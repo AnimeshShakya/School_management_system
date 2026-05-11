@@ -20,7 +20,7 @@
                             {{ __('list') . ' ' . __('students') }}
                         </h4>
                         <div id="toolbar">
-                            <div class="row">
+                            <div class="row align-items-center">
                                 <div class="col">
                                     <select name="filter_class_section_id" id="filter_class_section_id"
                                         class="form-control">
@@ -32,6 +32,13 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                @can('student-create')
+                                <div class="col-auto">
+                                    <button type="button" class="btn btn-theme" data-toggle="modal" data-target="#createModal">
+                                        <i class="fa fa-plus"></i> {{ __('add') . ' ' . __('registration') }}
+                                    </button>
+                                </div>
+                                @endcan
                             </div>
                         </div>
                         <div class="row">
@@ -103,8 +110,8 @@
                             <span aria-hidden="true"><i class="fa fa-close"></i></span>
                         </button>
                     </div>
-                    <form id="create-form" class="edit-student-registration-form" novalidate="novalidate"
-                        action="{{ route('update-active-status')}}" enctype="multipart/form-data">
+                    <form id="edit-online-registration-form" novalidate="novalidate"
+                        action="{{ route('online-registration.update')}}" enctype="multipart/form-data">
                         @csrf
                         <div class="modal-body">
                             <input type="hidden" name="edit_id" id="edit_id">
@@ -647,31 +654,375 @@
             </div>
         </div>
     @endcan
-    {{-- <div class="modal fade" id="changeStatusModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog" role="document">
+    @can('student-create')
+    {{-- Create Online Registration Modal --}}
+    <div class="modal fade" id="createModal" data-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="createModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">{{ __('edit') . ' ' . __('status') }}</h5>
+                    <h4 class="modal-title" id="createModalLabel">{{ __('add') . ' ' . __('online_registrations') }}</h4>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
+                        <span aria-hidden="true"><i class="fa fa-close"></i></span>
                     </button>
                 </div>
-                <form class="pt-3 create-form" id="create-form" action="{{ route('change-active-status') }}"
-                    novalidate="novalidate" method="POST">
-                    <input type="hidden" name="edit_user_id" id="edit_user_id" value="" />
+                <form id="create-online-registration-form" novalidate="novalidate"
+                    action="{{ route('online-registration.store') }}" enctype="multipart/form-data">
+                    @csrf
                     <div class="modal-body">
+                        <div class="row">
+                            <div class="form-group col-sm-12 col-md-4">
+                                <label>{{ __('first_name') }} <span class="text-danger">*</span></label>
+                                <input type="text" name="first_name" placeholder="{{ __('first_name') }}" class="form-control" required>
+                            </div>
+                            <div class="form-group col-sm-12 col-md-4">
+                                <label>{{ __('last_name') }} <span class="text-danger">*</span></label>
+                                <input type="text" name="last_name" placeholder="{{ __('last_name') }}" class="form-control" required>
+                            </div>
+                            <div class="form-group col-sm-12 col-md-4">
+                                <label>{{ __('mobile') }}</label>
+                                <input type="tel" name="mobile" placeholder="{{ __('mobile') }}" class="form-control">
+                            </div>
+                            <div class="form-group col-sm-12 col-md-4">
+                                <label>{{ __('gender') }} <span class="text-danger">*</span></label><br>
+                                <div class="d-flex">
+                                    <div class="form-check form-check-inline">
+                                        <label class="form-check-label">
+                                            <input type="radio" name="gender" value="male" required> {{ __('male') }}
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <label class="form-check-label">
+                                            <input type="radio" name="gender" value="female"> {{ __('female') }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group col-sm-12 col-md-4">
+                                <label>{{ __('dob') }} <span class="text-danger">*</span></label>
+                                <input type="text" name="dob" placeholder="{{ __('dob') }}" class="datepicker-popup-no-future form-control" required>
+                            </div>
+                            <div class="form-group col-sm-12 col-md-4">
+                                <label>{{ __('image') }} <span class="text-danger">*</span></label>
+                                <input type="file" name="image" class="file-upload-default" accept="image/*" required />
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled placeholder="{{ __('image') }}" />
+                                    <span class="input-group-append">
+                                        <button class="file-upload-browse btn btn-theme" type="button">{{ __('upload') }}</button>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="form-group col-sm-12 col-md-6">
+                                <label>{{ __('class') }} <span class="text-danger">*</span></label>
+                                <select name="class_id" class="form-control" required>
+                                    <option value="">{{ __('select') . ' ' . __('class') }}</option>
+                                    @foreach ($classSchools as $classSchool)
+                                        <option value="{{ $classSchool->id }}">{{ $classSchool->name }} - {{ $classSchool->medium->name }} {{ $classSchool->streams->name ?? '' }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="form-group col-sm-12 col-md-6">
+                                <label>{{ __('category') }} <span class="text-danger">*</span></label>
+                                <select name="category_id" class="form-control" required>
+                                    <option value="">{{ __('select') . ' ' . __('category') }}</option>
+                                    @foreach ($category as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="form-group col-sm-12 col-md-6">
+                                <label>{{ __('gr_number') }} <span class="text-danger">*</span></label>
+                                <input type="text" name="admission_no" placeholder="{{ __('admission_no') }}" class="form-control" required>
+                            </div>
+                            <div class="form-group col-sm-12 col-md-6">
+                                <label>{{ __('admission_date') }} <span class="text-danger">*</span></label>
+                                <input type="text" name="admission_date" placeholder="{{ __('admission_date') }}" class="datepicker-popup-no-future form-control" required>
+                            </div>
+                            <div class="form-group col-6">
+                                <label>{{ __('address') }} <span class="text-danger">*</span></label>
+                                <textarea name="current_address" placeholder="{{ __('current_address') }}" class="form-control" rows="3" required></textarea>
+                            </div>
+                            <div class="form-group col-6">
+                                <label>{{ __('permanent_address') }} <span class="text-danger">*</span></label>
+                                <textarea name="permanent_address" placeholder="{{ __('permanent_address') }}" class="form-control" rows="3" required></textarea>
+                            </div>
+                        </div>
 
+                        {{-- Dynamic form fields --}}
+                        @if ($formFields->isNotEmpty())
+                        <div class="row">
+                            @foreach ($formFields as $row)
+                                @if ($row->type === 'text' || $row->type === 'number')
+                                    <div class="form-group col-sm-12 col-md-4">
+                                        <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}{!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
+                                        <input type="{{ $row->type }}" name="{{ $row->name }}" placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}" class="form-control" {{ $row->is_required ? 'required' : '' }}>
+                                    </div>
+                                @elseif ($row->type === 'dropdown')
+                                    <div class="form-group col-sm-12 col-md-4">
+                                        <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}{!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
+                                        <select name="{{ $row->name }}" class="form-control" {{ $row->is_required ? 'required' : '' }}>
+                                            <option value="">Please Select</option>
+                                            @foreach (json_decode($row->default_values) as $opt)
+                                                @if ($opt != null)
+                                                    <option value="{{ $opt }}">{{ ucfirst($opt) }}</option>
+                                                @endif
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @elseif ($row->type === 'textarea')
+                                    <div class="form-group col-sm-12 col-md-4">
+                                        <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}{!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
+                                        <textarea name="{{ $row->name }}" rows="3" class="form-control" {{ $row->is_required ? 'required' : '' }}></textarea>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                        @endif
+
+                        {{-- Parent / Guardian section --}}
+                        <hr>
+                        <h5>{{ __('parents_details') }} / {{ __('guardian_details') }}</h5>
+                        <div class="form-group">
+                            <div class="d-flex">
+                                <div class="form-check form-check-inline">
+                                    <label class="form-check-label">
+                                        <input type="radio" name="parent_guardian_type" value="Parent" id="create_type_parent" required> {{ __('parents_details') }}
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <label class="form-check-label">
+                                        <input type="radio" name="parent_guardian_type" value="Guardian" id="create_type_guardian"> {{ __('guardian_details') }}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="create_parents_div" style="display:none;">
+                            <div class="row">
+                                <div class="form-group col-sm-12 col-md-12">
+                                    <label>{{ __('father_email') }} <span class="text-danger">*</span></label>
+                                    <input type="email" name="father_email" class="form-control" placeholder="{{ __('father_email') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('father') . ' ' . __('first_name') }}</label>
+                                    <input type="text" name="father_first_name" class="form-control" placeholder="{{ __('father') . ' ' . __('first_name') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('father') . ' ' . __('last_name') }}</label>
+                                    <input type="text" name="father_last_name" class="form-control" placeholder="{{ __('father') . ' ' . __('last_name') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('father') . ' ' . __('mobile') }}</label>
+                                    <input type="tel" name="father_mobile" class="form-control" placeholder="{{ __('father') . ' ' . __('mobile') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('father') . ' ' . __('dob') }}</label>
+                                    <input type="text" name="father_dob" class="datepicker-popup-no-future form-control" placeholder="{{ __('father') . ' ' . __('dob') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('father') . ' ' . __('occupation') }}</label>
+                                    <input type="text" name="father_occupation" class="form-control" placeholder="{{ __('father') . ' ' . __('occupation') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('father') . ' ' . __('image') }}</label>
+                                    <input type="file" name="father_image" class="file-upload-default" accept="image/*" />
+                                    <div class="input-group col-xs-12">
+                                        <input type="text" class="form-control file-upload-info" disabled placeholder="{{ __('father') . ' ' . __('image') }}" />
+                                        <span class="input-group-append">
+                                            <button class="file-upload-browse btn btn-theme" type="button">{{ __('upload') }}</button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="form-group col-sm-12 col-md-12">
+                                    <label>{{ __('mother_email') }} <span class="text-danger">*</span></label>
+                                    <input type="email" name="mother_email" class="form-control" placeholder="{{ __('mother_email') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('mother') . ' ' . __('first_name') }}</label>
+                                    <input type="text" name="mother_first_name" class="form-control" placeholder="{{ __('mother') . ' ' . __('first_name') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('mother') . ' ' . __('last_name') }}</label>
+                                    <input type="text" name="mother_last_name" class="form-control" placeholder="{{ __('mother') . ' ' . __('last_name') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('mother') . ' ' . __('mobile') }}</label>
+                                    <input type="tel" name="mother_mobile" class="form-control" placeholder="{{ __('mother') . ' ' . __('mobile') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('mother') . ' ' . __('dob') }}</label>
+                                    <input type="text" name="mother_dob" class="datepicker-popup-no-future form-control" placeholder="{{ __('mother') . ' ' . __('dob') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('mother') . ' ' . __('occupation') }}</label>
+                                    <input type="text" name="mother_occupation" class="form-control" placeholder="{{ __('mother') . ' ' . __('occupation') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('mother') . ' ' . __('image') }}</label>
+                                    <input type="file" name="mother_image" class="file-upload-default" accept="image/*" />
+                                    <div class="input-group col-xs-12">
+                                        <input type="text" class="form-control file-upload-info" disabled placeholder="{{ __('mother') . ' ' . __('image') }}" />
+                                        <span class="input-group-append">
+                                            <button class="file-upload-browse btn btn-theme" type="button">{{ __('upload') }}</button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="create_guardian_div" style="display:none;">
+                            <div class="row">
+                                <div class="form-group col-sm-12 col-md-12">
+                                    <label>{{ __('guardian') . ' ' . __('email') }} <span class="text-danger">*</span></label>
+                                    <input type="email" name="guardian_email" class="form-control" placeholder="{{ __('guardian') . ' ' . __('email') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('guardian') . ' ' . __('first_name') }}</label>
+                                    <input type="text" name="guardian_first_name" class="form-control" placeholder="{{ __('guardian') . ' ' . __('first_name') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('guardian') . ' ' . __('last_name') }}</label>
+                                    <input type="text" name="guardian_last_name" class="form-control" placeholder="{{ __('guardian') . ' ' . __('last_name') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('guardian') . ' ' . __('mobile') }}</label>
+                                    <input type="tel" name="guardian_mobile" class="form-control" placeholder="{{ __('guardian') . ' ' . __('mobile') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('gender') }}</label><br>
+                                    <div class="d-flex">
+                                        <div class="form-check form-check-inline">
+                                            <label class="form-check-label"><input type="radio" name="guardian_gender" value="male"> {{ __('male') }}</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <label class="form-check-label"><input type="radio" name="guardian_gender" value="female"> {{ __('female') }}</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('guardian') . ' ' . __('dob') }}</label>
+                                    <input type="text" name="guardian_dob" class="datepicker-popup-no-future form-control" placeholder="{{ __('guardian') . ' ' . __('dob') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('guardian') . ' ' . __('occupation') }}</label>
+                                    <input type="text" name="guardian_occupation" class="form-control" placeholder="{{ __('guardian') . ' ' . __('occupation') }}">
+                                </div>
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label>{{ __('guardian') . ' ' . __('image') }}</label>
+                                    <input type="file" name="guardian_image" class="file-upload-default" accept="image/*" />
+                                    <div class="input-group col-xs-12">
+                                        <input type="text" class="form-control file-upload-info" disabled placeholder="{{ __('guardian') . ' ' . __('image') }}" />
+                                        <span class="input-group-append">
+                                            <button class="file-upload-browse btn btn-theme" type="button">{{ __('upload') }}</button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary"
-                            data-dismiss="modal">{{ __('close') }}</button>
-                        <input class="btn btn-theme" type="submit" value={{ __('send') }} />
+                        <input class="btn btn-theme" type="submit" value="{{ __('submit') }}">
+                        <button type="button" class="btn btn-light" data-dismiss="modal">{{ __('cancel') }}</button>
                     </div>
                 </form>
             </div>
         </div>
-    </div> --}}
+    </div>
+    @endcan
 
+@endsection
 
+@section('script')
+<script>
+    // Toggle parent/guardian sections in create modal
+    $('input[name="parent_guardian_type"]').on('change', function () {
+        if ($(this).val() === 'Parent') {
+            $('#create_parents_div').show();
+            $('#create_guardian_div').hide();
+        } else {
+            $('#create_parents_div').hide();
+            $('#create_guardian_div').show();
+        }
+    });
+
+    // Handle create form submission
+    $('#create-online-registration-form').on('submit', function (e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            beforeSend: function () {
+                $('#createModal').find('input[type="submit"]').prop('disabled', true).val('{{ __('processing') }}...');
+            },
+            success: function (response) {
+                if (response.error) {
+                    showErrorToast(response.message);
+                } else {
+                    $('#createModal').modal('hide');
+                    $('#create-online-registration-form')[0].reset();
+                    $('#create_parents_div, #create_guardian_div').hide();
+                    $('#table_list').bootstrapTable('refresh');
+                    showSuccessToast(response.message);
+                }
+            },
+            error: function (xhr) {
+                var msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : '{{ __('error_occurred') }}';
+                if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    msg = Object.values(xhr.responseJSON.errors)[0][0];
+                }
+                showErrorToast(msg);
+            },
+            complete: function () {
+                $('#createModal').find('input[type="submit"]').prop('disabled', false).val('{{ __('submit') }}');
+            }
+        });
+    });
+
+    // Initialize jQuery Validate on the edit form so Select2 .rules() calls work,
+    // and handle AJAX submission via submitHandler (jQuery Validate calls native .submit()
+    // which bypasses jQuery event handlers, so submitHandler is required here).
+    $('#edit-online-registration-form').validate({
+        ignore: ':hidden',
+        submitHandler: function (form) {
+            var formData = new FormData(form);
+            formData.set('edit_id', $('#edit_id').val());
+
+            $.ajax({
+                url: $(form).attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                beforeSend: function () {
+                    $('#editModal').find('input[type="submit"]').prop('disabled', true).val('{{ __('processing') }}...');
+                },
+                success: function (response) {
+                    if (response.error) {
+                        showErrorToast(response.message);
+                    } else {
+                        $('#editModal').modal('hide');
+                        $('#table_list').bootstrapTable('refresh');
+                        showSuccessToast(response.message);
+                    }
+                },
+                error: function (xhr) {
+                    var msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : '{{ __('error_occurred') }}';
+                    if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        msg = Object.values(xhr.responseJSON.errors)[0][0];
+                    }
+                    showErrorToast(msg);
+                },
+                complete: function () {
+                    $('#editModal').find('input[type="submit"]').prop('disabled', false).val('{{ __('submit') }}');
+                }
+            });
+        }
+    });
+</script>
 @endsection

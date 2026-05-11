@@ -217,7 +217,7 @@
                                         </td>
                                         <td class="small text-nowrap">{{ $reg->payment_date ?? '—' }}</td>
                                         <td>
-                                            @if ($reg->is_fully_paid)
+                                            @if ($reg->registration_payment_status)
                                                 <span class="badge badge-success" style="font-size:0.7rem;">Paid</span>
                                             @else
                                                 <span class="badge badge-danger" style="font-size:0.7rem;">Pending</span>

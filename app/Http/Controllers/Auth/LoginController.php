@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\FeesPaid;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
@@ -46,11 +45,7 @@ class LoginController extends Controller
     protected function authenticated(Request $request, $user)
     {
         if ($user->hasRole('Student') && $user->student) {
-            $isRegistrationPaid = FeesPaid::where('student_id', $user->student->id)
-                ->where('total_amount', '>', 0)
-                ->exists();
-
-            if (! $isRegistrationPaid) {
+            if (! $user->student->registration_payment_status) {
                 Auth::logout();
 
                 return redirect()->route('login')->withErrors([

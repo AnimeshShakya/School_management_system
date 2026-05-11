@@ -39,6 +39,7 @@ class Students extends Model
         'height',
         'weight',
         'is_new_admission',
+        'registration_payment_status',
         'father_id',
         'mother_id',
         'guardian_id',
@@ -75,6 +76,7 @@ class Students extends Model
         return [
             'admission_date' => 'date',
             'is_new_admission' => 'boolean',
+            'registration_payment_status' => 'boolean',
             'height' => 'decimal:2',
             'weight' => 'decimal:2',
         ];
