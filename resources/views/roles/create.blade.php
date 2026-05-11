@@ -62,14 +62,14 @@
                                                 @endphp
                                                 <div class="col-lg-3 col-md-4 col-sm-6 mb-2">
                                                     <div class="form-check">
-                                                        <label class="form-check-label d-flex align-items-center">
+                                                        <label class="form-check-label">
                                                             <input
                                                                 type="checkbox"
                                                                 name="permission[]"
                                                                 value="{{ $permissionItem->id }}"
                                                                 class="form-check-input"
                                                                 {{ in_array($permissionItem->id, old('permission', [])) ? 'checked' : '' }}>
-                                                            <span>{{ $actionLabel }}</span>
+                                                            <i class="input-helper"></i>{{ $actionLabel }}
                                                         </label>
                                                     </div>
                                                 </div>

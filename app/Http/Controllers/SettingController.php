@@ -322,11 +322,11 @@ class SettingController extends Controller
                     $setting->message = $row === 'mail_password' ? $mailPassword : $request->$row;
                     $setting->save();
                 }
-                Settings::updateOrInsert(
-                    ['type' => 'email_configration_verification'],
-                    ['type' => 'email_configration_verification', 'message' => 0]
-                );
             }
+            Settings::updateOrInsert(
+                ['type' => 'email_configration_verification'],
+                ['type' => 'email_configration_verification', 'message' => 0]
+            );
             $env_update = changeEnv([
                 'MAIL_MAILER' => $request->mail_mailer,
                 'MAIL_HOST' => $request->mail_host,
@@ -402,7 +402,10 @@ class SettingController extends Controller
             });
 
             if ($status) {
-                Settings::where('type', 'email_configration_verification')->update(['message' => 1]);
+                Settings::updateOrInsert(
+                    ['type' => 'email_configration_verification'],
+                    ['message' => 1]
+                );
 
                 $response = [
                     'error' => false,

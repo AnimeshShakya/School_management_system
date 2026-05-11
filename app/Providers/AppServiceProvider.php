@@ -12,6 +12,7 @@ use App\Services\NepaliDateService;
 use dacoto\LaravelWizardInstaller\Controllers\InstallSetDatabaseController as VendorInstallSetDatabaseController;
 use dacoto\LaravelWizardInstaller\Controllers\InstallSetKeysController as VendorInstallSetKeysController;
 use dacoto\LaravelWizardInstaller\Controllers\InstallSetMigrationsController as VendorInstallSetMigrationsController;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
@@ -40,5 +41,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Set default string length for MySQL
         Schema::defaultStringLength(191);
+
+        Paginator::useBootstrapFour();
     }
 }

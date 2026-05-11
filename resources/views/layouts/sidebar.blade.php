@@ -87,7 +87,7 @@
                     <a class="nav-link" data-toggle="collapse" href="#academics-menu"
                         aria-expanded="{{ $academicsOpen ? 'true' : 'false' }}" aria-controls="academics-menu">
                         <i class="fa fa-university menu-icon"></i><span class="menu-title">{{ __('academics') }}</span>
-                        <i class="fa fa-angle-left fa-2xl menu-arrow"></i>
+                        <i class="fa fa-angle-left menu-arrow"></i>
                     </a>
                     <div class="collapse {{ $academicsOpen ? 'show' : '' }}" id="academics-menu">
                         <ul class="nav flex-column sub-menu">
