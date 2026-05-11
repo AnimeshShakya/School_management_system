@@ -57,6 +57,7 @@ use App\Models\Teacher;
 use App\Models\Timetable;
 use App\Models\User;
 use App\Models\UserNotification;
+use App\Services\NepaliDateService;
 use App\Services\Payment\PaymentService;
 use App\Services\ResponseService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -463,6 +464,7 @@ class StudentApiController extends Controller
     {
         try {
             $student = $request->user()->student;
+            $nepaliDate = app(NepaliDateService::class);
             $date = Carbon::now();
             $day = $date->format('l');
             $session_year = getSettings('session_year');
@@ -500,6 +502,8 @@ class StudentApiController extends Controller
                 ->orderBy('due_date', 'asc')
                 ->limit(2)
                 ->get();
+
+            $assignments = $nepaliDate->addBsFieldsToCollection($assignments, ['due_date']);
 
             $timetables = Timetable::where('class_section_id', $student->class_section_id)->where('day_name', $day)
                 ->whereHas('subject_teacher', function ($q) use ($subject_id) {
@@ -553,6 +557,7 @@ class StudentApiController extends Controller
                             'total_marks' => $item->total_marks,
                             'passing_marks' => $item->passing_marks,
                             'date' => $item->date,
+                            'date_bs' => $nepaliDate->toBSString($item->date),
                             'starting_time' => $item->start_time,
                             'ending_time' => $item->end_time,
                             'subject' => [
@@ -600,6 +605,8 @@ class StudentApiController extends Controller
                             'type' => $row->type,
                             'start_date' => $row->start_date,
                             'end_date' => $row->end_date,
+                            'start_date_bs' => $nepaliDate->toBSString($row->start_date),
+                            'end_date_bs' => $nepaliDate->toBSString($row->end_date),
                             'start_time' => $row->start_time,
                             'end_time' => $row->end_time,
                             'image' => $row->image,
@@ -613,6 +620,8 @@ class StudentApiController extends Controller
                             'type' => $row->type,
                             'start_date' => $row->start_date,
                             'end_date' => $row->end_date,
+                            'start_date_bs' => $nepaliDate->toBSString($row->start_date),
+                            'end_date_bs' => $nepaliDate->toBSString($row->end_date),
                             'start_time' => $row->start_time,
                             'end_time' => $row->end_time,
                             'image' => $row->image,
@@ -627,6 +636,8 @@ class StudentApiController extends Controller
                         'type' => $row->type,
                         'start_date' => $row->start_date,
                         'end_date' => $row->end_date,
+                        'start_date_bs' => $nepaliDate->toBSString($row->start_date),
+                        'end_date_bs' => $nepaliDate->toBSString($row->end_date),
                         'start_time' => $row->start_time,
                         'end_time' => $row->end_time,
                         'image' => $row->image,
@@ -1239,7 +1250,13 @@ class StudentApiController extends Controller
             }
             $attendance = $attendance->get();
             $holidays = $holidays->get();
-            ResponseService::successResponse('Attendance Details Fetched Successfully', ['attendance' => $attendance, 'holidays' => $holidays, 'session_year' => $session_year_data]);
+
+            $nepaliDate = app(NepaliDateService::class);
+            $attendanceWithBs = $nepaliDate->addBsFieldsToCollection($attendance, ['date']);
+            $holidaysWithBs = $nepaliDate->addBsFieldsToCollection($holidays, ['date']);
+            $sessionYearArr = $nepaliDate->addBsFields($session_year_data->toArray(), ['start_date', 'end_date']);
+
+            ResponseService::successResponse('Attendance Details Fetched Successfully', ['attendance' => $attendanceWithBs, 'holidays' => $holidaysWithBs, 'session_year' => $sessionYearArr]);
         } catch (Throwable $e) {
             ResponseService::errorResponse('error_occurred', null, 103, $e);
         }

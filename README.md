@@ -26,11 +26,12 @@ A comprehensive School Management System built with Laravel 12, designed to stre
 
 ### 👨‍🎓 Student Features
 - **Personal Dashboard** - View personal information and stats
-- **Attendance History** - Check attendance records
+- **Attendance History** - Check attendance records with **Nepali (BS) calendar support**
 - **Assignment Submission** - Submit assignments online
 - **Grade Reports** - View exam results and progress
 - **Timetable** - Access class schedule
 - **Announcements** - Receive school notifications
+- **QR Code** - Personal QR code for attendance scanning
 
 ### 👨‍👩‍👧‍👦 Parent Features
 - **Child Progress Monitoring** - Track children's academic performance
@@ -48,6 +49,7 @@ A comprehensive School Management System built with Laravel 12, designed to stre
 - **File Storage**: Laravel Storage
 - **Email**: SMTP Support
 - **Permissions**: Spatie Laravel Permission
+- **Calendar**: Bikram Sambat (BS / Nepali) calendar support via `NepaliDateService`
 
 ## 📋 Requirements
 
@@ -149,15 +151,11 @@ Use the included deployment scripts for easy production setup:
 ### Default Login Credentials
 After seeding the database, you can use these default credentials:
 
-- **Super Admin**: 
-   - Email: `superadmin@gmail.com`
-   - Password: `superadmin`
-
-Super Admin: superadmin@gmail.com / superadmin
-Admin: admin@gmail.com / admin123
-Teacher: teacher@gmail.com / teacher123
-Student: student@gmail.com / student123
-Parent: parent@gmail.com / parent123
+Super Admin: `superadmin@gmail.com` / `superadmin`
+Admin: `admin@gmail.com` / `admin123`
+Teacher: `teacher@gmail.com` / `teacher123`
+Student: `student@gmail.com` / `student123`
+Parent: `parent@gmail.com` / `parent123`
 
 If installer shows **"Invalid code supplied!"** on the purchase-code step, complete the install purchase verification first. Until installation is completed, admin login may not proceed to the dashboard.
 
@@ -230,6 +228,9 @@ The system includes RESTful APIs for mobile app integration:
 - Student API endpoints
 - Parent API endpoints
 - Authentication APIs
+- **Nepali (BS) calendar dates** — every date field has a companion `_bs` field (e.g. `date_bs`, `start_date_bs`). The `app_settings` response includes `calendar_type: "nepali"` so the mobile app knows which calendar to display.
+
+See [`Integrate_BS_nepali_calendar.md`](Integrate_BS_nepali_calendar.md) for the full Flutter integration guide.
 
 ## 🤝 Contributing
 

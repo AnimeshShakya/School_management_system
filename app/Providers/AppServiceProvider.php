@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Services\FormService;
 use App\Http\Controllers\Installer\InstallSetDatabaseController as AppInstallSetDatabaseController;
 use App\Http\Controllers\Installer\InstallSetKeysController as AppInstallSetKeysController;
 use App\Http\Controllers\Installer\InstallSetMigrationsController as AppInstallSetMigrationsController;
+use App\Services\FormService;
+use App\Services\NepaliDateService;
 use dacoto\LaravelWizardInstaller\Controllers\InstallSetDatabaseController as VendorInstallSetDatabaseController;
 use dacoto\LaravelWizardInstaller\Controllers\InstallSetKeysController as VendorInstallSetKeysController;
 use dacoto\LaravelWizardInstaller\Controllers\InstallSetMigrationsController as VendorInstallSetMigrationsController;
@@ -22,8 +23,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton('form', function ($app) {
-            return new FormService();
+            return new FormService;
         });
+
+        $this->app->singleton(NepaliDateService::class, fn () => new NepaliDateService);
 
         $this->app->bind(VendorInstallSetDatabaseController::class, AppInstallSetDatabaseController::class);
         $this->app->bind(VendorInstallSetMigrationsController::class, AppInstallSetMigrationsController::class);
