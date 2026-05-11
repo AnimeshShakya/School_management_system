@@ -4,71 +4,71 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use Carbon\Carbon;
-use App\Models\Exam;
-use App\Models\File;
-use App\Models\User;
-use App\Models\Event;
-use App\Models\Leave;
-use App\Models\Shift;
-use App\Models\Lesson;
-use App\Models\Slider;
-use App\Models\Holiday;
-use App\Models\Parents;
-use App\Models\Subject;
-use App\Models\Teacher;
-use App\Models\ChatFile;
-use App\Models\FeesPaid;
-use App\Models\Semester;
-use App\Models\Settings;
-use App\Models\Students;
-use App\Models\ExamClass;
-use App\Models\FeesClass;
-use App\Models\Timetable;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\TimetableCollection;
+use App\Models\Announcement;
 use App\Models\Assignment;
+use App\Models\AssignmentSubmission;
 use App\Models\Attendance;
-use App\Models\ExamResult;
-use App\Models\OnlineExam;
+use App\Models\ChatFile;
 use App\Models\ChatMessage;
 use App\Models\ClassSchool;
-use App\Models\LeaveDetail;
-use App\Models\LessonTopic;
-use App\Models\ReadMessage;
-use App\Models\SessionYear;
-use App\Models\Announcement;
 use App\Models\ClassSection;
 use App\Models\ClassTeacher;
-use App\Models\Notification;
-use Illuminate\Http\Request;
+use App\Models\ElectiveSubjectGroup;
+use App\Models\Event;
+use App\Models\Exam;
+use App\Models\ExamClass;
+use App\Models\ExamResult;
 use App\Models\ExamTimetable;
-use App\Models\MultipleEvent;
 use App\Models\FeesChoiceable;
+use App\Models\FeesClass;
+use App\Models\FeesPaid;
+use App\Models\File;
+use App\Models\Holiday;
 use App\Models\InstallmentFee;
-use App\Models\StudentSubject;
-use App\Models\SubjectTeacher;
-use App\Models\StudentSessions;
-use Barryvdh\DomPDF\Facade\Pdf;
-use App\Models\UserNotification;
-use App\Models\PaidInstallmentFee;
-use App\Models\PaymentTransaction;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
-use App\Models\AssignmentSubmission;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
-use App\Models\OnlineExamStudentAnswer;
-use App\Models\StudentOnlineExamStatus;
-use Illuminate\Support\Facades\Storage;
+use App\Models\Leave;
+use App\Models\LeaveDetail;
+use App\Models\Lesson;
+use App\Models\LessonTopic;
+use App\Models\MultipleEvent;
+use App\Models\Notification;
+use App\Models\OnlineExam;
 use App\Models\OnlineExamQuestionAnswer;
 use App\Models\OnlineExamQuestionChoice;
 use App\Models\OnlineExamQuestionOption;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
-use App\Http\Resources\TimetableCollection;
+use App\Models\OnlineExamStudentAnswer;
+use App\Models\PaidInstallmentFee;
+use App\Models\Parents;
+use App\Models\PaymentTransaction;
+use App\Models\ReadMessage;
+use App\Models\Semester;
+use App\Models\SessionYear;
+use App\Models\Settings;
+use App\Models\Shift;
+use App\Models\Slider;
+use App\Models\StudentOnlineExamStatus;
+use App\Models\Students;
+use App\Models\StudentSessions;
+use App\Models\StudentSubject;
+use App\Models\Subject;
+use App\Models\SubjectTeacher;
+use App\Models\Teacher;
+use App\Models\Timetable;
+use App\Models\User;
+use App\Models\UserNotification;
 use App\Services\Payment\PaymentService;
 use App\Services\ResponseService;
-use App\Models\ElectiveSubjectGroup;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Throwable;
 
 class StudentApiController extends Controller
@@ -100,22 +100,22 @@ class StudentApiController extends Controller
 
         if (Auth::attempt(['email' => $request->gr_number, 'password' => $request->password])) {
             //        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
-            //Here Email Field is referenced as a GR Number for Student
+            // Here Email Field is referenced as a GR Number for Student
             $auth = Auth::user();
-            if (!$auth->hasRole('Student')) {
-                ResponseService::errorResponse("Invalid Login Credentials", null, 101);
+            if (! $auth->hasRole('Student')) {
+                ResponseService::errorResponse('Invalid Login Credentials', null, 101);
             }
             $token = $auth->createToken($auth->first_name)->plainTextToken;
             $user = $auth->load(['student.class_section', 'student.category']);
 
             // if new session is not activated for student
-            $studentSession = StudentSessions::where('session_year_id', $session_year_id)->where('student_id',  $user->student->id)->first();
-            if (!$studentSession) {
-                ResponseService::errorResponse("Your account is not active for the current academic year because promotion to the next class has not been completed. Please contact the administration.", null, null);
+            $studentSession = StudentSessions::where('session_year_id', $session_year_id)->where('student_id', $user->student->id)->first();
+            if (! $studentSession) {
+                ResponseService::errorResponse('Your account is not active for the current academic year because promotion to the next class has not been completed. Please contact the administration.', null, null);
             }
 
             if ($studentSession->status == 0) {
-                ResponseService::errorResponse("Your Account is Deactivate Please contact Admin for Further Help.", null, null);
+                ResponseService::errorResponse('Your Account is Deactivate Please contact Admin for Further Help.', null, null);
             } else {
                 if ($request->fcm_id) {
                     $auth->fcm_id = $request->fcm_id;
@@ -127,21 +127,20 @@ class StudentApiController extends Controller
                     $auth->save();
                 }
 
-                $classSectionName = $user->student->class_section->class->name . " " . $user->student->class_section->section->name;
+                $classSectionName = $user->student->class_section->class->name.' '.$user->student->class_section->section->name;
 
                 // Set Class Section name
                 $streamName = $user->student->class_section->class->streams->name ?? null;
                 if ($streamName !== null) {
-                    $user->class_section_name = $classSectionName . " " . $streamName;
+                    $user->class_section_name = $classSectionName.' '.$streamName;
                 } else {
                     $user->class_section_name = $classSectionName;
                 }
                 $user->is_semester_on_in_class = $user->student->class_section->class->include_semesters;
-                //Set Medium name
+                // Set Medium name
                 $user->medium_name = $user->student->class_section->class->medium->name;
 
-
-                //Set Shift name
+                // Set Shift name
                 $user->shift_id = $user->student->class_section->class->shifts->id ?? '';
                 $user->shift = Shift::find($user->shift_id);
                 if ($user->shift) {
@@ -150,11 +149,10 @@ class StudentApiController extends Controller
                     $user->shift->start_time;
                 }
 
-
                 // $user->dynamic_field = $dynamicFields;
                 unset($user->student->class_section);
 
-                //Set Category name
+                // Set Category name
                 $user->category_name = $user->student->category->name;
                 unset($user->student->category);
                 $class_id = $user->student->class_section->class_id;
@@ -185,13 +183,13 @@ class StudentApiController extends Controller
                                         $installment_db_data = $installment_db->get();
                                         foreach ($installment_db_data as $data) {
                                             $paid_installment_data = PaidInstallmentFee::where(['student_id' => $user->student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'installment_fee_id' => $data['id'], 'status' => 1])->first();
-                                            $installment_data[] = array(
+                                            $installment_data[] = [
                                                 'id' => $data->id,
                                                 'name' => $data->name,
                                                 'due_date' => date('Y-m-d', strtotime($data->due_date)),
                                                 'due_charges' => $data->due_charges,
                                                 'is_paid' => $paid_installment_data->status ?? 0,
-                                            );
+                                            ];
                                         }
                                     }
                                     // Find the first unpaid installment and set its due date
@@ -230,13 +228,13 @@ class StudentApiController extends Controller
                                     $installment_db_data = $installment_db->get();
                                     foreach ($installment_db_data as $data) {
                                         $paid_installment_data = PaidInstallmentFee::where(['student_id' => $user->student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'installment_fee_id' => $data['id'], 'status' => 1])->first();
-                                        $installment_data[] = array(
+                                        $installment_data[] = [
                                             'id' => $data->id,
                                             'name' => $data->name,
                                             'due_date' => date('Y-m-d', strtotime($data->due_date)),
                                             'due_charges' => $data->due_charges,
                                             'is_paid' => $paid_installment_data->status ?? 0,
-                                        );
+                                        ];
                                     }
                                 }
                                 // Find the first unpaid installment and set its due date
@@ -254,12 +252,17 @@ class StudentApiController extends Controller
                     $user->is_fee_payment_due = 0;
                 }
 
-
-
                 $dynamicFields = null;
                 $dynamicField = $user->student->dynamic_fields;
+
+                // Compute QR payload before flattening the model
+                $qrPayload = null;
+                if (! empty($user->student->qr_token)) {
+                    $qrPayload = base64_encode(json_encode(['s' => $user->student->id, 't' => $user->student->qr_token]));
+                }
+
                 $user = flattenMyModel($user);
-                if (!empty($dynamicField)) {
+                if (! empty($dynamicField)) {
                     $data = json_decode($dynamicField, true);
                     if (is_array($data)) {
                         foreach ($data as $item) {
@@ -276,8 +279,7 @@ class StudentApiController extends Controller
                     $dynamicFields = null;
                 }
 
-
-                $data = array_merge($user, ['dynamic_fields' =>  $dynamicFields]);
+                $data = array_merge($user, ['dynamic_fields' => $dynamicFields, 'qr_payload' => $qrPayload]);
                 ResponseService::successResponse('User logged-in!', $data, ['token' => $token]);
             }
         } else {
@@ -298,7 +300,7 @@ class StudentApiController extends Controller
                 ->where('id', $session_year_id)
                 ->first();
 
-            if (!$session_year) {
+            if (! $session_year) {
                 throw new \Exception('Session year not found.');
             }
 
@@ -307,13 +309,13 @@ class StudentApiController extends Controller
             $allSemesters = Semester::query()
                 ->whereBetween('start_date', [
                     $session_year->start_date,
-                    $session_year->end_date
+                    $session_year->end_date,
                 ])
                 ->orderBy('start_date', 'asc')
                 ->get();
 
             // Find the current semester using your model's accessor
-            $currentSemester = $allSemesters->first(fn($semester) => $semester->current === true);
+            $currentSemester = $allSemesters->first(fn ($semester) => $semester->current === true);
 
             // Loop through all semesters to find every valid break
             for ($i = 0; $i < $allSemesters->count() - 1; $i++) {
@@ -326,18 +328,18 @@ class StudentApiController extends Controller
                     Carbon::parse($next->start_date)->gt(Carbon::parse($current->end_date))
                 ) {
                     $breakStart = Carbon::parse($current->end_date)->addDay();
-                    $breakEnd   = Carbon::parse($next->start_date)->subDay();
+                    $breakEnd = Carbon::parse($next->start_date)->subDay();
 
                     // Make sure the break falls inside the session year
                     if (
                         $breakStart->between($session_year->start_date, $session_year->end_date) &&
                         $breakEnd->between($session_year->start_date, $session_year->end_date)
                     ) {
-                        $semesterBreaks->push((object)[
+                        $semesterBreaks->push((object) [
                             'date' => $breakStart->toDateString(),
                             'start' => $breakStart->toDateString(),
                             'end' => $breakEnd->toDateString(),
-                            'type'  => 'holiday',
+                            'type' => 'holiday',
                             'title' => "Semester Break: {$breakStart->format('jS M')} - {$breakEnd->format('jS M')}",
                         ]);
                     }
@@ -345,7 +347,7 @@ class StudentApiController extends Controller
             }
 
             // If there’s no current semester (it’s a break), identify which break we’re in
-            if (!$currentSemester && $semesterBreaks->isNotEmpty()) {
+            if (! $currentSemester && $semesterBreaks->isNotEmpty()) {
                 $now = Carbon::today();
 
                 $activeBreak = $semesterBreaks->first(function ($break) use ($now) {
@@ -361,26 +363,26 @@ class StudentApiController extends Controller
             // === Fetch Holidays ===
             $holidays = Holiday::whereBetween('date', [
                 $session_year->start_date,
-                $session_year->end_date
+                $session_year->end_date,
             ])
                 ->orderBy('date', 'asc')
                 ->get()
-                ->map(fn($item) => (object)[
-                    'date'  => $item->date,
-                    'type'  => 'holiday',
+                ->map(fn ($item) => (object) [
+                    'date' => $item->date,
+                    'type' => 'holiday',
                     'title' => $item->title,
                 ]);
 
             // === Fetch Events ===
             $events = Event::whereBetween('start_date', [
                 $session_year->start_date,
-                $session_year->end_date
+                $session_year->end_date,
             ])
                 ->orderBy('start_date', 'asc')
                 ->get()
-                ->map(fn($item) => (object)[
-                    'date'  => $item->start_date,
-                    'type'  => 'event',
+                ->map(fn ($item) => (object) [
+                    'date' => $item->start_date,
+                    'type' => 'event',
                     'title' => $item->title,
                 ]);
 
@@ -390,7 +392,7 @@ class StudentApiController extends Controller
                 ->with('class_section')
                 ->first();
 
-            if (!$student || !$student->class_section) {
+            if (! $student || ! $student->class_section) {
                 throw new \Exception('Class section not found for this student.');
             }
 
@@ -398,14 +400,14 @@ class StudentApiController extends Controller
 
             $exams = ExamTimetable::whereBetween('date', [
                 $session_year->start_date,
-                $session_year->end_date
+                $session_year->end_date,
             ])
                 ->where('class_id', $student_class_id)
                 ->orderBy('date', 'asc')
                 ->get()
-                ->map(fn($item) => (object)[
-                    'date'  => $item->date,
-                    'type'  => 'exam',
+                ->map(fn ($item) => (object) [
+                    'date' => $item->date,
+                    'type' => 'exam',
                     'title' => $item->exam_name ?? 'Exam',
                 ]);
 
@@ -425,7 +427,7 @@ class StudentApiController extends Controller
             // === School Info ===
             $school_name = env('APP_NAME');
             $school_address = getSettings('school_address')['school_address'] ?? null;
-            $logo = public_path('/storage/' . env('LOGO2'));
+            $logo = public_path('/storage/'.env('LOGO2'));
 
             // === Prepare Data for PDF ===
             $data = [
@@ -441,7 +443,7 @@ class StudentApiController extends Controller
             $output = $pdf->output();
 
             return ResponseService::successResponse(
-                "Academic Calendar PDF fetched successfully",
+                'Academic Calendar PDF fetched successfully',
                 null,
                 [
                     'pdf' => base64_encode($output),
@@ -449,7 +451,7 @@ class StudentApiController extends Controller
             );
         } catch (Throwable $e) {
             return ResponseService::errorResponse(
-                "Error occurred while generating academic calendar PDF",
+                'Error occurred while generating academic calendar PDF',
                 null,
                 103,
                 $e
@@ -473,18 +475,17 @@ class StudentApiController extends Controller
                 $subjects['elective_subject'] = null;
             }
 
-            $announcements = Announcement::where('table_type', "")->where('session_year_id', $session_year_id)->with('file')->latest()->limit(3)->get();
+            $announcements = Announcement::where('table_type', '')->where('session_year_id', $session_year_id)->with('file')->latest()->limit(3)->get();
 
             $student_subject = $student->subjects();
             // $class_subject = $student->classSubjects();
 
-            $core_subjects = array_column($student_subject["core_subject"], 'subject_id');
+            $core_subjects = array_column($student_subject['core_subject'], 'subject_id');
 
-            $elective_subjects = $student_subject["elective_subject"] ?? [];
+            $elective_subjects = $student_subject['elective_subject'] ?? [];
             if ($elective_subjects) {
                 $elective_subjects = $elective_subjects->pluck('subject_id')->toArray();
             }
-
 
             $subject_id = array_merge($core_subjects, $elective_subjects);
 
@@ -505,10 +506,9 @@ class StudentApiController extends Controller
                     $q->whereIn('subject_id', $subject_id);
                 })->orderBy('start_time', 'asc')->get();
 
-
             $class_id = $student->class_section->class_id;
 
-            $exam_data_db = Exam::with(['timetable' => function ($q) use ($request, $class_id, $subject_id) {
+            $exam_data_db = Exam::with(['timetable' => function ($q) use ($class_id, $subject_id) {
                 $q->where('class_id', $class_id)->whereIn('subject_id', $subject_id)->with(['subject'])->orderby('date');
             }])->limit(10)->get();
 
@@ -533,40 +533,40 @@ class StudentApiController extends Controller
                 $currentTime = Carbon::now();
                 $current_date = date($currentTime->toDateString());
                 if ($current_date >= $starting_date && $current_date <= $ending_date) {
-                    $exam_status = "1"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                    $exam_status = '1'; // Upcoming = 0 , On Going = 1 , Completed = 2
                 } elseif ($current_date < $starting_date) {
-                    $exam_status = "0"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                    $exam_status = '0'; // Upcoming = 0 , On Going = 1 , Completed = 2
                 } else {
-                    $exam_status = "2"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                    $exam_status = '2'; // Upcoming = 0 , On Going = 1 , Completed = 2
                 }
 
                 foreach ($data->timetable as $item) {
-                    if (!$item->subject) {
+                    if (! $item->subject) {
                         continue;
                     }
 
                     // Fix: Compare current date with exam date instead of time
                     $exam_date = Carbon::parse($item->date);
                     if ($date->toDateString() <= $exam_date->toDateString()) {
-                        $exam_timetable[] = array(
+                        $exam_timetable[] = [
                             'id' => $item->id,
-                            'total_marks' =>  $item->total_marks,
-                            'passing_marks' =>  $item->passing_marks,
-                            'date' =>  $item->date,
-                            'starting_time' =>  $item->start_time,
-                            'ending_time' =>  $item->end_time,
-                            'subject' => array(
-                                'id' =>  $item->subject->id,
-                                'name' =>  $item->subject->name,
-                                'bg_color' =>  $item->subject->bg_color,
-                                'image' =>  $item->subject->image,
-                                'type' =>  $item->subject->type,
-                            )
-                        );
+                            'total_marks' => $item->total_marks,
+                            'passing_marks' => $item->passing_marks,
+                            'date' => $item->date,
+                            'starting_time' => $item->start_time,
+                            'ending_time' => $item->end_time,
+                            'subject' => [
+                                'id' => $item->subject->id,
+                                'name' => $item->subject->name,
+                                'bg_color' => $item->subject->bg_color,
+                                'image' => $item->subject->image,
+                                'type' => $item->subject->type,
+                            ],
+                        ];
                     }
                 }
                 if ($exam_status != 2) {
-                    $exam_data[] = array(
+                    $exam_data[] = [
                         'id' => $data->id,
                         'name' => $data->name,
                         'description' => $data->description,
@@ -575,8 +575,8 @@ class StudentApiController extends Controller
                         'exam_starting_date' => $starting_date,
                         'exam_ending_date' => $ending_date,
                         'exam_status' => $exam_status,
-                        'exam_timetable' => $exam_timetable
-                    );
+                        'exam_timetable' => $exam_timetable,
+                    ];
                 }
             }
 
@@ -635,17 +635,23 @@ class StudentApiController extends Controller
                 }
             }
 
-            $data = array(
+            $qrPayload = null;
+            if (! empty($student->qr_token)) {
+                $qrPayload = base64_encode(json_encode(['s' => $student->id, 't' => $student->qr_token]));
+            }
+
+            $data = [
                 'sliders' => $sliders,
                 'subjects' => $subjects,
                 'announcements' => $announcements,
                 'assignments' => $assignments,
                 'timetables' => new TimetableCollection($timetables),
                 'exams' => isset($exam_data) ? $exam_data : [],
-                'events' => isset($event) ? $event : []
-            );
+                'events' => isset($event) ? $event : [],
+                'qr_payload' => $qrPayload,
+            ];
 
-            ResponseService::successResponse('Data Fetched Successfully.', (object)$data);
+            ResponseService::successResponse('Data Fetched Successfully.', (object) $data);
         } catch (Throwable $e) {
             ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
@@ -655,7 +661,7 @@ class StudentApiController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'gr_no' => 'required',
-            'dob'   => 'required|date',
+            'dob' => 'required|date',
             'email' => 'required|email',
         ]);
 
@@ -665,7 +671,7 @@ class StudentApiController extends Controller
         try {
             $ip = $request->ip();
             $get_id = Students::select('user_id')->where('admission_no', $request->gr_no)->pluck('user_id')->first();
-            if (isset($get_id) && !empty($get_id)) {
+            if (isset($get_id) && ! empty($get_id)) {
                 $user = User::where('id', $get_id)
                     ->whereDate('dob', '=', date('Y-m-d', strtotime($request->dob)))
                     ->where('email', $request->email)
@@ -675,23 +681,23 @@ class StudentApiController extends Controller
                     $user->save();
                     Log::info('Password reset requested successfully.', [
                         'gr_no' => $request->gr_no,
-                        'ip'    => $ip,
+                        'ip' => $ip,
                     ]);
-                    ResponseService::successResponse("Request Send Successfully");
+                    ResponseService::successResponse('Request Send Successfully');
                 } else {
                     Log::warning('Failed password reset attempt: invalid credentials.', [
                         'ip' => $ip,
                     ]);
-                    ResponseService::errorResponse("Invalid user Details", null, 107);
+                    ResponseService::errorResponse('Invalid user Details', null, 107);
                 }
             } else {
                 Log::warning('Failed password reset attempt: admission number not found.', [
                     'ip' => $ip,
                 ]);
-                ResponseService::errorResponse("Invalid user Details", null, 107);
+                ResponseService::errorResponse('Invalid user Details', null, 107);
             }
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -707,7 +713,7 @@ class StudentApiController extends Controller
 
             ResponseService::successResponse('Student Subject Fetched Successfully.', $subjects);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -718,7 +724,7 @@ class StudentApiController extends Controller
             $subjects = $user->student->classSubjects();
             ResponseService::successResponse('Class Subject Fetched Successfully.', $subjects);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -755,7 +761,7 @@ class StudentApiController extends Controller
             if ($include_semester == 1) {
                 $semester_id = $currentSemester->id;
             }
-            $student_subject = array();
+            $student_subject = [];
             $session_year_id = Settings::select('message')->where('type', 'session_year')->pluck('message')->first();
 
             $groupIds = collect($request->subject_group)->pluck('id')->all();
@@ -767,8 +773,9 @@ class StudentApiController extends Controller
             foreach ($request->subject_group as $key => $subject_group) {
                 $group = $electiveGroups->get($subject_group['id']);
 
-                if (!$group) {
-                    ResponseService::errorResponse("Invalid elective subject group for your class.");
+                if (! $group) {
+                    ResponseService::errorResponse('Invalid elective subject group for your class.');
+
                     return;
                 }
 
@@ -777,6 +784,7 @@ class StudentApiController extends Controller
                     ResponseService::errorResponse(
                         "You can select at most {$group->total_selectable_subjects} subject(s) from this group."
                     );
+
                     return;
                 }
 
@@ -787,25 +795,25 @@ class StudentApiController extends Controller
                         'subject_id' => $subject_id,
                         'semester_id' => $semester_id ?? null,
                         'class_section_id' => $class_section->id,
-                        'session_year_id' => intval($session_year_id)
+                        'session_year_id' => intval($session_year_id),
                     ])->first();
 
-                    if (!$if_subject_already_selected) {
-                        $student_subject[] = array(
+                    if (! $if_subject_already_selected) {
+                        $student_subject[] = [
                             'student_id' => $student->id,
                             'subject_id' => $subject_id,
                             'semester_id' => $semester_id ?? null,
                             'class_section_id' => $class_section->id,
-                            'session_year_id' => intval($session_year_id)
-                        );
+                            'session_year_id' => intval($session_year_id),
+                        ];
                     }
                 }
             }
             StudentSubject::insert($student_subject);
 
-            ResponseService::successResponse("Subject Selected Successfully", $student_subject);
+            ResponseService::successResponse('Subject Selected Successfully', $student_subject);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -830,12 +838,12 @@ class StudentApiController extends Controller
                 } else {
                     $parentDynamicFields = $data;
                 }
-                $dynamic_fields = (array)$parentDynamicFields;
-                $father  =  array_merge($father, ['dynamic_fields' => !empty($dynamic_fields) ?  $dynamic_fields : null]);
+                $dynamic_fields = (array) $parentDynamicFields;
+                $father = array_merge($father, ['dynamic_fields' => ! empty($dynamic_fields) ? $dynamic_fields : null]);
             }
 
             if ($student->mother != null) {
-                //mother data
+                // mother data
                 $data = json_decode($student->mother->dynamic_fields, true);
                 $mother = $student->mother->toArray();
 
@@ -850,12 +858,12 @@ class StudentApiController extends Controller
                 } else {
                     $parentDynamicFields = $data;
                 }
-                $dynamic_fields = (array)$parentDynamicFields;
-                $mother  =  array_merge($mother, ['dynamic_fields' =>  !empty($dynamic_fields) ?  $dynamic_fields : null]);
+                $dynamic_fields = (array) $parentDynamicFields;
+                $mother = array_merge($mother, ['dynamic_fields' => ! empty($dynamic_fields) ? $dynamic_fields : null]);
             }
 
             if ($student->guardian != null) {
-                //guardian data
+                // guardian data
                 $data = json_decode($student->guardian->dynamic_fields, true);
                 $guardian = $student->guardian->toArray();
 
@@ -871,30 +879,30 @@ class StudentApiController extends Controller
                     $parentDynamicFields = $data;
                 }
 
-                $dynamic_fields = (array)$parentDynamicFields;
-                $guardian  =  array_merge($guardian, ['dynamic_fields' =>  !empty($dynamic_fields) ?  $dynamic_fields : null]);
+                $dynamic_fields = (array) $parentDynamicFields;
+                $guardian = array_merge($guardian, ['dynamic_fields' => ! empty($dynamic_fields) ? $dynamic_fields : null]);
             }
 
             if ($student->father != null && $student->mother != null && $student->guardian != null) {
-                $data = array(
-                    'father' => (!empty($student->father)) ? $father : (object)[],
-                    'mother' => (!empty($student->mother)) ? $mother : (object)[],
-                    'guardian' => (!empty($student->guardian)) ? $guardian  : (object)[]
-                );
+                $data = [
+                    'father' => (! empty($student->father)) ? $father : (object) [],
+                    'mother' => (! empty($student->mother)) ? $mother : (object) [],
+                    'guardian' => (! empty($student->guardian)) ? $guardian : (object) [],
+                ];
             } elseif ($student->father != null && $student->mother != null) {
-                $data = array(
-                    'father' => (!empty($student->father)) ? $father  : (object)[],
-                    'mother' => (!empty($student->mother)) ? $mother : (object)[],
-                );
+                $data = [
+                    'father' => (! empty($student->father)) ? $father : (object) [],
+                    'mother' => (! empty($student->mother)) ? $mother : (object) [],
+                ];
             } else {
-                $data = array(
-                    'guardian' => (!empty($student->guardian)) ? $guardian  : (object)[]
-                );
+                $data = [
+                    'guardian' => (! empty($student->guardian)) ? $guardian : (object) [],
+                ];
             }
 
-            ResponseService::successResponse("Parent Details Fetched Successfully", $data);
+            ResponseService::successResponse('Parent Details Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -906,13 +914,12 @@ class StudentApiController extends Controller
             $student_subject = $student->subjects();
             $class_subject = $student->classSubjects();
 
-            $core_subjects = array_column($student_subject["core_subject"], 'subject_id');
+            $core_subjects = array_column($student_subject['core_subject'], 'subject_id');
 
-            $elective_subjects = $student_subject["elective_subject"] ?? [];
+            $elective_subjects = $student_subject['elective_subject'] ?? [];
             if ($elective_subjects) {
                 $elective_subjects = $elective_subjects->pluck('subject_id')->toArray();
             }
-
 
             $subject_id = array_merge($core_subjects, $elective_subjects);
 
@@ -926,9 +933,9 @@ class StudentApiController extends Controller
                     $new_timetable[] = $timetable;
                 }
             }
-            ResponseService::successResponse("Timetable Fetched Successfully", new TimetableCollection($new_timetable));
+            ResponseService::successResponse('Timetable Fetched Successfully', new TimetableCollection($new_timetable));
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -950,15 +957,15 @@ class StudentApiController extends Controller
         try {
             $student = $request->user()->student;
             $student_subject = $student->subjects();
-            $core_subjects = array_column($student_subject["core_subject"], 'subject_id');
-            $elective_subjects = $student_subject["elective_subject"] ?? [];
+            $core_subjects = array_column($student_subject['core_subject'], 'subject_id');
+            $elective_subjects = $student_subject['elective_subject'] ?? [];
             if ($elective_subjects) {
                 $elective_subjects = $elective_subjects->pluck('subject_id')->toArray();
             }
             $enrolled_subject_ids = array_merge($core_subjects, $elective_subjects);
 
-            if (!in_array((int)$request->subject_id, $enrolled_subject_ids)) {
-                ResponseService::errorResponse("Invalid Subject ID", null, 106);
+            if (! in_array((int) $request->subject_id, $enrolled_subject_ids)) {
+                ResponseService::errorResponse('Invalid Subject ID', null, 106);
             }
 
             $data = Lesson::where('class_section_id', $student->class_section_id)->where('subject_id', $request->subject_id)->with('topic', 'file');
@@ -967,9 +974,9 @@ class StudentApiController extends Controller
             }
             $data = $data->get();
 
-            ResponseService::successResponse("Lessons Fetched Successfully", $data);
+            ResponseService::successResponse('Lessons Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -998,9 +1005,9 @@ class StudentApiController extends Controller
                 $data->where('id', $request->topic_id);
             }
             $data = $data->get();
-            ResponseService::successResponse("Topics Fetched Successfully", $data);
+            ResponseService::successResponse('Topics Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1028,13 +1035,12 @@ class StudentApiController extends Controller
             $session_year_id = $session_year['session_year'];
             // $class_subject = $student->classSubjects();
 
-            $core_subjects = array_column($student_subject["core_subject"], 'subject_id');
+            $core_subjects = array_column($student_subject['core_subject'], 'subject_id');
 
-            $elective_subjects = $student_subject["elective_subject"] ?? [];
+            $elective_subjects = $student_subject['elective_subject'] ?? [];
             if ($elective_subjects) {
                 $elective_subjects = $elective_subjects->pluck('subject_id')->toArray();
             }
-
 
             $subject_id = array_merge($core_subjects, $elective_subjects);
 
@@ -1053,16 +1059,16 @@ class StudentApiController extends Controller
                     $data->whereHas('submission', function ($q) use ($student) {
                         $q->where('student_id', $student->id);
                     });
-                } else if ($request->is_submitted == 0) {
+                } elseif ($request->is_submitted == 0) {
                     $data->whereDoesntHave('submission', function ($q) use ($student) {
                         $q->where('student_id', $student->id);
                     });
                 }
             }
             $data = $data->orderBy('id', 'desc')->paginate();
-            ResponseService::successResponse("Assignments Fetched Successfully", $data);
+            ResponseService::successResponse('Assignments Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1091,17 +1097,16 @@ class StudentApiController extends Controller
             $session_year = getSettings('session_year');
             $session_year_id = $session_year['session_year'];
 
-
             $assignment = Assignment::where('id', $request->assignment_id)->where('class_section_id', $student->class_section_id)->firstOrFail();
 
             $assignment_submission = AssignmentSubmission::where('assignment_id', $request->assignment_id)->where('student_id', $student->id)->first();
             if (empty($assignment_submission)) {
-                $assignment_submission = new AssignmentSubmission();
+                $assignment_submission = new AssignmentSubmission;
                 $assignment_submission->assignment_id = $request->assignment_id;
                 $assignment_submission->student_id = $student->id;
                 $assignment_submission->session_year_id = $session_year_id;
                 $assignment_submission->text_submission = $request->text_submission;
-            } else if ($assignment_submission->status == 2 && $assignment->resubmission) {
+            } elseif ($assignment_submission->status == 2 && $assignment->resubmission) {
                 // if assignment submission is rejected and
                 // Assignment has resubmission allowed then change the status to resubmitted
                 $assignment_submission->status = 3;
@@ -1115,18 +1120,18 @@ class StudentApiController extends Controller
                 }
                 $assignment_submission->file()->delete();
             } else {
-                ResponseService::errorResponse("You already have submitted your assignment.", null, 104);
+                ResponseService::errorResponse('You already have submitted your assignment.', null, 104);
             }
 
             $subject_teacher_id = SubjectTeacher::where('class_section_id', $student->class_section_id)->where('subject_id', $assignment->subject_id)->pluck('teacher_id');
             $user = Teacher::whereIn('id', $subject_teacher_id)->pluck('user_id');
             $title = 'New submission';
-            $body =  $student->user->first_name . ' ' . $student->user->last_name . ' submitted their assignment.';
+            $body = $student->user->first_name.' '.$student->user->last_name.' submitted their assignment.';
             $type = 'assignment_submission';
             $image = null;
             $userinfo = null;
 
-            $notification = new Notification();
+            $notification = new Notification;
             $notification->send_to = 2;
             $notification->title = $title;
             $notification->message = $body;
@@ -1136,30 +1141,30 @@ class StudentApiController extends Controller
             $notification->save();
 
             foreach ($user as $data) {
-                $user_notification = new UserNotification();
+                $user_notification = new UserNotification;
                 $user_notification->notification_id = $notification->id;
                 $user_notification->user_id = $data;
                 $user_notification->save();
             }
             $assignment_submission->save();
             sendSimpleNotification($user, $title, $body, $type, $image, $userinfo);
-            if ($request->hasFile("files")) {
+            if ($request->hasFile('files')) {
                 foreach ($request->file('files') as $key => $image) {
-                    $file = new File();
+                    $file = new File;
                     $file->file_name = $image->getClientOriginalName();
                     $file->modal()->associate($assignment_submission);
                     $file->type = 1;
                     $uuid = Str::uuid();
                     $extension = $image->extension();
-                    $file->file_url = $image->storeAs('assignment', $uuid . '.' . $extension, 'public');
+                    $file->file_url = $image->storeAs('assignment', $uuid.'.'.$extension, 'public');
                     $file->save();
                 }
             }
 
             $submitted_assignment = AssignmentSubmission::where('id', $assignment_submission->id)->with('file')->get();
-            ResponseService::successResponse("Assignments Submitted Successfully", $submitted_assignment);
+            ResponseService::successResponse('Assignments Submitted Successfully', $submitted_assignment);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1182,7 +1187,7 @@ class StudentApiController extends Controller
             $student = $request->user()->student;
             $assignment_submission = AssignmentSubmission::where('id', $request->assignment_submission_id)->where('student_id', $student->id)->with('file')->first();
 
-            if (!empty($assignment_submission) && $assignment_submission->status == 0) {
+            if (! empty($assignment_submission) && $assignment_submission->status == 0) {
                 foreach ($assignment_submission->file as $file) {
                     if (Storage::disk('public')->exists($file->file_url)) {
                         Storage::disk('public')->delete($file->file_url);
@@ -1191,12 +1196,12 @@ class StudentApiController extends Controller
                 $assignment_submission->file()->delete();
                 $assignment_submission->delete();
 
-                ResponseService::successResponse("Assignments Deleted Successfully");
+                ResponseService::successResponse('Assignments Deleted Successfully');
             } else {
-                ResponseService::errorResponse("You can not delete assignment", null, 110);
+                ResponseService::errorResponse('You can not delete assignment', null, 110);
             }
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1234,9 +1239,9 @@ class StudentApiController extends Controller
             }
             $attendance = $attendance->get();
             $holidays = $holidays->get();
-            ResponseService::successResponse("Attendance Details Fetched Successfully", ['attendance' => $attendance, 'holidays' => $holidays, 'session_year' => $session_year_data]);
+            ResponseService::successResponse('Attendance Details Fetched Successfully', ['attendance' => $attendance, 'holidays' => $holidays, 'session_year' => $session_year_data]);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1244,7 +1249,7 @@ class StudentApiController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'type' => 'nullable|in:subject,noticeboard,class',
-            'subject_id' => 'required_if:type,subject|numeric'
+            'subject_id' => 'required_if:type,subject|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -1256,20 +1261,20 @@ class StudentApiController extends Controller
             $session_year = getSettings('session_year');
             $session_year_id = $session_year['session_year'];
             $table = null;
-            if (isset($request->type) && $request->type == "subject") {
+            if (isset($request->type) && $request->type == 'subject') {
                 $table = SubjectTeacher::where('class_section_id', $student->class_section_id)->where('subject_id', $request->subject_id)->get()->pluck('id');
                 if (empty($table)) {
-                    ResponseService::errorResponse("Invalid Subject ID", null, 106);
+                    ResponseService::errorResponse('Invalid Subject ID', null, 106);
                 }
             }
 
             $data = Announcement::with('file')->where('session_year_id', $session_year_id)->latest();
 
-            if (!isset($request->type)) {
+            if (! isset($request->type)) {
                 // No type filter: return only announcements accessible to this student
                 $subject_teacher_ids = SubjectTeacher::where('class_section_id', $student->class_section_id)->pluck('id');
                 $data = $data->where(function ($q) use ($class_id, $subject_teacher_ids) {
-                    $q->where('table_type', "")
+                    $q->where('table_type', '')
                         ->orWhere(function ($q) use ($class_id) {
                             $q->where('table_type', "App\Models\ClassSchool")->where('table_id', $class_id);
                         })
@@ -1279,22 +1284,22 @@ class StudentApiController extends Controller
                 });
             }
 
-            if (isset($request->type) && $request->type == "noticeboard") {
-                $data = $data->where('table_type', "");
+            if (isset($request->type) && $request->type == 'noticeboard') {
+                $data = $data->where('table_type', '');
             }
 
-            if (isset($request->type) && $request->type == "class") {
+            if (isset($request->type) && $request->type == 'class') {
                 $data = $data->where('table_type', "App\Models\ClassSchool")->where('table_id', $class_id);
             }
 
-            if (isset($request->type) && $request->type == "subject") {
+            if (isset($request->type) && $request->type == 'subject') {
                 $data = $data->where('table_type', "App\Models\SubjectTeacher")->whereIn('table_id', $table);
             }
 
             $data = $data->orderBy('id', 'desc')->paginate();
-            ResponseService::successResponse("Announcement Details Fetched Successfully", $data);
+            ResponseService::successResponse('Announcement Details Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1307,9 +1312,9 @@ class StudentApiController extends Controller
             $student_subject = $student->subjects();
             $class_id = $student->class_section->class_id;
 
-            $core_subjects = array_column($student_subject["core_subject"], 'subject_id') ?? [];
+            $core_subjects = array_column($student_subject['core_subject'], 'subject_id') ?? [];
 
-            $elective_subjects = $student_subject["elective_subject"] ?? [];
+            $elective_subjects = $student_subject['elective_subject'] ?? [];
 
             if ($elective_subjects) {
                 $elective_subjects = $elective_subjects->pluck('subject_id')->toArray();
@@ -1317,7 +1322,7 @@ class StudentApiController extends Controller
 
             $subject_id = array_merge($core_subjects, $elective_subjects);
 
-            $exam_data_db = ExamClass::with('exam.session_year:id,name', 'exam.timetable.subject',)
+            $exam_data_db = ExamClass::with('exam.session_year:id,name', 'exam.timetable.subject')
                 ->where('class_id', $class_id)
                 ->whereHas('exam.timetable', function ($query) use ($subject_id) {
                     $query->whereIn('subject_id', $subject_id);
@@ -1338,17 +1343,17 @@ class StudentApiController extends Controller
                 $currentTime = Carbon::now();
                 $current_date = date($currentTime->toDateString());
                 if ($current_date >= $starting_date && $current_date <= $ending_date) {
-                    $exam_status = "1"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                    $exam_status = '1'; // Upcoming = 0 , On Going = 1 , Completed = 2
                 } elseif ($current_date < $starting_date) {
-                    $exam_status = "0"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                    $exam_status = '0'; // Upcoming = 0 , On Going = 1 , Completed = 2
                 } else {
-                    $exam_status = "2"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                    $exam_status = '2'; // Upcoming = 0 , On Going = 1 , Completed = 2
                 }
 
                 if (isset($request->status)) {
                     if ($request->status == 0) {
                         if ($request->get_timetable == 1) {
-                            $exam_data[] = array(
+                            $exam_data[] = [
                                 'id' => $data->exam->id,
                                 'name' => $data->exam->name,
                                 'description' => $data->exam->description,
@@ -1358,9 +1363,9 @@ class StudentApiController extends Controller
                                 'exam_ending_date' => $ending_date,
                                 'exam_status' => $exam_status,
                                 'exam_timetable' => $data->exam->timetable,
-                            );
+                            ];
                         } else {
-                            $exam_data[] = array(
+                            $exam_data[] = [
                                 'id' => $data->exam->id,
                                 'name' => $data->exam->name,
                                 'description' => $data->exam->description,
@@ -1369,12 +1374,12 @@ class StudentApiController extends Controller
                                 'exam_starting_date' => $starting_date,
                                 'exam_ending_date' => $ending_date,
                                 'exam_status' => $exam_status,
-                            );
+                            ];
                         }
-                    } else if ($request->status == 1) {
+                    } elseif ($request->status == 1) {
                         if ($exam_status == 0) {
                             if ($request->get_timetable == 1) {
-                                $exam_data[] = array(
+                                $exam_data[] = [
                                     'id' => $data->exam->id,
                                     'name' => $data->exam->name,
                                     'description' => $data->exam->description,
@@ -1384,9 +1389,9 @@ class StudentApiController extends Controller
                                     'exam_ending_date' => $ending_date,
                                     'exam_status' => $exam_status,
                                     'exam_timetable' => $data->exam->timetable,
-                                );
+                                ];
                             } else {
-                                $exam_data[] = array(
+                                $exam_data[] = [
                                     'id' => $data->exam->id,
                                     'name' => $data->exam->name,
                                     'description' => $data->exam->description,
@@ -1395,13 +1400,13 @@ class StudentApiController extends Controller
                                     'exam_starting_date' => $starting_date,
                                     'exam_ending_date' => $ending_date,
                                     'exam_status' => $exam_status,
-                                );
+                                ];
                             }
                         }
-                    } else if ($request->status == 2) {
+                    } elseif ($request->status == 2) {
                         if ($exam_status == 1) {
                             if ($request->get_timetable == 1) {
-                                $exam_data[] = array(
+                                $exam_data[] = [
                                     'id' => $data->exam->id,
                                     'name' => $data->exam->name,
                                     'description' => $data->exam->description,
@@ -1411,9 +1416,9 @@ class StudentApiController extends Controller
                                     'exam_ending_date' => $ending_date,
                                     'exam_status' => $exam_status,
                                     'exam_timetable' => $data->exam->timetable,
-                                );
+                                ];
                             } else {
-                                $exam_data[] = array(
+                                $exam_data[] = [
                                     'id' => $data->exam->id,
                                     'name' => $data->exam->name,
                                     'description' => $data->exam->description,
@@ -1422,13 +1427,13 @@ class StudentApiController extends Controller
                                     'exam_starting_date' => $starting_date,
                                     'exam_ending_date' => $ending_date,
                                     'exam_status' => $exam_status,
-                                );
+                                ];
                             }
                         }
                     } else {
                         if ($exam_status == 2) {
                             if ($request->get_timetable == 1) {
-                                $exam_data[] = array(
+                                $exam_data[] = [
                                     'id' => $data->exam->id,
                                     'name' => $data->exam->name,
                                     'description' => $data->exam->description,
@@ -1438,9 +1443,9 @@ class StudentApiController extends Controller
                                     'exam_ending_date' => $ending_date,
                                     'exam_status' => $exam_status,
                                     'exam_timetable' => $data->exam->timetable,
-                                );
+                                ];
                             } else {
-                                $exam_data[] = array(
+                                $exam_data[] = [
                                     'id' => $data->exam->id,
                                     'name' => $data->exam->name,
                                     'description' => $data->exam->description,
@@ -1449,13 +1454,13 @@ class StudentApiController extends Controller
                                     'exam_starting_date' => $starting_date,
                                     'exam_ending_date' => $ending_date,
                                     'exam_status' => $exam_status,
-                                );
+                                ];
                             }
                         }
                     }
                 } else {
                     if ($request->get_timetable == 1) {
-                        $exam_data[] = array(
+                        $exam_data[] = [
                             'id' => $data->exam->id,
                             'name' => $data->exam->name,
                             'description' => $data->exam->description,
@@ -1465,9 +1470,9 @@ class StudentApiController extends Controller
                             'exam_ending_date' => $ending_date,
                             'exam_status' => $exam_status,
                             'exam_timetable' => $data->exam->timetable,
-                        );
+                        ];
                     } else {
-                        $exam_data[] = array(
+                        $exam_data[] = [
                             'id' => $data->exam->id,
                             'name' => $data->exam->name,
                             'description' => $data->exam->description,
@@ -1476,14 +1481,14 @@ class StudentApiController extends Controller
                             'exam_starting_date' => $starting_date,
                             'exam_ending_date' => $ending_date,
                             'exam_status' => $exam_status,
-                        );
+                        ];
                     }
                 }
             }
 
-            ResponseService::successResponse("Exam List Fetched Successfully", $exam_data ?? []);
+            ResponseService::successResponse('Exam List Fetched Successfully', $exam_data ?? []);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1499,9 +1504,9 @@ class StudentApiController extends Controller
             $student_id = Auth::user()->student->id;
             $student = Students::with('class_section')->where('id', $student_id)->first();
             $student_subject = $student->subjects();
-            $core_subjects = array_column($student_subject["core_subject"], 'subject_id');
+            $core_subjects = array_column($student_subject['core_subject'], 'subject_id');
 
-            $elective_subjects = $student_subject["elective_subject"] == null ? [] : $student_subject["elective_subject"]->pluck('subject_id')->toArray();
+            $elective_subjects = $student_subject['elective_subject'] == null ? [] : $student_subject['elective_subject']->pluck('subject_id')->toArray();
 
             $subject_id = array_merge($core_subjects, $elective_subjects);
 
@@ -1510,33 +1515,31 @@ class StudentApiController extends Controller
                 $q->where(['exam_id' => $request->exam_id, 'class_id' => $class_id])->whereIn('subject_id', $subject_id)->with(['subject'])->orderby('date');
             }])->where('id', $request->exam_id)->first();
 
-
-            if (!$exam_data_db) {
-                ResponseService::errorResponse("error_occurred", null, 103);
+            if (! $exam_data_db) {
+                ResponseService::errorResponse('error_occurred', null, 103);
             }
-
 
             $exam_data = [];
             foreach ($exam_data_db->timetable as $data) {
-                $exam_data[] = array(
+                $exam_data[] = [
                     'id' => $data->id,
                     'total_marks' => $data->total_marks,
                     'passing_marks' => $data->passing_marks,
                     'date' => $data->date,
                     'starting_time' => $data->start_time,
                     'ending_time' => $data->end_time,
-                    'subject' => array(
+                    'subject' => [
                         'id' => $data->subject->id,
                         'name' => $data->subject->name,
                         'bg_color' => $data->subject->bg_color,
                         'image' => $data->subject->image,
                         'type' => $data->subject->type,
-                    )
-                );
+                    ],
+                ];
             }
-            ResponseService::successResponse("Exam Details Fetched Successfully", $exam_data ?? []);
+            ResponseService::successResponse('Exam Details Fetched Successfully', $exam_data ?? []);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1555,9 +1558,7 @@ class StudentApiController extends Controller
                 $q->where('student_id', $student->id);
             }])->where('student_id', $student->id)->get();
 
-
-
-            if (sizeof($exam_result_db)) {
+            if (count($exam_result_db)) {
                 $examIds = $exam_result_db->pluck('exam_id')->toArray();
                 $examStartDates = ExamTimetable::selectRaw('exam_id, MIN(date) as start_date')
                     ->whereIn('exam_id', $examIds)
@@ -1569,22 +1570,22 @@ class StudentApiController extends Controller
                 foreach ($exam_result_db as $exam_result_data) {
                     $starting_date = $examStartDates[$exam_result_data->exam_id] ?? null;
 
-                    $exam_result = array(
+                    $exam_result = [
                         'result_id' => $exam_result_data->id,
                         'exam_id' => $exam_result_data->exam_id,
                         'exam_name' => $exam_result_data->exam->name,
-                        'class_name' => $class_data->class_section->class->name . '-' . $class_data->class_section->section->name . ' ' . $class_data->class_section->class->medium->name,
-                        'student_name' => $exam_result_data->student->user->first_name . ' ' . $exam_result_data->student->user->last_name,
+                        'class_name' => $class_data->class_section->class->name.'-'.$class_data->class_section->section->name.' '.$class_data->class_section->class->medium->name,
+                        'student_name' => $exam_result_data->student->user->first_name.' '.$exam_result_data->student->user->last_name,
                         'exam_date' => $starting_date,
                         'total_marks' => $exam_result_data->total_marks,
                         'obtained_marks' => $exam_result_data->obtained_marks,
                         'percentage' => $exam_result_data->percentage,
                         'grade' => $exam_result_data->grade,
                         'session_year' => $exam_result_data->session_year->name,
-                    );
-                    $exam_marks = array();
+                    ];
+                    $exam_marks = [];
                     foreach ($exam_result_data->exam->marks as $marks) {
-                        $exam_marks[] = array(
+                        $exam_marks[] = [
                             'marks_id' => $marks->id,
                             'subject_name' => $marks->subject->name,
                             'subject_type' => $marks->subject->type,
@@ -1593,19 +1594,19 @@ class StudentApiController extends Controller
                             'obtained_marks' => $marks->obtained_marks,
                             'teacher_review' => $marks->teacher_review,
                             'grade' => $marks->grade,
-                        );
+                        ];
                     }
-                    $data[] = array(
+                    $data[] = [
                         'result' => $exam_result,
                         'exam_marks' => $exam_marks,
-                    );
+                    ];
                 }
-                ResponseService::successResponse("Exam Result Fetched Successfully", $data);
+                ResponseService::successResponse('Exam Result Fetched Successfully', $data);
             } else {
-                ResponseService::successResponse("Exam Result Fetched Successfully", []);
+                ResponseService::successResponse('Exam Result Fetched Successfully', []);
             }
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1625,9 +1626,9 @@ class StudentApiController extends Controller
             $student_subject = $student->subjects();
             // $class_subject = $student->classSubjects();
 
-            $core_subjects = array_column($student_subject["core_subject"], 'subject_id');
+            $core_subjects = array_column($student_subject['core_subject'], 'subject_id');
 
-            $elective_subjects = $student_subject["elective_subject"] ?? [];
+            $elective_subjects = $student_subject['elective_subject'] ?? [];
             if ($elective_subjects) {
                 $elective_subjects = $elective_subjects->pluck('subject_id')->toArray();
             }
@@ -1639,13 +1640,13 @@ class StudentApiController extends Controller
             $session_year = getSettings('session_year');
             $session_year_id = $session_year['session_year'];
 
-            //get current
+            // get current
             $time_data = Carbon::now()->toArray();
             $current_date_time = $time_data['formatted'];
 
             // checks the subject id param is passed or not .
             // query meets the condition for both class section and class
-            if (isset($request->subject_id) && !empty($request->subject_id)) {
+            if (isset($request->subject_id) && ! empty($request->subject_id)) {
                 $exam_data_db = OnlineExam::where(['model_type' => 'App\Models\ClassSection', 'model_id' => $class_section_id, 'subject_id' => $request->subject_id, 'session_year_id' => $session_year_id,  ['end_date', '>=', $current_date_time]])->has('question_choice')->with('subject')->whereDoesntHave('student_attempt', function ($q) use ($student) {
                     $q->where('student_id', $student->id);
                 })->orWhere(function ($query) use ($class_id, $session_year_id, $current_date_time, $student, $request) {
@@ -1663,50 +1664,50 @@ class StudentApiController extends Controller
                 })->orderby('start_date')->paginate(15)->toArray();
             }
 
-            if (isset($exam_data_db) && !empty($exam_data_db)) {
+            if (isset($exam_data_db) && ! empty($exam_data_db)) {
 
-                $exam_data = array();
-                $exam_list = array();
+                $exam_data = [];
+                $exam_list = [];
                 // making the array of exam data
                 foreach ($exam_data_db['data'] as $data) {
 
                     // total marks of exams
-                    $total_marks = OnlineExamQuestionChoice::select(DB::raw("sum(marks)"))->where('online_exam_id', $data['id'])->first();
+                    $total_marks = OnlineExamQuestionChoice::select(DB::raw('sum(marks)'))->where('online_exam_id', $data['id'])->first();
                     $total_marks = $total_marks['sum(marks)'];
 
                     if ($data['model_type'] == 'App\Models\ClassSection') {
                         $class_section_data = ClassSection::where('id', $data['model_id'])->with('class.medium', 'section')->first();
-                        $class_name = $class_section_data->class->name . ' - ' . $class_section_data->section->name . ' ' . $class_section_data->class->medium->name;
+                        $class_name = $class_section_data->class->name.' - '.$class_section_data->section->name.' '.$class_section_data->class->medium->name;
                     } else {
                         $class_data = ClassSchool::where('id', $data['model_id'])->with('medium')->first();
-                        $class_name = $class_data->name . ' ' . $class_data->medium->name;
+                        $class_name = $class_data->name.' '.$class_data->medium->name;
                     }
 
                     if ($total_marks == null) {
                         $exam_list = [];
                     } else {
-                        $exam_list[] = array(
+                        $exam_list[] = [
                             'exam_id' => $data['id'],
-                            'class' => array(
+                            'class' => [
                                 'id' => $data['model_id'],
-                                'name' => $class_name
-                            ),
-                            'subject' => array(
+                                'name' => $class_name,
+                            ],
+                            'subject' => [
                                 'id' => $data['subject_id'],
-                                'name' => $data['subject']['name'] . ' - ' . $data['subject']['type']
-                            ),
+                                'name' => $data['subject']['name'].' - '.$data['subject']['type'],
+                            ],
                             'title' => $data['title'],
                             'exam_key' => $data['exam_key'],
                             'duration' => $data['duration'],
                             'start_date' => $data['start_date'],
                             'end_date' => $data['end_date'],
                             'total_marks' => $total_marks,
-                        );
+                        ];
                     }
                 }
 
-                //adding the exam data with pagination data
-                $exam_data = array(
+                // adding the exam data with pagination data
+                $exam_data = [
                     'current_page' => $exam_data_db['current_page'],
                     'data' => $exam_list,
                     'current_date' => $date,
@@ -1715,15 +1716,15 @@ class StudentApiController extends Controller
                     'per_page' => $exam_data_db['per_page'],
                     'to' => $exam_data_db['to'],
                     'total' => $exam_data_db['total'],
-                );
+                ];
             } else {
-                //if no data found
+                // if no data found
                 $exam_data = null;
             }
 
-            ResponseService::successResponse("Exam List Fetched Successfully", $exam_data);
+            ResponseService::successResponse('Exam List Fetched Successfully', $exam_data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1743,25 +1744,25 @@ class StudentApiController extends Controller
             // checks Exam key
             $check_key = OnlineExam::where(['id' => $request->exam_id, 'exam_key' => $request->exam_key])->count();
             if ($check_key == 0) {
-                ResponseService::errorResponse("Invalid Exam Key", null, 103);
+                ResponseService::errorResponse('Invalid Exam Key', null, 103);
             }
 
             // checks student exam status
             $check_student_status = StudentOnlineExamStatus::where(['online_exam_id' => $request->exam_id, 'student_id' => $student->id])->count();
             if ($check_student_status != 0) {
-                ResponseService::errorResponse("student_already_attempted_exam", null, 105);
+                ResponseService::errorResponse('student_already_attempted_exam', null, 105);
             }
 
-            //checks the exam started or not
+            // checks the exam started or not
             $time_data = Carbon::now()->toArray();
             $current_date_time = $time_data['formatted'];
             $check_start_date = OnlineExam::where('id', $request->exam_id)->where('start_date', '>', $current_date_time)->count();
             if ($check_start_date != 0) {
-                ResponseService::errorResponse("exam_not_started_yet", null, 106);
+                ResponseService::errorResponse('exam_not_started_yet', null, 106);
             }
 
             // add the exam status
-            $student_exam_status = new StudentOnlineExamStatus();
+            $student_exam_status = new StudentOnlineExamStatus;
             $student_exam_status->online_exam_id = $request->exam_id;
             $student_exam_status->student_id = $student->id;
             $student_exam_status->status = 1;
@@ -1772,32 +1773,32 @@ class StudentApiController extends Controller
 
             // get the questions data
             $get_exam_questions_db = OnlineExamQuestionChoice::where('online_exam_id', $request->exam_id)->with('questions')->get();
-            $questions_data = array();
+            $questions_data = [];
             $total_marks = 0;
             foreach ($get_exam_questions_db as $exam_questions) {
                 $total_marks += $exam_questions->marks;
 
                 // make options array
-                $options_data = array();
+                $options_data = [];
                 foreach ($exam_questions->questions->options as $question_options) {
-                    $options_data[] = array(
+                    $options_data[] = [
                         'id' => $question_options->id,
-                        'option' => safe_htmlspecialchars_decode($question_options->option)
-                    );
+                        'option' => safe_htmlspecialchars_decode($question_options->option),
+                    ];
                 }
 
                 // make answers array
-                $answers_data = array();
+                $answers_data = [];
                 foreach ($exam_questions->questions->answers as $question_answers) {
-                    $answers_data[] = array(
+                    $answers_data[] = [
                         'id' => $question_answers->id,
                         'option_id' => $question_answers->answer,
-                        'answer' => safe_htmlspecialchars_decode($question_answers->options->option)
-                    );
+                        'answer' => safe_htmlspecialchars_decode($question_answers->options->option),
+                    ];
                 }
 
                 // make question array
-                $questions_data[] = array(
+                $questions_data[] = [
                     'id' => $exam_questions->id,
                     'question' => safe_htmlspecialchars_decode($exam_questions->questions->question),
                     'question_type' => $exam_questions->questions->question_type,
@@ -1806,11 +1807,11 @@ class StudentApiController extends Controller
                     'marks' => $exam_questions->marks,
                     'image' => $exam_questions->questions->image_url,
                     'note' => $exam_questions->questions->note,
-                );
+                ];
             }
-            ResponseService::successResponse("Exam Questions Fetched Successfully", $questions_data ?? null, ['total_questions' => $total_questions, 'total_marks' => $total_marks]);
+            ResponseService::successResponse('Exam Questions Fetched Successfully', $questions_data ?? null, ['total_questions' => $total_questions, 'total_marks' => $total_marks]);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1834,7 +1835,7 @@ class StudentApiController extends Controller
 
                 $answers_exists = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $request->online_exam_id])->count();
                 if ($answers_exists) {
-                    ResponseService::errorResponse("Answers already submitted", null, 103);
+                    ResponseService::errorResponse('Answers already submitted', null, 103);
                 }
 
                 foreach ($request->answers_data as $answer_data) {
@@ -1849,14 +1850,14 @@ class StudentApiController extends Controller
                         // checks the option exists with provided question
                         $check_option_exists = OnlineExamQuestionOption::where(['id' => $answer_data['option_id'], 'question_id' => $question_id])->count();
 
-                        //get the current date
+                        // get the current date
                         $currentTime = Carbon::now();
                         $current_date = date($currentTime->toDateString());
 
                         if ($check_option_exists) {
                             foreach ($answer_data['option_id'] as $options) {
                                 // add the data of answers
-                                $store_answers = new OnlineExamStudentAnswer();
+                                $store_answers = new OnlineExamStudentAnswer;
                                 $store_answers->student_id = $student->id;
                                 $store_answers->online_exam_id = $request->online_exam_id;
                                 $store_answers->question_id = $answer_data['question_id'];
@@ -1866,29 +1867,29 @@ class StudentApiController extends Controller
                             }
 
                             $student_exam_status_id = StudentOnlineExamStatus::where(['student_id' => $student->id, 'online_exam_id' => $request->online_exam_id])->pluck('id')->first();
-                            if (isset($student_exam_status_id) && !empty($student_exam_status_id)) {
+                            if (isset($student_exam_status_id) && ! empty($student_exam_status_id)) {
                                 $update_status = StudentOnlineExamStatus::find($student_exam_status_id);
                                 $update_status->status = 2;
                                 $update_status->save();
                             }
                         }
                     } else {
-                        ResponseService::errorResponse("invalid_question_id", null, 103);
+                        ResponseService::errorResponse('invalid_question_id', null, 103);
                     }
                 }
-                ResponseService::successResponse("data_store_successfully");
+                ResponseService::successResponse('data_store_successfully');
             } else {
-                ResponseService::errorResponse("invalid_online_exam_id", null, 103);
+                ResponseService::errorResponse('invalid_online_exam_id', null, 103);
             }
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
     public function getOnlineExamReport(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'subject_id' => 'required|numeric'
+            'subject_id' => 'required|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -1899,11 +1900,10 @@ class StudentApiController extends Controller
             $class_section_id = $student->class_section_id;
             $class_id = $student->class_section->class_id;
 
-
             $session_year = getSettings('session_year');
             $session_year_id = $session_year['session_year'];
 
-            //get current
+            // get current
             $time_data = Carbon::now()->toArray();
             $current_date_time = $time_data['formatted'];
 
@@ -1911,57 +1911,55 @@ class StudentApiController extends Controller
                 $query->where(['model_type' => 'App\Models\ClassSchool', 'model_id' => $class_id, 'subject_id' => $request->subject_id, 'session_year_id' => $session_year_id, ['start_date', '<=', $current_date_time]]);
             });
             $exam_exists = $exam_query->count();
-            $exam_query_without_session_year = OnlineExam::where(['model_type' => 'App\Models\ClassSection', 'model_id' => $class_section_id, 'subject_id' => $request->subject_id, ['start_date', '<=', $current_date_time]])->orWhere(function ($query) use ($class_id, $session_year_id, $request, $current_date_time) {
+            $exam_query_without_session_year = OnlineExam::where(['model_type' => 'App\Models\ClassSection', 'model_id' => $class_section_id, 'subject_id' => $request->subject_id, ['start_date', '<=', $current_date_time]])->orWhere(function ($query) use ($class_id, $request, $current_date_time) {
                 $query->where(['model_type' => 'App\Models\ClassSchool', 'model_id' => $class_id, 'subject_id' => $request->subject_id, ['start_date', '<=', $current_date_time]]);
             });
 
             // checks the exams exists
-            if (isset($exam_exists) && !empty($exam_exists)) {
-                //total online exams id and counts
+            if (isset($exam_exists) && ! empty($exam_exists)) {
+                // total online exams id and counts
                 $total_exam_ids = $exam_query->pluck('id');
-                //online exam ids attempted
+                // online exam ids attempted
                 $attempted_online_exam_ids = StudentOnlineExamStatus::where('student_id', $student->id)->whereIn('online_exam_id', $total_exam_ids)->pluck('online_exam_id');
 
-                //get the submitted answers (i.e. option id)
+                // get the submitted answers (i.e. option id)
                 $online_exams_attempted_answers = OnlineExamStudentAnswer::where('student_id', $student->id)->whereIn('online_exam_id', $total_exam_ids)->pluck('option_id');
 
-                //get the submitted choiced question id
+                // get the submitted choiced question id
                 $online_exams_submitted_question_ids = OnlineExamStudentAnswer::where('student_id', $student->id)->whereIn('online_exam_id', $total_exam_ids)->pluck('question_id');
 
-                //get the questions id
+                // get the questions id
                 $get_question_ids = OnlineExamQuestionChoice::whereIn('id', $online_exams_submitted_question_ids)->pluck('question_id');
 
-                //removes the question id of the question if one of the answer of particular question is wrong
+                // removes the question id of the question if one of the answer of particular question is wrong
                 $incorrectly_answered_question_ids = OnlineExamQuestionAnswer::whereIn('question_id', $get_question_ids)
                     ->whereNotIn('answer', $online_exams_attempted_answers)
                     ->pluck('question_id')
                     ->unique();
                 $get_question_ids = $get_question_ids->diff($incorrectly_answered_question_ids);
-                //get the correct answers question id
+                // get the correct answers question id
                 $correct_answers_question_id = OnlineExamQuestionAnswer::whereIn('question_id', $get_question_ids)->whereIn('answer', $online_exams_attempted_answers)->pluck('question_id');
 
-
-                //total exams
+                // total exams
                 $total_exams = $exam_query_without_session_year->count();
 
-                //total exam attempted
+                // total exam attempted
                 $total_attempted_exams = StudentOnlineExamStatus::where('student_id', $student->id)->whereIn('online_exam_id', $total_exam_ids)->count();
 
                 // total missed exams
                 $total_missed_exams = $exam_query_without_session_year->whereNotIn('id', $attempted_online_exam_ids)->count();
 
                 // get the correct choiced question id and marks
-                $total_obtained_marks = OnlineExamQuestionChoice::select(DB::raw("sum(marks)"))->whereIn('online_exam_id', $total_exam_ids)->whereIn('question_id', $correct_answers_question_id)->first();
+                $total_obtained_marks = OnlineExamQuestionChoice::select(DB::raw('sum(marks)'))->whereIn('online_exam_id', $total_exam_ids)->whereIn('question_id', $correct_answers_question_id)->first();
                 $total_obtained_marks = $total_obtained_marks['sum(marks)'];
 
-                //overall total marks
-                $total_marks = OnlineExamQuestionChoice::select(DB::raw("sum(marks)"))->whereIn('online_exam_id', $total_exam_ids)->first();
+                // overall total marks
+                $total_marks = OnlineExamQuestionChoice::select(DB::raw('sum(marks)'))->whereIn('online_exam_id', $total_exam_ids)->first();
                 $total_marks = $total_marks['sum(marks)'];
 
                 if ($total_obtained_marks) {
                     $percentage = number_format(($total_obtained_marks * 100) / $total_marks, 2);
                 }
-
 
                 // particular online exam data
                 $online_exams_db = OnlineExam::where(['model_type' => 'App\Models\ClassSection', 'model_id' => $class_section_id, 'subject_id' => $request->subject_id, 'session_year_id' => $session_year_id, ['start_date', '<=', $current_date_time]])->orWhere(function ($query) use ($class_id, $session_year_id, $request, $current_date_time) {
@@ -1970,8 +1968,7 @@ class StudentApiController extends Controller
                     $q->where('student_id', $student->id);
                 }])->has('question_choice')->paginate(10)->toArray();
 
-
-                $exam_list = array();
+                $exam_list = [];
                 $total_obtained_marks_exam = '';
 
                 $examIdsForReport = collect($online_exams_db['data'])->pluck('id')->toArray();
@@ -1999,14 +1996,14 @@ class StudentApiController extends Controller
                     // Note: OnlineExamStudentAnswer.question_id stores OnlineExamQuestionChoice.id (choice IDs, not question IDs)
                     $exam_submitted_question_ids = $exam_student_answers->pluck('question_id');
                     $get_exam_question_ids = $exam_submitted_question_ids
-                        ->map(fn($id) => $choiceIdToQuestionId[$id] ?? null)
+                        ->map(fn ($id) => $choiceIdToQuestionId[$id] ?? null)
                         ->filter()
                         ->unique()
                         ->values();
 
                     $exam_attempted_answers = $exam_student_answers->pluck('option_id');
 
-                    //removes the question id of the question if one of the answer of particular question is wrong
+                    // removes the question id of the question if one of the answer of particular question is wrong
                     $incorrectly_answered_exam_question_ids = OnlineExamQuestionAnswer::whereIn('question_id', $get_exam_question_ids)
                         ->whereNotIn('answer', $exam_attempted_answers)
                         ->pluck('question_id')
@@ -2015,28 +2012,27 @@ class StudentApiController extends Controller
 
                     $exam_correct_answers_question_id = OnlineExamQuestionAnswer::whereIn('question_id', $get_exam_question_ids)->whereIn('answer', $exam_attempted_answers)->pluck('question_id');
 
-                    $total_obtained_marks_exam = OnlineExamQuestionChoice::select(DB::raw("sum(marks)"))->where('online_exam_id', $data['id'])->whereIn('question_id', $exam_correct_answers_question_id)->first();
+                    $total_obtained_marks_exam = OnlineExamQuestionChoice::select(DB::raw('sum(marks)'))->where('online_exam_id', $data['id'])->whereIn('question_id', $exam_correct_answers_question_id)->first();
                     $total_obtained_marks_exam = $total_obtained_marks_exam['sum(marks)'];
                     $total_marks_exam = $totalMarksByExam[$data['id']] ?? null;
 
-                    $exam_list[] = array(
+                    $exam_list[] = [
                         'online_exam_id' => $data['id'],
                         'title' => $data['title'],
-                        'obtained_marks' => $total_obtained_marks_exam ?? "0",
-                        'total_marks' => $total_marks_exam ?? "0",
-                    );
+                        'obtained_marks' => $total_obtained_marks_exam ?? '0',
+                        'total_marks' => $total_marks_exam ?? '0',
+                    ];
                 }
 
-
                 // array of final data
-                $online_exam_report_data = array(
+                $online_exam_report_data = [
                     'total_exams' => $total_exams,
                     'attempted' => $total_attempted_exams,
                     'missed_exams' => $total_missed_exams,
-                    'total_marks' => $total_marks ?? "0",
-                    'total_obtained_marks' => $total_obtained_marks ?? "0",
-                    'percentage' => $percentage ?? "0",
-                    'exam_list' => array(
+                    'total_marks' => $total_marks ?? '0',
+                    'total_obtained_marks' => $total_obtained_marks ?? '0',
+                    'percentage' => $percentage ?? '0',
+                    'exam_list' => [
                         'current_page' => $online_exams_db['current_page'],
                         'data' => $exam_list,
                         'from' => $online_exams_db['from'],
@@ -2044,19 +2040,19 @@ class StudentApiController extends Controller
                         'per_page' => $online_exams_db['per_page'],
                         'to' => $online_exams_db['to'],
                         'total' => $online_exams_db['total'],
-                    )
-                );
+                    ],
+                ];
             }
-            ResponseService::successResponse("Online Exam Report Fetched Successfully", $online_exam_report_data ?? []);
+            ResponseService::successResponse('Online Exam Report Fetched Successfully', $online_exam_report_data ?? []);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
     public function getAssignmentReport(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'subject_id' => 'required|numeric'
+            'subject_id' => 'required|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -2070,8 +2066,8 @@ class StudentApiController extends Controller
             // Base query: all assignments for this student's class, session, subject
             $assignmentsQuery = Assignment::where([
                 'class_section_id' => $student->class_section_id,
-                'session_year_id'  => $session_year_id,
-                'subject_id'       => $request->subject_id,
+                'session_year_id' => $session_year_id,
+                'subject_id' => $request->subject_id,
             ]);
 
             $total_assignments = $assignmentsQuery->count();
@@ -2090,7 +2086,7 @@ class StudentApiController extends Controller
             // Calculate percentage safely
             $percentage = $total_assignment_points > 0
                 ? number_format(($total_points_obtained * 100) / $total_assignment_points, 2)
-                : "0.00";
+                : '0.00';
 
             $unsubmitted_assignments = $total_assignments - $total_submitted_assignments;
 
@@ -2111,10 +2107,10 @@ class StudentApiController extends Controller
                 $submission = $assignment->submission; // Already constrained to this student
 
                 return [
-                    'assignment_id'     => $assignment->id,
-                    'assignment_name'   => $assignment->name,
-                    'obtained_points'   => $submission?->points ?? 0,
-                    'total_points'      => $assignment->points,
+                    'assignment_id' => $assignment->id,
+                    'assignment_name' => $assignment->name,
+                    'obtained_points' => $submission?->points ?? 0,
+                    'total_points' => $assignment->points,
                 ];
             });
 
@@ -2123,26 +2119,26 @@ class StudentApiController extends Controller
 
             // Final report structure
             $report = [
-                'assignments'             => $total_assignments,
-                'submitted_assignments'   => $total_submitted_assignments,
+                'assignments' => $total_assignments,
+                'submitted_assignments' => $total_submitted_assignments,
                 'unsubmitted_assignments' => $unsubmitted_assignments,
-                'total_points'            => (string) $total_assignment_points,
-                'total_obtained_points'   => (string) $total_points_obtained,
-                'percentage'              => $percentage,
+                'total_points' => (string) $total_assignment_points,
+                'total_obtained_points' => (string) $total_points_obtained,
+                'percentage' => $percentage,
                 'submitted_assignment_with_points_data' => [
                     'current_page' => $submitted_assignments_paginated->currentPage(),
-                    'data'         => $submitted_assignments_paginated->items(),
-                    'from'         => $submitted_assignments_paginated->firstItem(),
-                    'last_page'    => $submitted_assignments_paginated->lastPage(),
-                    'per_page'     => $submitted_assignments_paginated->perPage(),
-                    'to'           => $submitted_assignments_paginated->lastItem(),
-                    'total'        => $submitted_assignments_paginated->total(),
-                ]
+                    'data' => $submitted_assignments_paginated->items(),
+                    'from' => $submitted_assignments_paginated->firstItem(),
+                    'last_page' => $submitted_assignments_paginated->lastPage(),
+                    'per_page' => $submitted_assignments_paginated->perPage(),
+                    'to' => $submitted_assignments_paginated->lastItem(),
+                    'total' => $submitted_assignments_paginated->total(),
+                ],
             ];
 
-            return ResponseService::successResponse("Assignment Report Fetched Successfully", $report);
+            return ResponseService::successResponse('Assignment Report Fetched Successfully', $report);
         } catch (Throwable $e) {
-            return ResponseService::errorResponse("error_occurred", null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2159,7 +2155,7 @@ class StudentApiController extends Controller
 
             // get the class subject id on the basis of subject id passed
             // query meets the condition for both class section and class
-            if (isset($request->subject_id) && !empty($request->subject_id)) {
+            if (isset($request->subject_id) && ! empty($request->subject_id)) {
                 $online_exam_db = OnlineExam::where(['model_type' => 'App\Models\ClassSection', 'model_id' => $class_section_id, 'subject_id' => $request->subject_id, 'session_year_id' => $session_year_id])->whereHas('student_attempt', function ($q) use ($student) {
                     $q->where('student_id', $student->id);
                 })->orWhere(function ($query) use ($class_id, $session_year_id, $request, $student) {
@@ -2176,18 +2172,17 @@ class StudentApiController extends Controller
                     });
                 })->with('subject')->paginate(10)->toArray();
             }
-            $exam_list_data = array();
+            $exam_list_data = [];
             foreach ($online_exam_db['data'] as $data) {
-                //get the choice question id
+                // get the choice question id
                 $exam_submitted_question_ids = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $data['id']])->pluck('question_id');
                 $exam_submitted_date = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $data['id']])->pluck('submitted_date')->first();
 
                 $question_ids = OnlineExamQuestionChoice::whereIn('id', $exam_submitted_question_ids)->pluck('question_id');
 
-
                 $exam_attempted_answers = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $data['id']])->pluck('option_id');
 
-                //removes the question id of the question if one of the answer of particular question is wrong
+                // removes the question id of the question if one of the answer of particular question is wrong
                 foreach ($question_ids as $question_id) {
                     $check_questions_answers_exists = OnlineExamQuestionAnswer::where('question_id', $question_id)->whereNotIn('answer', $exam_attempted_answers)->count();
                     if ($check_questions_answers_exists) {
@@ -2198,24 +2193,24 @@ class StudentApiController extends Controller
                 $exam_correct_answers_question_id = OnlineExamQuestionAnswer::whereIn('question_id', $question_ids)->whereIn('answer', $exam_attempted_answers)->pluck('question_id');
 
                 // get the data of only attempted data
-                $total_obtained_marks_exam = OnlineExamQuestionChoice::select(DB::raw("sum(marks)"))->where('online_exam_id', $data['id'])->whereIn('question_id', $exam_correct_answers_question_id)->first();
+                $total_obtained_marks_exam = OnlineExamQuestionChoice::select(DB::raw('sum(marks)'))->where('online_exam_id', $data['id'])->whereIn('question_id', $exam_correct_answers_question_id)->first();
                 $total_obtained_marks_exam = $total_obtained_marks_exam['sum(marks)'];
-                $total_marks_exam = OnlineExamQuestionChoice::select(DB::raw("sum(marks)"))->where('online_exam_id', $data['id'])->first();
+                $total_marks_exam = OnlineExamQuestionChoice::select(DB::raw('sum(marks)'))->where('online_exam_id', $data['id'])->first();
                 $total_marks_exam = $total_marks_exam['sum(marks)'];
 
-                $exam_list_data[] = array(
+                $exam_list_data[] = [
                     'online_exam_id' => $data['id'],
-                    'subject' => array(
+                    'subject' => [
                         'id' => $data['subject_id'],
-                        'name' => $data['subject']['name'] . ' - ' . $data['subject']['type'],
-                    ),
+                        'name' => $data['subject']['name'].' - '.$data['subject']['type'],
+                    ],
                     'title' => $data['title'],
-                    'obtained_marks' => $total_obtained_marks_exam ?? "0",
-                    'total_marks' => $total_marks_exam ?? "0",
-                    'exam_submitted_date' => $exam_submitted_date ??  date('Y-m-d', strtotime($data['end_date']))
-                );
+                    'obtained_marks' => $total_obtained_marks_exam ?? '0',
+                    'total_marks' => $total_marks_exam ?? '0',
+                    'exam_submitted_date' => $exam_submitted_date ?? date('Y-m-d', strtotime($data['end_date'])),
+                ];
             }
-            $exam_list = array(
+            $exam_list = [
                 'current_page' => $online_exam_db['current_page'],
                 'data' => $exam_list_data ?? '',
                 'from' => $online_exam_db['from'],
@@ -2223,10 +2218,10 @@ class StudentApiController extends Controller
                 'per_page' => $online_exam_db['per_page'],
                 'to' => $online_exam_db['to'],
                 'total' => $online_exam_db['total'],
-            );
-            ResponseService::successResponse("Exam List Fetched Successfully", $exam_list ?? '');
+            ];
+            ResponseService::successResponse('Exam List Fetched Successfully', $exam_list ?? '');
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2242,19 +2237,19 @@ class StudentApiController extends Controller
         try {
             $student = $request->user()->student;
 
-            //get the total questions count
+            // get the total questions count
             $total_questions = OnlineExamQuestionChoice::where('online_exam_id', $request->online_exam_id)->count();
 
-            //get the exam's choiced question id
+            // get the exam's choiced question id
             $exam_choiced_question_ids = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $request->online_exam_id])->pluck('question_id');
 
-            //get the questions id
+            // get the questions id
             $question_ids = OnlineExamQuestionChoice::whereIn('id', $exam_choiced_question_ids)->pluck('question_id');
 
-            //get the options submitted by student
+            // get the options submitted by student
             $exam_attempted_answers = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $request->online_exam_id])->pluck('option_id');
 
-            //removes the question id of the question if one of the answer of particular question is wrong
+            // removes the question id of the question if one of the answer of particular question is wrong
             foreach ($question_ids as $question_id) {
                 $check_questions_answers_exists = OnlineExamQuestionAnswer::where('question_id', $question_id)->whereNotIn('answer', $exam_attempted_answers)->count();
                 if ($check_questions_answers_exists) {
@@ -2268,17 +2263,17 @@ class StudentApiController extends Controller
             // question id of correct answers
             $exam_correct_answers_question_id = OnlineExamQuestionAnswer::whereIn('question_id', $question_ids)->whereIn('answer', $exam_attempted_answers)->pluck('question_id');
 
-            //data of correct answers
+            // data of correct answers
             $exam_correct_answers_data = OnlineExamQuestionAnswer::whereIn('question_id', $question_ids)->whereIn('answer', $exam_attempted_answers)->groupby('question_id')->get();
 
             // array of correct answer with choiced exam id and marks
-            $correct_answers_data = array();
+            $correct_answers_data = [];
             foreach ($exam_correct_answers_data as $correct_data) {
                 $choice_questions = OnlineExamQuestionChoice::where(['online_exam_id' => $request->online_exam_id, 'question_id' => $correct_data->question_id])->first();
-                $correct_answers_data[] = array(
+                $correct_answers_data[] = [
                     'question_id' => $choice_questions->id,
-                    'marks' => $choice_questions->marks
-                );
+                    'marks' => $choice_questions->marks,
+                ];
             }
 
             // get questions ids
@@ -2291,40 +2286,40 @@ class StudentApiController extends Controller
             $exam_in_correct_answers_data = OnlineExamQuestionAnswer::whereIn('question_id', $all_questions_ids)->whereNotIn('answer', $exam_attempted_answers)->groupby('question_id')->get();
 
             // array of in correct answer && unattempted with choiced exam id and marks
-            $in_correct_answers_data = array();
+            $in_correct_answers_data = [];
             foreach ($exam_in_correct_answers_data as $in_correct_data) {
                 $choice_questions = OnlineExamQuestionChoice::where(['online_exam_id' => $request->online_exam_id, 'question_id' => $in_correct_data->question_id])->first();
-                if (isset($choice_questions) && !empty($choice_questions)) {
-                    $in_correct_answers_data[] = array(
+                if (isset($choice_questions) && ! empty($choice_questions)) {
+                    $in_correct_answers_data[] = [
                         'question_id' => $choice_questions->id,
-                        'marks' => $choice_questions->marks
-                    );
+                        'marks' => $choice_questions->marks,
+                    ];
                 }
             }
 
             // total obtained and total marks
-            $total_obtained_marks = OnlineExamQuestionChoice::select(DB::raw("sum(marks)"))->where('online_exam_id', $request->online_exam_id)->whereIn('question_id', $exam_correct_answers_question_id)->first();
+            $total_obtained_marks = OnlineExamQuestionChoice::select(DB::raw('sum(marks)'))->where('online_exam_id', $request->online_exam_id)->whereIn('question_id', $exam_correct_answers_question_id)->first();
             $total_obtained_marks = $total_obtained_marks['sum(marks)'];
-            $total_marks = OnlineExamQuestionChoice::select(DB::raw("sum(marks)"))->where('online_exam_id', $request->online_exam_id)->first();
+            $total_marks = OnlineExamQuestionChoice::select(DB::raw('sum(marks)'))->where('online_exam_id', $request->online_exam_id)->first();
             $total_marks = $total_marks['sum(marks)'];
 
             // final array data
-            $exam_result = array(
+            $exam_result = [
                 'total_questions' => $total_questions,
-                'correct_answers' => array(
+                'correct_answers' => [
                     'total_questions' => $exam_correct_answers,
-                    'question_data' => $correct_answers_data ?? ''
-                ),
-                'in_correct_answers' => array(
+                    'question_data' => $correct_answers_data ?? '',
+                ],
+                'in_correct_answers' => [
                     'total_questions' => $exam_in_correct_answers,
-                    'question_data' => $in_correct_answers_data ?? ''
-                ),
+                    'question_data' => $in_correct_answers_data ?? '',
+                ],
                 'total_obtained_marks' => $total_obtained_marks ?? '0',
-                'total_marks' => $total_marks
-            );
-            ResponseService::successResponse("Exam Result Fetched Successfully", $exam_result ?? '');
+                'total_marks' => $total_marks,
+            ];
+            ResponseService::successResponse('Exam Result Fetched Successfully', $exam_result ?? '');
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2347,26 +2342,26 @@ class StudentApiController extends Controller
 
             $user = Auth::user()->load(['student.class_section', 'student.category']);
 
-            //Check weather student status is valid or leaved the school
+            // Check weather student status is valid or leaved the school
             if ($user->status === 0 || $user->student->status === 0) {
-                return ResponseService::errorResponse("Your Account is Deactivate Please contact Admin for Further Help.", null, 101);
+                return ResponseService::errorResponse('Your Account is Deactivate Please contact Admin for Further Help.', null, 101);
             }
 
-            //Set Class Section name
-            $classSectionName = $user->student->class_section->class->name . " " . $user->student->class_section->section->name;
+            // Set Class Section name
+            $classSectionName = $user->student->class_section->class->name.' '.$user->student->class_section->section->name;
 
             // Set Class Section name
             $streamName = $user->student->class_section->class->streams->name ?? null;
             if ($streamName !== null) {
-                $user->class_section_name = $classSectionName . " " . $streamName;
+                $user->class_section_name = $classSectionName.' '.$streamName;
             } else {
                 $user->class_section_name = $classSectionName;
             }
             $user->is_semester_on_in_class = $user->student->class_section->class->include_semesters;
-            //Set Medium name
+            // Set Medium name
             $user->medium_name = $user->student->class_section->class->medium->name;
 
-            //Set School Shift name
+            // Set School Shift name
             $user->shift_id = $user->student->class_section->class->shifts->id ?? '';
             $user->shift = Shift::find($user->shift_id);
             if ($user->shift) {
@@ -2376,7 +2371,7 @@ class StudentApiController extends Controller
             }
             unset($user->student->class_section);
 
-            //Set Category
+            // Set Category
             $user->category_name = $user->student->category->name;
             unset($user->student->category);
 
@@ -2408,13 +2403,13 @@ class StudentApiController extends Controller
                                     $installment_db_data = $installment_db->get();
                                     foreach ($installment_db_data as $data) {
                                         $paid_installment_data = PaidInstallmentFee::where(['student_id' => $user->student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'installment_fee_id' => $data['id'], 'status' => 1])->first();
-                                        $installment_data[] = array(
+                                        $installment_data[] = [
                                             'id' => $data->id,
                                             'name' => $data->name,
                                             'due_date' => date('Y-m-d', strtotime($data->due_date)),
                                             'due_charges' => $data->due_charges,
                                             'is_paid' => $paid_installment_data->status ?? 0,
-                                        );
+                                        ];
                                     }
                                 }
                                 // Find the first unpaid installment and set its due date
@@ -2451,13 +2446,13 @@ class StudentApiController extends Controller
                                 $installment_db_data = $installment_db->get();
                                 foreach ($installment_db_data as $data) {
                                     $paid_installment_data = PaidInstallmentFee::where(['student_id' => $user->student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'installment_fee_id' => $data['id'], 'status' => 1])->first();
-                                    $installment_data[] = array(
+                                    $installment_data[] = [
                                         'id' => $data->id,
                                         'name' => $data->name,
                                         'due_date' => date('Y-m-d', strtotime($data->due_date)),
                                         'due_charges' => $data->due_charges,
                                         'is_paid' => $paid_installment_data->status ?? 0,
-                                    );
+                                    ];
                                 }
                             }
                             // Find the first unpaid installment and set its due date
@@ -2482,7 +2477,7 @@ class StudentApiController extends Controller
             $data = json_decode($dynamicField, true);
             if (is_array($data)) {
                 foreach ($data as $item) {
-                    if (!empty($item)) {
+                    if (! empty($item)) {
                         foreach ($item as $key => $value) {
                             $dynamicFields[$key] = $value;
                         }
@@ -2493,7 +2488,7 @@ class StudentApiController extends Controller
             }
 
             // Ensure proper data types for API response
-            $data = array_merge($user, ['dynamic_fields' =>  $dynamicFields ?? null]);
+            $data = array_merge($user, ['dynamic_fields' => $dynamicFields ?? null]);
 
             // Convert data types as per API requirements
             if (isset($data['student'])) {
@@ -2513,9 +2508,9 @@ class StudentApiController extends Controller
                 }
             }
 
-            ResponseService::successResponse("Data Fetched Successfully", $data);
+            ResponseService::successResponse('Data Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2525,13 +2520,13 @@ class StudentApiController extends Controller
             // $user = $request->user()->id;
             $user = Auth::user()->id;
             $notification_id = UserNotification::where('user_id', $user)->pluck('notification_id');
-            //Send To All Users(1) and Students(3)
+            // Send To All Users(1) and Students(3)
             $notification = Notification::whereIn('id', $notification_id)
                 // ->orWhereIn('send_to', [1, 3]) // this also shows the notifications sent to other students
                 ->latest()->paginate();
-            ResponseService::successResponse("Data Fetched Successfully", $notification ?? '');
+            ResponseService::successResponse('Data Fetched Successfully', $notification ?? '');
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2549,18 +2544,16 @@ class StudentApiController extends Controller
 
             $student_subject = $user->student->subjects();
 
-            $core_subjects = array_column($student_subject["core_subject"], 'subject_id');
+            $core_subjects = array_column($student_subject['core_subject'], 'subject_id');
 
-            $elective_subjects = $student_subject["elective_subject"] ?? [];
+            $elective_subjects = $student_subject['elective_subject'] ?? [];
             if ($elective_subjects) {
                 $elective_subjects = $elective_subjects->pluck('subject_id')->toArray();
             }
             $subject_id = array_merge($core_subjects, $elective_subjects);
 
-
             $class_teachers_id = ClassTeacher::where('class_section_id', $class_section_id)->pluck('class_teacher_id')->toArray();
             $subject_teacher_id = SubjectTeacher::where('class_section_id', $class_section_id)->whereIn('subject_id', $subject_id)->pluck('teacher_id')->toArray();
-
 
             $teacher_ids = array_merge($class_teachers_id, $subject_teacher_id);
 
@@ -2578,8 +2571,6 @@ class StudentApiController extends Controller
                 $teachers = Teacher::whereIn('id', $teacher_ids)->with('user:id,first_name,last_name,image,mobile,email', 'subjects.subject')->offset($offset)->limit($limit)
                     ->get();
             }
-
-
 
             $data = [];
 
@@ -2607,13 +2598,12 @@ class StudentApiController extends Controller
                     ->latest()
                     ->first();
 
-
                 $lastReadMessage = ReadMessage::where('modal_id', $user->id)->where('user_id', $teacher->user->id)->first();
 
                 if ($lastReadMessage) {
 
                     $lastReadMessageId = $lastReadMessage->last_read_message_id;
-                    if (!empty($lastReadMessageId)) {
+                    if (! empty($lastReadMessageId)) {
                         $unreadCount = ChatMessage::where('sender_id', $teacher->user->id)->where('modal_id', $user->id)->where('id', '>', $lastReadMessageId)->count();
                     } else {
                         $unreadCount = ChatMessage::where('sender_id', $teacher->user->id)->where('modal_id', $user->id)->count();
@@ -2626,11 +2616,11 @@ class StudentApiController extends Controller
                     'last_name' => $teacher->user->last_name,
                     'email' => $teacher->user->email,
                     'qualification' => $teacher->qualification,
-                    'image' =>  $teacher->user->image,
+                    'image' => $teacher->user->image,
                     'mobile_no' => $teacher->user->mobile,
                     'subjects' => $subjectData,
                     'last_message' => $lastMessage ?? null,
-                    'unread_message' => $unreadCount ?? 0
+                    'unread_message' => $unreadCount ?? 0,
                 ];
             }
             $total_items = count($data);
@@ -2644,9 +2634,9 @@ class StudentApiController extends Controller
             $data = collect($data)->sortByDesc(function ($user) {
                 return optional($user['last_message'])->date ?? 0;
             })->values();
-            ResponseService::successResponse("Data Fetched Successfully", ['items' => $data, 'total_items' => $total_items, 'total_unread_users' => $totalunreadusers]);
+            ResponseService::successResponse('Data Fetched Successfully', ['items' => $data, 'total_items' => $total_items, 'total_unread_users' => $totalunreadusers]);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2655,7 +2645,7 @@ class StudentApiController extends Controller
         $validator = Validator::make($request->all(), [
             'receiver_id' => 'required|numeric',
             'message' => 'required_without:file',
-            'file.*' => 'nullable'
+            'file.*' => 'nullable',
         ]);
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
@@ -2664,7 +2654,7 @@ class StudentApiController extends Controller
             $sender_id = $request->user()->id;
             $receiver_id = $request->receiver_id;
 
-            $message = new ChatMessage();
+            $message = new ChatMessage;
             $message->modal_id = $receiver_id;
             $message->modal_type = 'App/Models/User';
             $message->sender_id = $sender_id;
@@ -2680,7 +2670,7 @@ class StudentApiController extends Controller
                     $originalName = $uploadedFile->getClientOriginalName();
                     $filePath = $uploadedFile->storeAs('chatfile', $originalName, 'public');
 
-                    $file = new ChatFile();
+                    $file = new ChatFile;
                     $file->file_type = 1;
                     $file->file_name = $filePath;
                     $file->message_id = $message->id;
@@ -2689,11 +2679,10 @@ class StudentApiController extends Controller
                 }
             }
 
-
             $readMessage = ReadMessage::where('modal_id', $receiver_id)->where('user_id', $sender_id)->first();
 
             if (empty($readMessage)) {
-                $readMessage = new ReadMessage();
+                $readMessage = new ReadMessage;
                 $readMessage->modal_id = $receiver_id;
                 $readMessage->modal_type = 'App/Models/User';
                 $readMessage->user_id = $sender_id;
@@ -2705,24 +2694,23 @@ class StudentApiController extends Controller
             foreach ($message as $message) {
                 $chatfile = [];
                 foreach ($message->file as $file) {
-                    if (!empty($file)) {
-                        $chatfile[] =  asset('storage/' . $file->file_name);
+                    if (! empty($file)) {
+                        $chatfile[] = asset('storage/'.$file->file_name);
                     } else {
                         $chatfile[] = '';
                     }
                 }
 
-                $data = array(
+                $data = [
                     'id' => $message->id,
                     'sender_id' => $message->sender_id,
                     'body' => $message->body,
                     'date' => $message->date,
-                    'files' => $chatfile
-                );
+                    'files' => $chatfile,
+                ];
             }
 
             $student = Students::with('user')->where('user_id', $sender_id)->first();
-
 
             $lastReadMessage = ReadMessage::where('modal_id', $receiver_id)->where('user_id', $student->user_id)->first();
 
@@ -2730,25 +2718,22 @@ class StudentApiController extends Controller
 
                 $lastReadMessageId = $lastReadMessage->last_read_message_id;
 
-                if (!empty($lastReadMessageId) || ($lastReadMessageId != null)) {
+                if (! empty($lastReadMessageId) || ($lastReadMessageId != null)) {
                     $unreadCount = ChatMessage::where('modal_id', $receiver_id)->where('sender_id', $student->user_id)->where('id', '>', $lastReadMessageId)->count();
                 } else {
                     $unreadCount = ChatMessage::where('modal_id', $receiver_id)->where('sender_id', $student->user_id)->count();
                 }
             }
 
-
-
             $student_subject = $student->subjects();
 
-            $core_subjects = array_column($student_subject["core_subject"], 'subject_id');
+            $core_subjects = array_column($student_subject['core_subject'], 'subject_id');
 
-            $elective_subjects = $student_subject["elective_subject"] ?? [];
+            $elective_subjects = $student_subject['elective_subject'] ?? [];
             if ($elective_subjects) {
                 $elective_subjects = $elective_subjects->pluck('subject_id')->toArray();
             }
             $subject_id = array_merge($core_subjects, $elective_subjects);
-
 
             $subjects = Subject::whereIn('id', $subject_id)->get();
             $subjectArray = [];
@@ -2758,7 +2743,6 @@ class StudentApiController extends Controller
                     'name' => $subject->name,
                 ];
             }
-
 
             $userinfo = [
                 'id' => $student->id,
@@ -2772,24 +2756,24 @@ class StudentApiController extends Controller
                 'dob' => $student->user->dob,
                 'subjects' => $subjectArray,
                 'address' => $student->user->current_address,
-                'last_message' =>  $data ?? null,
-                'class_name' => $student->class_section->class->name . ' ' . $student->class_section->section->name . ' ' . $student->class_section->class->medium->name,
+                'last_message' => $data ?? null,
+                'class_name' => $student->class_section->class->name.' '.$student->class_section->section->name.' '.$student->class_section->class->medium->name,
                 'isParent' => 0,
-                'unread_message' => $unreadCount ?? 0
+                'unread_message' => $unreadCount ?? 0,
             ];
 
-            $title = $student->user->first_name . ' ' . $student->user->last_name;
-            $body = $request->message ??  $count . " Files Received";
-            $type = "chat";
+            $title = $student->user->first_name.' '.$student->user->last_name;
+            $body = $request->message ?? $count.' Files Received';
+            $type = 'chat';
             $image = null;
             $user[] = $receiver_id;
-            $userinfo = (object)$userinfo;
+            $userinfo = (object) $userinfo;
 
             sendSimpleNotification($user, $title, $body, $type, $image, $userinfo);
 
-            ResponseService::successResponse("message_sent_successfully", $data);
+            ResponseService::successResponse('message_sent_successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2820,7 +2804,7 @@ class StudentApiController extends Controller
             foreach ($messages as &$message) {
                 if (isset($message['file'])) {
                     $message['files'] = collect($message['file'])->map(function ($file) {
-                        return asset('storage/' . $file['file_name']);
+                        return asset('storage/'.$file['file_name']);
                     })->toArray();
 
                     unset($message['file']);
@@ -2829,9 +2813,9 @@ class StudentApiController extends Controller
                 }
             }
 
-            ResponseService::successResponse("Data Fetched Successfully", ['items' => $messages ?? [], 'total_items' => $total_items]);
+            ResponseService::successResponse('Data Fetched Successfully', ['items' => $messages ?? [], 'total_items' => $total_items]);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2846,7 +2830,6 @@ class StudentApiController extends Controller
                 $message_id = $lastMessage->id;
             }
 
-
             // Update Read Message id
             $readMessage = ReadMessage::where('modal_id', $user)->where('user_id', $teacher)->first();
 
@@ -2855,13 +2838,13 @@ class StudentApiController extends Controller
                 $readMessage->save();
             }
 
-            ResponseService::successResponse("Message Read");
+            ResponseService::successResponse('Message Read');
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
-    //Get Fees Details
+    // Get Fees Details
     public function getFeesDetails(Request $request)
     {
         try {
@@ -2874,21 +2857,21 @@ class StudentApiController extends Controller
             $session_year = getSettings('session_year');
             $session_year_id = $session_year['session_year'];
 
-            //Total optional fees amount
-            $optional_fees_amount = FeesClass::select(DB::raw("SUM(amount) as optional_fees_amount"))->where(['class_id' => $class_id, 'choiceable' => 1])->first();
+            // Total optional fees amount
+            $optional_fees_amount = FeesClass::select(DB::raw('SUM(amount) as optional_fees_amount'))->where(['class_id' => $class_id, 'choiceable' => 1])->first();
             $optional_fees_amount = $optional_fees_amount['optional_fees_amount'];
 
-            //Total optional fees amount
-            $compulsory_fees_amount = FeesClass::select(DB::raw("SUM(amount) as compulsory_fees_amount"))->where(['class_id' => $class_id, 'choiceable' => 0])->first();
+            // Total optional fees amount
+            $compulsory_fees_amount = FeesClass::select(DB::raw('SUM(amount) as compulsory_fees_amount'))->where(['class_id' => $class_id, 'choiceable' => 0])->first();
             $compulsory_fees_amount = $compulsory_fees_amount['compulsory_fees_amount'];
 
             // Fees Class Data
             $fees_class = FeesClass::where('class_id', $class_id)->with('fees_type')->get();
 
-            //arrays for data
-            $compulsory_fees_data = array();
-            $optional_fees_data = array();
-            $installment_data = array();
+            // arrays for data
+            $compulsory_fees_data = [];
+            $optional_fees_data = [];
+            $installment_data = [];
 
             $payment_transaction_db = PaymentTransaction::where(['student_id' => $student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id])->latest()->first();
 
@@ -2915,64 +2898,64 @@ class StudentApiController extends Controller
             foreach ($fees_class as $data) {
                 if ($data->choiceable == 1) {
                     $paid_optional_data = FeesChoiceable::where(['student_id' => $student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'fees_type_id' => $data['fees_type_id'], 'status' => 1])->first();
-                    $optional_fees_data[] = array(
+                    $optional_fees_data[] = [
                         'id' => $data->fees_type_id,
                         'name' => $data->fees_type->name,
-                        'amount' =>  $data->amount,
+                        'amount' => $data->amount,
                         'is_paid' => $paid_optional_data->status ?? 0,
-                        'paid_date' => $paid_optional_data->date ?? null
-                    );
+                        'paid_date' => $paid_optional_data->date ?? null,
+                    ];
                 } else {
                     $is_fully_paid_data = FeesPaid::where(['student_id' => $student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'is_fully_paid' => 1]);
-                    $compulsory_fees_data[] = array(
+                    $compulsory_fees_data[] = [
                         'id' => $data->fees_type_id,
                         'name' => $data->fees_type->name,
-                        'amount' =>  $data->amount,
-                        'is_paid' => !empty($is_fully_paid_data->count()) ? 1 : 0,
-                        'paid_on' => !empty($is_fully_paid_data->count()) ? ((isset($is_fully_paid_data->first()->date) && !empty($is_fully_paid_data->first()->date)) ? date('Y-m-d', strtotime($is_fully_paid_data->first()->date)) : null) : "",
-                    );
+                        'amount' => $data->amount,
+                        'is_paid' => ! empty($is_fully_paid_data->count()) ? 1 : 0,
+                        'paid_on' => ! empty($is_fully_paid_data->count()) ? ((isset($is_fully_paid_data->first()->date) && ! empty($is_fully_paid_data->first()->date)) ? date('Y-m-d', strtotime($is_fully_paid_data->first()->date)) : null) : '',
+                    ];
                 }
             }
 
             // Checking for Due Charges Paid with Fully Compulsory Amount and Add it to Compulsory Fees Data Array
-            if (isset($compulsory_fees_data) && !empty($compulsory_fees_data)) {
+            if (isset($compulsory_fees_data) && ! empty($compulsory_fees_data)) {
                 $paid_charges_due = FeesChoiceable::where(['student_id' => $student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'is_due_charges' => 1]);
                 if ($paid_charges_due->count()) {
-                    array_push($compulsory_fees_data, array(
-                        'id' => "",
+                    array_push($compulsory_fees_data, [
+                        'id' => '',
                         'name' => 'Due Charges',
                         'amount' => $paid_charges_due->first()->total_amount,
-                        'is_paid' => 1
-                    ));
+                        'is_paid' => 1,
+                    ]);
                 }
             }
 
-            //check the installments data for current session year
+            // check the installments data for current session year
             $installment_db = InstallmentFee::where('session_year_id', $session_year_id);
             if ($installment_db->count()) {
                 $installment_db_data = $installment_db->get();
                 foreach ($installment_db_data as $data) {
                     $paid_installment_data = PaidInstallmentFee::where(['student_id' => $student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'installment_fee_id' => $data['id'], 'status' => 1])->first();
-                    $installment_data[] = array(
+                    $installment_data[] = [
                         'id' => $data->id,
                         'name' => $data->name,
                         'due_date' => date('Y-m-d', strtotime($data->due_date)),
                         'due_charges' => $data->due_charges,
                         'is_paid' => $paid_installment_data->status ?? 0,
                         'paid_date' => $paid_installment_data->date ?? null,
-                        "paid_due_charges" => !empty($paid_installment_data) ? number_format($paid_installment_data->due_charges ?? 0, 2) : ""
-                    );
+                        'paid_due_charges' => ! empty($paid_installment_data) ? number_format($paid_installment_data->due_charges ?? 0, 2) : '',
+                    ];
                 }
             }
-            //Due Date And Due Charges From Session Year For Fully pay Compulsory Amount (Without Installments)
+            // Due Date And Due Charges From Session Year For Fully pay Compulsory Amount (Without Installments)
             $session_year_data = SessionYear::where('id', $session_year_id)->first();
             $due_date = date('Y-m-d', strtotime($session_year_data->fee_due_date));
             $due_charges = $session_year_data->fee_due_charges;
 
-            ResponseService::successResponse("Fees Details Fetched Successfully", null, [
-                'compulsory_fees_data' => $compulsory_fees_data ?? array(""),
-                'optional_fees_data' => $optional_fees_data ?? array(""),
-                'installment_data' => $installment_data ?? (object)null,
+            ResponseService::successResponse('Fees Details Fetched Successfully', null, [
+                'compulsory_fees_data' => $compulsory_fees_data ?? [''],
+                'optional_fees_data' => $optional_fees_data ?? [''],
+                'installment_data' => $installment_data ?? (object) null,
                 'compulsory_fees_total' => $compulsory_fees_amount ?? 0,
                 'optional_fees_total' => $optional_fees_amount ?? 0,
                 'compulsory_due_date' => $due_date,
@@ -2981,18 +2964,18 @@ class StudentApiController extends Controller
                 'is_fee_pending' => (isset($payment_transaction_status) && $payment_transaction_status == 2) ? 1 : 0,
             ]);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
-    //Store Fees Transaction
+    // Store Fees Transaction
     public function storeFeesTransaction(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'payment_method' => 'required|in:1,2,3,4',
             'amount' => 'required',
             'type_of_fee' => 'required|in:0,1,2',
-            'is_fully_paid' => 'required|in:0,1'
+            'is_fully_paid' => 'required|in:0,1',
         ]);
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
@@ -3012,18 +2995,18 @@ class StudentApiController extends Controller
             $session_year = getSettings('session_year');
             $session_year_id = $session_year['session_year'];
 
-            //variables for storing the data
-            $payment_gateway_details = array();
+            // variables for storing the data
+            $payment_gateway_details = [];
 
             $class_id = $student->class_section->class_id;
 
-            //variables for storing the data
-            $optional_fees_store = array();
-            $installment_fees_store = array();
+            // variables for storing the data
+            $optional_fees_store = [];
+            $installment_fees_store = [];
             $paid_installment_id = [];
             $optional_fees_id = [];
 
-            $payment_transaction_db = new PaymentTransaction();
+            $payment_transaction_db = new PaymentTransaction;
             $payment_transaction_db->student_id = $student->id;
             $payment_transaction_db->parent_id = $student->father_id ?? $student->guardian_id;
             $payment_transaction_db->class_id = $class_id;
@@ -3040,9 +3023,9 @@ class StudentApiController extends Controller
             $payment_transaction_db->save();
 
             // If Optional Fees Passed then insert data
-            if (isset($request->optional_fees_data) && !empty($request->optional_fees_data)) {
+            if (isset($request->optional_fees_data) && ! empty($request->optional_fees_data)) {
                 foreach ($request->optional_fees_data as $data) {
-                    $optional_fees_store = array(
+                    $optional_fees_store = [
                         'student_id' => $student->id,
                         'class_id' => $class_id,
                         'fees_type_id' => $data['id'],
@@ -3051,15 +3034,15 @@ class StudentApiController extends Controller
                         'session_year_id' => $session_year_id,
                         'date' => date('Y-m-d'),
                         'payment_transaction_id' => $payment_transaction_db->id,
-                        'status' => 0
-                    );
-                    $optional_fees_id[] =  FeesChoiceable::insertGetId($optional_fees_store);
+                        'status' => 0,
+                    ];
+                    $optional_fees_id[] = FeesChoiceable::insertGetId($optional_fees_store);
                 }
             }
             // If Installment Fees Passed then insert data
-            if (isset($request->installment_data) && !empty($request->installment_data)) {
+            if (isset($request->installment_data) && ! empty($request->installment_data)) {
                 foreach ($request->installment_data as $data) {
-                    $installment_fees_store = array(
+                    $installment_fees_store = [
                         'class_id' => $class_id,
                         'student_id' => $student->id,
                         'parent_id' => $student->father_id ?? $student->guardian_id,
@@ -3069,18 +3052,18 @@ class StudentApiController extends Controller
                         'due_charges' => $data['due_charges'] ?? null,
                         'date' => date('Y-m-d'),
                         'payment_transaction_id' => $payment_transaction_db->id,
-                        'status' => 0
-                    );
+                        'status' => 0,
+                    ];
                     $paid_installment_id[] = PaidInstallmentFee::insertGetId($installment_fees_store);
                 }
             }
 
-            $paymentIntent = PaymentService::create($request->payment_method)->createAndFormatPaymentIntent(round((float)$request->amount, 2), [
+            $paymentIntent = PaymentService::create($request->payment_method)->createAndFormatPaymentIntent(round((float) $request->amount, 2), [
                 'student_id' => $student->id,
                 'parent_id' => $student->father_id ?? $student->guardian_id,
                 'class_id' => $class_id,
                 'email' => $email,
-                'name'  => $name,
+                'name' => $name,
                 'mobile' => $mobile,
                 'session_year_id' => $session_year_id,
                 'payment_transaction_id' => $payment_transaction_db->id,
@@ -3088,26 +3071,25 @@ class StudentApiController extends Controller
                 'type_of_fee' => $request->type_of_fee,
                 'is_due_charges' => (isset($request->due_charges) && $request->due_charges >= 0) ? 1 : 0,
                 'due_charges' => $request->due_charges,
-                'optional_fees_paid' => json_encode($optional_fees_id) ?? "",
-                'installment_fees_paid' => json_encode($paid_installment_id) ?? "",
+                'optional_fees_paid' => json_encode($optional_fees_id) ?? '',
+                'installment_fees_paid' => json_encode($paid_installment_id) ?? '',
             ]);
-
 
             $payment_transaction_update = PaymentTransaction::find($payment_transaction_db->id);
             $payment_transaction_update->order_id = $paymentIntent['id'];
             $payment_transaction_update->save();
 
-            $payment_gateway_details = array(
+            $payment_gateway_details = [
                 ...$paymentIntent,
                 'payment_transaction_id' => $payment_transaction_db->id,
-            );
+            ];
             DB::commit();
-            ResponseService::successResponse("data_store_successfully", null, [
+            ResponseService::successResponse('data_store_successfully', null, [
                 'payment_gateway_details' => $payment_gateway_details,
             ]);
         } catch (Throwable $e) {
             DB::rollBack();
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3132,50 +3114,50 @@ class StudentApiController extends Controller
                 $transaction_db->payment_signature = $request->payment_signature;
             }
             $transaction_db->save();
-            ResponseService::successResponse("data_update_successfully");
+            ResponseService::successResponse('data_update_successfully');
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
-    //get the fees paid list
+    // get the fees paid list
     public function feesPaidList(Request $request)
     {
         try {
             $student = $request->user()->student;
 
             $fees_paid = FeesPaid::where(['student_id' => $student->id])->with('session_year:id,name', 'class.medium')->get();
-            ResponseService::successResponse("Fees Paid List Fetched Successfully", $fees_paid);
+            ResponseService::successResponse('Fees Paid List Fetched Successfully', $fees_paid);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
-    //Generate The Reciept
+    // Generate The Reciept
     public function feesPaidReceiptPDF(Request $request)
     {
         try {
             $student = $request->user()->student;
 
             $logo = env('LOGO2');
-            $logo = public_path('/storage/' . $logo);
+            $logo = public_path('/storage/'.$logo);
             $school_name = env('APP_NAME');
             $school_address = getSettings('school_address');
             $school_address = $school_address['school_address'];
 
             $currency_symbol = getSettings('currency_symbol');
-            if (isset($currency_symbol) && sizeof($currency_symbol)) {
+            if (isset($currency_symbol) && count($currency_symbol)) {
                 $currency_symbol = $currency_symbol['currency_symbol'];
             } else {
                 $currency_symbol = null;
             }
 
-            //Getting the Fees Paid Data
+            // Getting the Fees Paid Data
             $fees_paid = FeesPaid::where('student_id', $student->id)->with('student.user:id,first_name,last_name', 'class', 'session_year')->get()->first();
 
             // Check That Fees Paid Data Exists Or Not
-            if (!$fees_paid) {
-                ResponseService::errorResponse("No Fees Paid Found", null, 103);
+            if (! $fees_paid) {
+                ResponseService::errorResponse('No Fees Paid Found', null, 103);
             }
 
             // Variables
@@ -3183,29 +3165,28 @@ class StudentApiController extends Controller
             $class_id = $fees_paid->class_id;
             $session_year_id = $fees_paid->session_year_id;
 
-
             // Paid Installment Data
             $paid_installment = PaidInstallmentFee::where(['student_id' => $student_id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'status' => 1])->with('installment_fee')->get();
 
-            //Fees Choiceable Data
+            // Fees Choiceable Data
             $optional_fees_type_id = FeesClass::where(['class_id' => $class_id, 'choiceable' => 1])->pluck('fees_type_id');
             $fees_choiceable = FeesChoiceable::whereIn('fees_type_id', $optional_fees_type_id)->where(['student_id' => $student_id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'status' => 1])->with('fees_type')->orderby('id', 'asc')->get();
 
-            //Fees Class Data
+            // Fees Class Data
             $fees_class = FeesClass::where(['class_id' => $class_id, 'choiceable' => 0])->with('fees_type')->get();
 
-            //Session Year Data
+            // Session Year Data
             $session_year = SessionYear::where('id', $session_year_id)->first();
 
-            //Load the HTML
+            // Load the HTML
             $pdf = Pdf::loadView('fees.fees_receipt', compact('logo', 'school_name', 'fees_paid', 'paid_installment', 'fees_choiceable', 'currency_symbol', 'school_address', 'fees_class', 'session_year'));
 
-            //Get The Output Of PDF
+            // Get The Output Of PDF
             $output = $pdf->output();
 
-            ResponseService::successResponse("Fees Paid Receipt PDF Fetched Successfully", null, ['pdf' => base64_encode($output)]);
+            ResponseService::successResponse('Fees Paid Receipt PDF Fetched Successfully', null, ['pdf' => base64_encode($output)]);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3238,23 +3219,23 @@ class StudentApiController extends Controller
                     }
                 }
             }
-            $fees_payment_transactions =  $fees_payment_transactions->toArray();
+            $fees_payment_transactions = $fees_payment_transactions->toArray();
 
-            ResponseService::successResponse("Fees Payment Transactions Fetched Successfully",
+            ResponseService::successResponse('Fees Payment Transactions Fetched Successfully',
                 $fees_payment_transactions['data'],
                 [],
                 null,
                 [
                     'current_page' => $fees_payment_transactions['current_page'],
-                    'from'         => $fees_payment_transactions['from'],
-                    'last_page'    => $fees_payment_transactions['last_page'],
-                    'per_page'     => $fees_payment_transactions['per_page'],
-                    'to'           => $fees_payment_transactions['to'],
-                    'total'        => $fees_payment_transactions['total'],
+                    'from' => $fees_payment_transactions['from'],
+                    'last_page' => $fees_payment_transactions['last_page'],
+                    'per_page' => $fees_payment_transactions['per_page'],
+                    'to' => $fees_payment_transactions['to'],
+                    'total' => $fees_payment_transactions['total'],
                 ]
             );
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3271,12 +3252,12 @@ class StudentApiController extends Controller
             $student = $request->user()->student;
 
             $user[] = $student->user_id;
-            $body = 'Amount :- ' . $total_amount;
+            $body = 'Amount :- '.$total_amount;
             $type = 'online';
             $image = null;
             $userinfo = null;
 
-            $notification = new Notification();
+            $notification = new Notification;
             $notification->send_to = 2;
             $notification->title = 'Payment Failed';
             $notification->message = $body;
@@ -3285,16 +3266,16 @@ class StudentApiController extends Controller
             $notification->is_custom = 0;
             $notification->save();
             foreach ($user as $data) {
-                $user_notification = new UserNotification();
+                $user_notification = new UserNotification;
                 $user_notification->notification_id = $notification->id;
                 $user_notification->user_id = $data;
                 $user_notification->save();
             }
 
             sendSimpleNotification($user, 'Payment Failed', $body, $type, $image, $userinfo);
-            ResponseService::successResponse("Data Updated Successfully");
+            ResponseService::successResponse('Data Updated Successfully');
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3310,23 +3291,23 @@ class StudentApiController extends Controller
             $settings = getSettings();
 
             if (isset($settings['razorpay_status']) && $settings['razorpay_status']) {
-                $secretkey = $settings['razorpay_secret_key'] ?? "";
+                $secretkey = $settings['razorpay_secret_key'] ?? '';
             }
 
             if (isset($settings['stripe_status']) && $settings['stripe_status']) {
-                $secretkey = $settings['stripe_secret_key'] ?? "";
+                $secretkey = $settings['stripe_secret_key'] ?? '';
             }
 
-            $url = 'https://api.stripe.com/v1/payment_intents/' . $request->payment_intent_id;
+            $url = 'https://api.stripe.com/v1/payment_intents/'.$request->payment_intent_id;
 
             $payment_status = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $secretkey,
+                'Authorization' => 'Bearer '.$secretkey,
             ])->get($url);
 
             $data = $payment_status['status'];
-            ResponseService::successResponse("Payment Status Fetched Successfully", $data);
+            ResponseService::successResponse('Payment Status Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3344,12 +3325,12 @@ class StudentApiController extends Controller
             $user = Parents::whereIn('id', $parent)->pluck('user_id');
 
             $title = 'Fees are dues';
-            $body =  $student->user->first_name . ' ' . $student->user->last_name . ' ' . 'wants to keep learning! Please pay the overdue fees as soon as possible.';
-            $type = "fees-due";
+            $body = $student->user->first_name.' '.$student->user->last_name.' '.'wants to keep learning! Please pay the overdue fees as soon as possible.';
+            $type = 'fees-due';
             $image = null;
-            $userinfo = (string)$student->id;
+            $userinfo = (string) $student->id;
 
-            $notification = new Notification();
+            $notification = new Notification;
             $notification->send_to = 2;
             $notification->title = $title;
             $notification->message = $body;
@@ -3359,9 +3340,9 @@ class StudentApiController extends Controller
             $notification->save();
 
             sendSimpleNotification($user, $title, $body, $type, $image, $userinfo);
-            ResponseService::successResponse("Notification Send Successfully", null);
-        } catch (\Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::successResponse('Notification Send Successfully', null);
+        } catch (Throwable $e) {
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3372,16 +3353,16 @@ class StudentApiController extends Controller
         // reject any extra keys
         $unknown = array_diff(array_keys($request->all()), $allowed);
 
-        if (!empty($unknown)) {
-            ResponseService::validationError("Unknown fields: " . implode(', ', $unknown));
+        if (! empty($unknown)) {
+            ResponseService::validationError('Unknown fields: '.implode(', ', $unknown));
         }
 
         $validator = Validator::make($request->all(), [
-            'reason'          => 'required',
+            'reason' => 'required',
             'leave_details.*' => 'required|array',
 
             // This enforces that "files" must be an array
-            'files'           => 'nullable|array',
+            'files' => 'nullable|array',
 
             // Only if files is a proper array, validate each file
             'files.*' => 'nullable|file|mimetypes:image/jpeg,image/png,image/webp,image/gif,image/bmp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -3396,7 +3377,7 @@ class StudentApiController extends Controller
             $session_year_id = $session_year['session_year'];
             $class_section_id = $request->user()->student->class_section_id;
             $teacher_ids = ClassTeacher::where('class_section_id', $class_section_id)->pluck('class_teacher_id');
-            $user =  Teacher::whereIn('id', $teacher_ids)->pluck('user_id')->toArray();
+            $user = Teacher::whereIn('id', $teacher_ids)->pluck('user_id')->toArray();
 
             // dd($userids);
             // $sessionYear = SessionYear::where('id', $session_year_id)->first();
@@ -3413,8 +3394,8 @@ class StudentApiController extends Controller
                 'from_date' => $from_date,
                 'to_date' => $to_date,
                 'leave_master_id' => null,
-                'status' => "0",
-                'session_year_id' => $session_year_id
+                'status' => '0',
+                'session_year_id' => $session_year_id,
             ];
 
             $leave = Leave::create($data);
@@ -3422,7 +3403,7 @@ class StudentApiController extends Controller
             // $leave_details = array();
 
             foreach ($request->leave_details as $key => $value) {
-                $leaveDetail = new LeaveDetail();
+                $leaveDetail = new LeaveDetail;
                 $leaveDetail->leave_id = $leave->id;
                 $leaveDetail->date = date('Y-m-d', strtotime($value['date']));
                 $leaveDetail->type = $value['type'];
@@ -3431,7 +3412,7 @@ class StudentApiController extends Controller
 
             if ($request->hasFile('files')) {
                 foreach ($request->file('files') as $file_upload) {
-                    $file = new File();
+                    $file = new File;
                     $file->modal_type = "App\Models\Leave";
                     $file->modal_id = $leave->id;
                     $file->file_name = $file_upload->getClientOriginalName();
@@ -3447,9 +3428,9 @@ class StudentApiController extends Controller
             $image = null;
             $userinfo = null;
 
-            $body = $request->user()->first_name . ' ' . $request->user()->last_name . ' ' . 'has added a new leave request';
+            $body = $request->user()->first_name.' '.$request->user()->last_name.' '.'has added a new leave request';
 
-            $notification = new Notification();
+            $notification = new Notification;
             $notification->send_to = 3;
             $notification->title = $title;
             $notification->message = $body;
@@ -3459,7 +3440,7 @@ class StudentApiController extends Controller
             $notification->save();
 
             foreach ($user as $data) {
-                $user_notification = new UserNotification();
+                $user_notification = new UserNotification;
                 $user_notification->notification_id = $notification->id;
                 $user_notification->user_id = $data;
                 $user_notification->save();
@@ -3470,17 +3451,17 @@ class StudentApiController extends Controller
             } catch (\Exception $e) {
             }
 
-            ResponseService::successResponse("Data Stored Successfully", $leave ?? '');
-        } catch (\Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::successResponse('Data Stored Successfully', $leave ?? '');
+        } catch (Throwable $e) {
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
     public function getMyLeave(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'month'  => 'in:1,2,3,4,5,6,7,8,9,10,11,12',
-            'status' => 'in:0,1,2'
+            'month' => 'in:1,2,3,4,5,6,7,8,9,10,11,12',
+            'status' => 'in:0,1,2',
         ]);
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
@@ -3512,17 +3493,18 @@ class StudentApiController extends Controller
             $sql = $sql->map(function ($sql) {
                 $total_leaves = ($sql->half_leave / 2) + $sql->full_leave;
                 $sql->days = $total_leaves;
+
                 return $sql;
             });
 
             $data = [
                 'taken_leaves' => $sql->where('status', 1)->sum('days'),
-                'leave_details' => $sql
+                'leave_details' => $sql,
             ];
 
-            ResponseService::successResponse("Data Fetched Successfully", $data);
-        } catch (\Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::successResponse('Data Fetched Successfully', $data);
+        } catch (Throwable $e) {
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3532,9 +3514,9 @@ class StudentApiController extends Controller
             $leave = Leave::findOrFail($request->leave_id);
             $leave->delete();
 
-            ResponseService::successResponse("Data Deleted Successfully");
-        } catch (\Throwable $e) {
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::successResponse('Data Deleted Successfully');
+        } catch (Throwable $e) {
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 }

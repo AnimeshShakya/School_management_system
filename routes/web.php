@@ -186,6 +186,7 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         Route::get('students/new-student-list', [StudentController::class, 'newStudentList'])->name('students.new-student-list');
         Route::get('students/create_bulk', [StudentController::class, 'createBulkData'])->name('students.create-bulk-data');
         Route::post('students/store_bulk', [StudentController::class, 'storeBulkData'])->name('students.store-bulk-data');
+        Route::get('students/{id}/qr-code', [StudentController::class, 'showStudentQrCode'])->name('students.qr-code');
         Route::resource('students', StudentController::class);
 
         // student generate roll number

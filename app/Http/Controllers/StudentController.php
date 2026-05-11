@@ -46,6 +46,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Spatie\Permission\Models\Role;
 use Throwable;
 
@@ -2994,5 +2995,30 @@ class StudentController extends Controller
         }
 
         return response()->json($response);
+    }
+
+    /**
+     * Serve a QR code PNG image for the given student.
+     */
+    public function showStudentQrCode(int $id): Response
+    {
+        $student = Students::select('id', 'qr_token')
+            ->where('id', $id)
+            ->firstOrFail();
+
+        abort_unless(Auth::user()->can('student-list'), 403);
+
+        if (empty($student->qr_token)) {
+            abort(404, 'QR token not generated for this student.');
+        }
+
+        $payload = base64_encode(json_encode(['s' => $student->id, 't' => $student->qr_token]));
+
+        $png = QrCode::format('png')->size(250)->margin(1)->generate($payload);
+
+        return response($png, 200, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'private, max-age=3600',
+        ]);
     }
 }

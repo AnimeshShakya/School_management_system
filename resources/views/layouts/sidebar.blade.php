@@ -35,6 +35,7 @@
                 'student.result.*',
                 'students.reset_password',
                 'students.create-bulk-data',
+                'parents.*',
             );
             $teacherOpen = $isRoute('teachers.*', 'teacher.*');
             $staffOpen = $isRoute('staff.*', 'roles*', 'users*');
@@ -205,7 +206,7 @@
         @endcan
 
         {{-- student --}}
-        @canany(['student-create', 'student-list', 'category-create', 'student-reset-password', 'class-teacher'])
+        @canany(['student-create', 'student-list', 'category-create', 'student-reset-password', 'class-teacher', 'parents-list', 'parents-create'])
             <li class="nav-item {{ $studentsOpen ? 'active' : '' }}">
                 <a class="nav-link" data-toggle="collapse" href="#student-menu"
                     aria-expanded="{{ $studentsOpen ? 'true' : 'false' }}" aria-controls="academics-menu"><i
@@ -293,6 +294,15 @@
                                 </a>
                             </li>
                         @endif
+
+                        @canany(['parents-list', 'parents-create'])
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('parents.*') ? 'active' : '' }}"
+                                    href="{{ route('parents.index') }}">
+                                    {{ __('parents') }}
+                                </a>
+                            </li>
+                        @endcanany
                     </ul>
                 </div>
             </li>
@@ -330,16 +340,7 @@
             </li>
         @endcan
 
-        {{-- parents --}}
-        @can('parents-create')
-            <li class="nav-item">
-                <a href="{{ route('parents.index') }}"
-                    class="nav-link {{ request()->routeIs('parents.*') ? 'active' : '' }}">
-                    <i class="fa fa-users menu-icon"></i>
-                    <span class="menu-title">{{ __('parents') }}</span>
-                </a>
-            </li>
-        @endcan
+        {{-- parents moved into the students section above --}}
 
         {{-- Staff Management --}}
         @canany(['role-create', 'staff-create', 'staff-list'])

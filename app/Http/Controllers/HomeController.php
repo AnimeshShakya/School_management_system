@@ -4,36 +4,32 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use Throwable;
-use Carbon\Carbon;
-use App\Models\Exam;
-use App\Models\User;
-use App\Models\Leave;
-use App\Models\Parents;
-use App\Models\Teacher;
-use App\Models\Semester;
-use App\Models\Settings;
-use App\Models\Students;
-use App\Models\Attendance;
-use App\Models\ExamResult;
-use App\Models\ClassSchool;
-use App\Models\LeaveDetail;
 use App\Models\Announcement;
+use App\Models\Attendance;
+use App\Models\ClassSchool;
 use App\Models\ClassSection;
 use App\Models\ClassSubject;
 use App\Models\ClassTeacher;
+use App\Models\ExamResult;
+use App\Models\LeaveDetail;
+use App\Models\Parents;
+use App\Models\Semester;
+use App\Models\Students;
+use App\Models\Teacher;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use App\Models\SubjectTeacher;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Contracts\View\View;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Throwable;
 
 class HomeController extends Controller
 {
@@ -53,7 +49,7 @@ class HomeController extends Controller
         if (Auth::user()) {
             return redirect('home');
         }
-        
+
         return view('auth.login');
     }
 
@@ -66,9 +62,9 @@ class HomeController extends Controller
     {
         $old_password = $request->input('old_password');
         $password = User::where('id', Auth::id())->first();
-        
+
         $isValid = $password && Hash::check($old_password, $password->password);
-        
+
         return response()->json($isValid ? 1 : 0);
     }
 
@@ -84,15 +80,15 @@ class HomeController extends Controller
         try {
             $data = ['password' => Hash::make($request->input('new_password'))];
             User::where('id', $id)->update($data);
-            
+
             return response()->json([
                 'error' => false,
-                'message' => trans('data_update_successfully')
+                'message' => trans('data_update_successfully'),
             ]);
         } catch (Throwable $e) {
             return response()->json([
                 'error' => true,
-                'message' => trans('error_occurred')
+                'message' => trans('error_occurred'),
             ]);
         }
     }
@@ -101,7 +97,7 @@ class HomeController extends Controller
     {
         $session_year = getSettings('session_year');
         $user = Auth::user();
-        
+
         // Initialize variables
         $data = [
             'teacher' => null,
@@ -130,7 +126,7 @@ class HomeController extends Controller
         }
 
         // Common data for all users
-        $data['date_format'] = "d-m-Y H:i:s";
+        $data['date_format'] = 'd-m-Y H:i:s';
         $data['announcement'] = collect();
         if (Schema::hasTable('announcements')) {
             $announcementQuery = Announcement::query();
@@ -173,6 +169,18 @@ class HomeController extends Controller
 
         $data['leaves'] = $this->getUpcomingLeaves((int) ($session_year['session_year'] ?? 0));
 
+        // Pass QR code data for student users
+        $data['student_qr_code_base64'] = null;
+        if ($user->hasRole('Student')) {
+            $studentRecord = $user->student;
+            if ($studentRecord && ! empty($studentRecord->qr_token)) {
+                $payload = base64_encode(json_encode(['s' => $studentRecord->id, 't' => $studentRecord->qr_token]));
+                $data['student_qr_code_base64'] = base64_encode(
+                    (string) QrCode::format('png')->size(220)->margin(1)->generate($payload)
+                );
+            }
+        }
+
         return view('home', $data);
     }
 
@@ -196,16 +204,16 @@ class HomeController extends Controller
             }
 
             $teachers = Teacher::with([
-                'user' => fn ($query) => $query->select(array_unique($userSelect))
+                'user' => fn ($query) => $query->select(array_unique($userSelect)),
             ])->get();
         }
-        
+
         $boys = 0;
         $girls = 0;
-        
+
         if ($student > 0 && Schema::hasColumn('users', 'gender')) {
-            $boys_count = Students::whereHas('user', fn($query) => $query->where('gender', 'male'))->count();
-            $girls_count = Students::whereHas('user', fn($query) => $query->where('gender', 'female'))->count();
+            $boys_count = Students::whereHas('user', fn ($query) => $query->where('gender', 'male'))->count();
+            $girls_count = Students::whereHas('user', fn ($query) => $query->where('gender', 'female'))->count();
 
             $boys = round((($boys_count * 100) / $student), 2);
             $girls = round(($girls_count * 100) / $student, 2);
@@ -227,10 +235,10 @@ class HomeController extends Controller
     {
         if (
             $teacher_id <= 0 ||
-            !Schema::hasTable('class_teachers') ||
-            !Schema::hasTable('class_sections') ||
-            !Schema::hasColumn('class_teachers', 'class_section_id') ||
-            !Schema::hasColumn('class_teachers', 'class_teacher_id')
+            ! Schema::hasTable('class_teachers') ||
+            ! Schema::hasTable('class_sections') ||
+            ! Schema::hasColumn('class_teachers', 'class_section_id') ||
+            ! Schema::hasColumn('class_teachers', 'class_teacher_id')
         ) {
             return collect();
         }
@@ -252,16 +260,16 @@ class HomeController extends Controller
     {
         if (
             $session_year_id <= 0 ||
-            !Schema::hasTable('leave_details') ||
-            !Schema::hasTable('leaves') ||
-            !Schema::hasTable('leave_masters') ||
-            !Schema::hasColumn('leave_details', 'leave_id') ||
-            !Schema::hasColumn('leave_details', 'date') ||
-            !Schema::hasColumn('leaves', 'id') ||
-            !Schema::hasColumn('leaves', 'leave_master_id') ||
-            !Schema::hasColumn('leaves', 'status') ||
-            !Schema::hasColumn('leave_masters', 'id') ||
-            !Schema::hasColumn('leave_masters', 'session_year_id')
+            ! Schema::hasTable('leave_details') ||
+            ! Schema::hasTable('leaves') ||
+            ! Schema::hasTable('leave_masters') ||
+            ! Schema::hasColumn('leave_details', 'leave_id') ||
+            ! Schema::hasColumn('leave_details', 'date') ||
+            ! Schema::hasColumn('leaves', 'id') ||
+            ! Schema::hasColumn('leaves', 'leave_master_id') ||
+            ! Schema::hasColumn('leaves', 'status') ||
+            ! Schema::hasColumn('leave_masters', 'id') ||
+            ! Schema::hasColumn('leave_masters', 'session_year_id')
         ) {
             return collect();
         }
@@ -270,9 +278,9 @@ class HomeController extends Controller
 
         try {
             return LeaveDetail::whereHas('leave', function ($query) use ($session_year_id) {
-                    $query->where('status', 1)
-                        ->whereHas('leave_master', fn($q) => $q->where('session_year_id', $session_year_id));
-                })
+                $query->where('status', 1)
+                    ->whereHas('leave_master', fn ($q) => $q->where('session_year_id', $session_year_id));
+            })
                 ->with('leave.user')
                 ->whereDate('date', '>=', $today_date)
                 ->orderBy('date', 'ASC')
@@ -288,7 +296,7 @@ class HomeController extends Controller
         Auth::logout();
         $request->session()->flush();
         $request->session()->regenerate();
-        
+
         return redirect('/');
     }
 
@@ -301,12 +309,12 @@ class HomeController extends Controller
         $classSectionId = (int) $request->input('class_section_id');
         $classSection = ClassSection::select('class_id')->where('id', $classSectionId)->first();
 
-        if (!$classSection) {
+        if (! $classSection) {
             return response()->json([]);
         }
 
         $class = ClassSchool::find($classSection->class_id);
-        if (!$class) {
+        if (! $class) {
             return response()->json([]);
         }
 
@@ -329,6 +337,7 @@ class HomeController extends Controller
     public function getTeacherByClassSubject(Request $request): JsonResponse
     {
         $teachers = Teacher::with('user')->get();
+
         return response()->json($teachers);
     }
 
@@ -339,7 +348,8 @@ class HomeController extends Controller
 
     public function editProfile(): View
     {
-        $admin_data = Auth::user();  
+        $admin_data = Auth::user();
+
         return view('settings.update_profile', compact('admin_data'));
     }
 
@@ -359,10 +369,10 @@ class HomeController extends Controller
         try {
             $user = Auth::user();
             $data = $request->only([
-                'first_name', 'last_name', 'mobile', 'gender', 
-                'current_address', 'permanent_address'
+                'first_name', 'last_name', 'mobile', 'gender',
+                'current_address', 'permanent_address',
             ]);
-            
+
             $data['dob'] = date('Y-m-d', strtotime($request->input('dob')));
 
             if ($request->hasFile('image')) {
@@ -372,13 +382,13 @@ class HomeController extends Controller
                 }
 
                 $file = $request->file('image');
-                $fileName = time() . '-' . $file->getClientOriginalName();
-                $filePath = 'profile/' . $fileName;
-                
+                $fileName = time().'-'.$file->getClientOriginalName();
+                $filePath = 'profile/'.$fileName;
+
                 resizeImage($file);
                 $destinationPath = storage_path('app/public/profile');
                 $file->move($destinationPath, $fileName);
-                
+
                 $data['image'] = $filePath;
             }
 
@@ -386,12 +396,12 @@ class HomeController extends Controller
 
             return response()->json([
                 'error' => false,
-                'message' => trans('data_update_successfully')
+                'message' => trans('data_update_successfully'),
             ]);
         } catch (Throwable $e) {
             return response()->json([
                 'error' => true,
-                'message' => trans('error_occurred')
+                'message' => trans('error_occurred'),
             ]);
         }
     }
@@ -402,12 +412,12 @@ class HomeController extends Controller
             // Implementation for warning modal update
             return response()->json([
                 'error' => false,
-                'message' => 'Warning modal updated successfully'
+                'message' => 'Warning modal updated successfully',
             ]);
         } catch (Throwable $e) {
             return response()->json([
                 'error' => true,
-                'message' => trans('error_occurred')
+                'message' => trans('error_occurred'),
             ]);
         }
     }

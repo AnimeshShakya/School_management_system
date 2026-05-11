@@ -11,6 +11,28 @@
                 </span> {{ __('dashboard') }}
             </h3>
         </div>
+
+        @if (Auth::user()->hasRole('Student') && !empty($student_qr_code_base64))
+            <div class="row">
+                <div class="col-md-4 col-sm-6 col-12 grid-margin stretch-card">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h4 class="card-title mb-3">{{ __('attendance') }} QR Code</h4>
+                            <img src="data:image/png;base64,{{ $student_qr_code_base64 }}"
+                                 alt="Your QR Code"
+                                 style="max-width: 220px; width: 100%; border: 1px solid #dee2e6; border-radius: 4px; padding: 8px;"
+                                 id="studentQrCodeImg" />
+                            <p class="text-muted small mt-2 mb-3">Show this code to mark your attendance</p>
+                            <a href="#"
+                               class="btn btn-sm btn-outline-primary"
+                               onclick="downloadStudentQr(); return false;">
+                                <i class="fa fa-download mr-1"></i> Download QR
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
         @if ($class_sections)
             <div class="row classes">
                 <div class="col-md-12 grid-margin stretch-card search-container">
@@ -465,6 +487,18 @@
             document.addEventListener('DOMContentLoaded', function() {
                 filterLeaves();
             });
+        </script>
+    @endif
+
+    @if (Auth::user()->hasRole('Student') && !empty($student_qr_code_base64))
+        <script>
+            function downloadStudentQr() {
+                var img = document.getElementById('studentQrCodeImg');
+                var a = document.createElement('a');
+                a.href = img.src;
+                a.download = 'attendance-qr-{{ Auth::user()->first_name }}-{{ Auth::user()->last_name }}.png';
+                a.click();
+            }
         </script>
     @endif
 @endsection

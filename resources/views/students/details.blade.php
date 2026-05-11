@@ -61,6 +61,7 @@
                                             <th scope="col" data-field="religion" data-visible="false">{{ __('religion') }}</th>
                                             <th scope="col" data-field="admission_date">{{ __('admission_date') }}</th>
                                             <th scope="col" data-field="registration_payment_status" data-formatter="studentRegistrationPaymentStatusFormatter">Registration Payment</th>
+                                            <th scope="col" data-field="qr_code_url" data-formatter="studentQrCodeFormatter" data-escape="false">QR Code</th>
                                             <th scope="col" data-field="height" data-visible="false">{{ __('height') }}</th>
                                             <th scope="col" data-field="weight" data-visible="false">{{ __('weight') }}</th>
                                             <th scope="col" data-field="father_full_name">{{ __('father') . ' ' . __('name') }}</th>
@@ -476,4 +477,50 @@
             </div>
         </div>
     @endcan
+
+    {{-- QR Code Modal --}}
+    <div class="modal fade" id="qrCodeModal" tabindex="-1" role="dialog" aria-labelledby="qrCodeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="qrCodeModalLabel">Student QR Code</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body text-center">
+                    <p id="qrStudentName" class="font-weight-bold mb-2"></p>
+                    <img id="qrCodeImg" src="" alt="QR Code" class="img-fluid" style="max-width:220px;" />
+                    <p class="mt-2 text-muted small">Scan with QR Attendance scanner</p>
+                </div>
+                <div class="modal-footer">
+                    <a id="qrCodeDownload" href="#" download="qr_code.png" class="btn btn-theme btn-sm">Download</a>
+                    <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">{{ __('close') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+@endsection
+
+@section('script')
+<script>
+function studentQrCodeFormatter(value, row) {
+    if (!value) {
+        return '<span class="text-muted">—</span>';
+    }
+    return '<button class="btn btn-sm btn-outline-info view-qr-btn" '
+        + 'data-url="' + value + '" '
+        + 'data-name="' + (row.full_name || '') + '">'
+        + '<i class="fa fa-qrcode"></i> View</button>';
+}
+
+$(document).on('click', '.view-qr-btn', function () {
+    var url  = $(this).data('url');
+    var name = $(this).data('name');
+    $('#qrStudentName').text(name);
+    $('#qrCodeImg').attr('src', url);
+    $('#qrCodeDownload').attr('href', url);
+    $('#qrCodeModal').modal('show');
+});
+</script>
 @endsection

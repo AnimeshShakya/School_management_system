@@ -4,86 +4,120 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\FeesChoiceable;
 use App\Models\FeesPaid;
+use App\Models\Students;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class RevenueAnalysisController extends Controller
 {
     public function index(): Response|RedirectResponse
     {
         if (! Auth::user()->hasRole('Super Admin')) {
-            $response = [
-                'message' => trans('no_permission_message'),
-            ];
-
-            return redirect(route('home'))->withErrors($response);
+            return redirect(route('home'))->withErrors(['message' => trans('no_permission_message')]);
         }
 
         $currencySettings = getSettings('currency_symbol');
         $currencySymbol = $currencySettings['currency_symbol'] ?? '';
 
-        $baseQuery = FeesChoiceable::query()
-            ->join('fees_types', 'fees_types.id', '=', 'fees_choiceables.fees_type_id')
-            ->where('fees_choiceables.status', 1)
-            ->whereNotNull('fees_choiceables.date')
-            ->where(function ($query) {
-                $query->where('fees_types.name', 'like', '%id%')
-                    ->where('fees_types.name', 'like', '%card%');
-            });
-
         $currentYear = (int) now()->year;
         $currentMonth = (int) now()->month;
 
-        $monthlyRevenueRaw = (clone $baseQuery)
-            ->whereYear('fees_choiceables.date', $currentYear)
-            ->selectRaw('MONTH(fees_choiceables.date) as month_number, ROUND(SUM(fees_choiceables.total_amount), 2) as total_amount')
+        $baseQuery = FeesPaid::query()
+            ->join('students', 'students.id', '=', 'fees_paids.student_id')
+            ->join('users', 'users.id', '=', 'students.user_id')
+            ->whereNull('fees_paids.deleted_at')
+            ->where('fees_paids.total_amount', '>', 0);
+
+        $summary = [
+            'total_revenue' => (float) (clone $baseQuery)->sum('fees_paids.total_amount'),
+            'current_year' => (float) (clone $baseQuery)->whereYear('fees_paids.date', $currentYear)->sum('fees_paids.total_amount'),
+            'current_month' => (float) (clone $baseQuery)->whereYear('fees_paids.date', $currentYear)->whereMonth('fees_paids.date', $currentMonth)->sum('fees_paids.total_amount'),
+            'total_registrations' => (int) (clone $baseQuery)->count(),
+            'fully_paid' => (int) (clone $baseQuery)->where('fees_paids.is_fully_paid', 1)->count(),
+            'pending_payment' => (int) (clone $baseQuery)->where('fees_paids.is_fully_paid', 0)->count(),
+            'with_qr' => (int) Students::whereNotNull('qr_token')->count(),
+            'without_qr' => (int) Students::whereNull('qr_token')->count(),
+        ];
+
+        $summary['avg_per_student'] = $summary['total_registrations'] > 0
+            ? round($summary['total_revenue'] / $summary['total_registrations'], 2)
+            : 0.0;
+
+        $monthlyRaw = (clone $baseQuery)
+            ->whereYear('fees_paids.date', $currentYear)
+            ->selectRaw('MONTH(fees_paids.date) as month_number, ROUND(SUM(fees_paids.total_amount), 2) as total_amount, COUNT(*) as registrations')
             ->groupBy('month_number')
-            ->pluck('total_amount', 'month_number');
+            ->get()
+            ->keyBy('month_number');
 
         $monthlyRevenue = [];
-        for ($month = 1; $month <= 12; $month++) {
+        for ($m = 1; $m <= 12; $m++) {
             $monthlyRevenue[] = [
-                'month' => now()->setMonth($month)->format('F'),
-                'total_amount' => (float) ($monthlyRevenueRaw[$month] ?? 0),
+                'month' => now()->setMonth($m)->format('M'),
+                'total_amount' => (float) ($monthlyRaw[$m]->total_amount ?? 0),
+                'registrations' => (int) ($monthlyRaw[$m]->registrations ?? 0),
             ];
         }
 
         $yearlyRevenue = (clone $baseQuery)
-            ->selectRaw('YEAR(fees_choiceables.date) as year, ROUND(SUM(fees_choiceables.total_amount), 2) as total_amount')
+            ->selectRaw('YEAR(fees_paids.date) as year, ROUND(SUM(fees_paids.total_amount), 2) as total_amount, COUNT(*) as registrations, SUM(CASE WHEN fees_paids.is_fully_paid = 1 THEN 1 ELSE 0 END) as fully_paid')
             ->groupBy('year')
             ->orderByDesc('year')
             ->get();
 
-        $registrationLoginQuery = FeesPaid::query()
+        $paymentModes = (clone $baseQuery)
+            ->selectRaw('fees_paids.mode, COUNT(*) as count, ROUND(SUM(fees_paids.total_amount), 2) as total_amount')
+            ->groupBy('fees_paids.mode')
+            ->get()
+            ->map(fn ($row) => [
+                'label' => match ((int) $row->mode) {
+                    1 => 'Cash',
+                    2 => 'Online',
+                    3 => 'Cheque',
+                    default => 'Other',
+                },
+                'count' => (int) $row->count,
+                'total_amount' => (float) $row->total_amount,
+            ]);
+
+        $recentRegistrations = FeesPaid::query()
             ->join('students', 'students.id', '=', 'fees_paids.student_id')
             ->join('users', 'users.id', '=', 'students.user_id')
-            ->where('users.status', 1)
+            ->leftJoin('student_sessions', 'student_sessions.student_id', '=', 'fees_paids.student_id')
+            ->leftJoin('class_sections', 'class_sections.id', '=', 'student_sessions.class_section_id')
+            ->leftJoin('classes', 'classes.id', '=', 'class_sections.class_id')
+            ->leftJoin('sections', 'sections.id', '=', 'class_sections.section_id')
+            ->whereNull('fees_paids.deleted_at')
             ->where('fees_paids.total_amount', '>', 0)
-            ->whereNotNull('fees_paids.date');
-
-        $yearlyRegistrationRevenue = (clone $registrationLoginQuery)
-            ->selectRaw('YEAR(fees_paids.date) as year, ROUND(SUM(fees_paids.total_amount), 2) as total_amount')
-            ->groupBy('year')
-            ->orderByDesc('year')
+            ->select(
+                'fees_paids.id',
+                'fees_paids.date as payment_date',
+                'fees_paids.total_amount',
+                'fees_paids.is_fully_paid',
+                'fees_paids.mode',
+                'users.first_name',
+                'users.last_name',
+                'users.email',
+                'students.admission_no',
+                'students.qr_token',
+                DB::raw("CONCAT(COALESCE(classes.name,''), IF(sections.name IS NOT NULL, CONCAT('-', sections.name), '')) as class_section")
+            )
+            ->orderByDesc('fees_paids.date')
+            ->orderByDesc('fees_paids.id')
             ->get();
 
-        $summary = [
-            'current_month' => (float) ((clone $baseQuery)
-                ->whereYear('fees_choiceables.date', $currentYear)
-                ->whereMonth('fees_choiceables.date', $currentMonth)
-                ->sum('fees_choiceables.total_amount')),
-            'current_year' => (float) ((clone $baseQuery)
-                ->whereYear('fees_choiceables.date', $currentYear)
-                ->sum('fees_choiceables.total_amount')),
-            'overall' => (float) ((clone $baseQuery)
-                ->sum('fees_choiceables.total_amount')),
-            'registration_login_access' => (float) ((clone $registrationLoginQuery)
-                ->sum('fees_paids.total_amount')),
-        ];
-
-        return response()->view('revenue.analysis', compact('monthlyRevenue', 'yearlyRevenue', 'yearlyRegistrationRevenue', 'summary', 'currencySymbol', 'currentYear'));
+        return response()->view('revenue.analysis', compact(
+            'summary',
+            'monthlyRevenue',
+            'yearlyRevenue',
+            'paymentModes',
+            'recentRegistrations',
+            'currencySymbol',
+            'currentYear',
+            'currentMonth'
+        ));
     }
 }
