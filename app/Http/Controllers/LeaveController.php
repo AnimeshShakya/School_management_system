@@ -504,11 +504,16 @@ class LeaveController extends Controller
             $holiday_days = $leaveMaster->holiday_days;
         }
 
-        $teachers = Teacher::with('user')->get();
-        $staff = Staff::with('user')->get();
+        $teachers = Teacher::with('user')
+            ->whereHas('user', function ($query) {
+                $query->whereDoesntHave('roles', function ($roleQuery) {
+                    $roleQuery->where('name', 'Super Admin');
+                });
+            })
+            ->get();
 
-        // Combine all users and sort by first name in ascending order
-        $users = $teachers->concat($staff)->sortBy(function ($item) {
+        // Only teachers should appear in the staff filter.
+        $users = $teachers->sortBy(function ($item) {
             return $item->user->first_name;
         })->values(); // Reset array keys after sorting
 

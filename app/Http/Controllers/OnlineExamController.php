@@ -32,26 +32,33 @@ class OnlineExamController extends Controller {
             );
             return redirect(route('home'))->withErrors($response);
         }
-        $teacher_id = Auth::user()->teacher->id;
+        $user = Auth::user();
+        if ($user->teacher) {
+            $teacher_id = $user->teacher->id;
 
-        //get the class and subject according to subject teacher
-        $subject_teacher = SubjectTeacher::where('teacher_id', $teacher_id);
-        $class_section_id = $subject_teacher->pluck('class_section_id');
-        $subject_id = $subject_teacher->pluck('subject_id');
+            // get the class and subject according to subject teacher
+            $subject_teacher = SubjectTeacher::where('teacher_id', $teacher_id);
+            $class_section_id = $subject_teacher->pluck('class_section_id');
+            $subject_id = $subject_teacher->pluck('subject_id');
 
-        $all_subjects = Subject::whereIn('id', $subject_id)->get();
+            $all_subjects = Subject::whereIn('id', $subject_id)->get();
 
-        //get class section all data
-        $class_sections_query = ClassSection::whereIn('id', $class_section_id);
+            // get class section all data
+            $class_sections_query = ClassSection::whereIn('id', $class_section_id);
 
-        //get the class section data
-        $class_sections = $class_sections_query->with('class.medium', 'section', 'class.streams')->get();
+            // get the class section data
+            $class_sections = $class_sections_query->with('class.medium', 'section', 'class.streams')->get();
 
-        //get class ids
-        $class_ids = $class_sections_query->pluck('class_id');
+            // get class ids
+            $class_ids = $class_sections_query->pluck('class_id');
 
-        //get the class data
-        $classes = ClassSchool::whereIn('id', $class_ids)->with('medium', 'streams')->get();
+            // get the class data
+            $classes = ClassSchool::whereIn('id', $class_ids)->with('medium', 'streams')->get();
+        } else {
+            $all_subjects = Subject::all();
+            $class_sections = ClassSection::with('class.medium', 'section', 'class.streams')->get();
+            $classes = ClassSchool::with('medium', 'streams')->get();
+        }
 
         return response(view('online_exam.index', compact('class_sections', 'all_subjects', 'classes')));
     }
@@ -173,33 +180,42 @@ class OnlineExamController extends Controller {
         $session_year = getSettings('session_year');
         $session_year_id = $session_year['session_year'];
 
-        // Get teacher's assigned subjects and class sections
-        $teacher_id = Auth::user()->teacher->id;
-        $subject_teacher = SubjectTeacher::where('teacher_id', $teacher_id);
-        $assigned_class_sections = $subject_teacher->pluck('class_section_id')->toArray();
-        $assigned_subjects = $subject_teacher->pluck('subject_id')->toArray();
+        $user = Auth::user();
+        $assigned_class_sections = [];
+        $assigned_subjects = [];
+        $isTeacher = (bool) $user->teacher;
+
+        if ($isTeacher) {
+            // Get teacher's assigned subjects and class sections
+            $teacher_id = $user->teacher->id;
+            $subject_teacher = SubjectTeacher::where('teacher_id', $teacher_id);
+            $assigned_class_sections = $subject_teacher->pluck('class_section_id')->toArray();
+            $assigned_subjects = $subject_teacher->pluck('subject_id')->toArray();
+        }
 
         $sql = OnlineExam::with('subject', 'question_choice', 'model')
             // Filter by current session year
             ->where('session_year_id', $session_year_id)
             // Filter by teacher's assigned subjects
-            ->where(function ($query) use ($assigned_class_sections, $assigned_subjects) {
-                $query->whereIn('subject_id', $assigned_subjects)
-                    ->where(function ($q) use ($assigned_class_sections) {
-                        $q->where(function ($q1) use ($assigned_class_sections) {
-                            // Filter class section based exams
-                            $q1->where('model_type', 'App\Models\ClassSection')
-                                ->whereIn('model_id', $assigned_class_sections);
-                        })->orWhere(function ($q2) use ($assigned_class_sections) {
-                            // Filter class based exams where teacher has any section
-                            $q2->where('model_type', 'App\Models\ClassSchool')
-                                ->whereIn('model_id', function ($subquery) use ($assigned_class_sections) {
-                                    $subquery->select('class_id')
-                                        ->from('class_sections')
-                                        ->whereIn('id', $assigned_class_sections);
-                                });
+            ->when($isTeacher, function ($query) use ($assigned_class_sections, $assigned_subjects) {
+                $query->where(function ($query) use ($assigned_class_sections, $assigned_subjects) {
+                    $query->whereIn('subject_id', $assigned_subjects)
+                        ->where(function ($q) use ($assigned_class_sections) {
+                            $q->where(function ($q1) use ($assigned_class_sections) {
+                                // Filter class section based exams
+                                $q1->where('model_type', 'App\Models\ClassSection')
+                                    ->whereIn('model_id', $assigned_class_sections);
+                            })->orWhere(function ($q2) use ($assigned_class_sections) {
+                                // Filter class based exams where teacher has any section
+                                $q2->where('model_type', 'App\Models\ClassSchool')
+                                    ->whereIn('model_id', function ($subquery) use ($assigned_class_sections) {
+                                        $subquery->select('class_id')
+                                            ->from('class_sections')
+                                            ->whereIn('id', $assigned_class_sections);
+                                    });
+                            });
                         });
-                    });
+                });
             })
             //search query
             ->when($search, function ($query) use ($search) {
@@ -218,26 +234,37 @@ class OnlineExamController extends Controller {
                         });
                 });
             })
-            //class data filter
-            ->when(request('class_id') != null, function ($query) use ($assigned_class_sections) {
+            // class data filter
+            ->when(request('class_id') != null, function ($query) use ($assigned_class_sections, $isTeacher) {
                 $classId = request('class_id');
-                $query->where(function ($query) use ($classId, $assigned_class_sections) {
-                    // Only allow filtering by classes where teacher has access
-                    $classSectionIds = ClassSection::where('class_id', $classId)
-                        ->whereIn('id', $assigned_class_sections)
-                        ->pluck('id');
+                $query->where(function ($query) use ($classId, $assigned_class_sections, $isTeacher) {
+                    if ($isTeacher) {
+                        // Only allow filtering by classes where teacher has access
+                        $classSectionIds = ClassSection::where('class_id', $classId)
+                            ->whereIn('id', $assigned_class_sections)
+                            ->pluck('id');
 
-                    $query->whereIn('model_id', $classSectionIds)
-                        ->where('model_type', 'App\Models\ClassSection')
-                        ->orWhere(function ($query) use ($classId) {
-                            $query->where(['model_type' => 'App\Models\ClassSchool', 'model_id' => $classId]);
-                        });
+                        $query->whereIn('model_id', $classSectionIds)
+                            ->where('model_type', 'App\Models\ClassSection')
+                            ->orWhere(function ($query) use ($classId) {
+                                $query->where(['model_type' => 'App\Models\ClassSchool', 'model_id' => $classId]);
+                            });
+                    } else {
+                        $classSectionIds = ClassSection::where('class_id', $classId)->pluck('id');
+                        $query->whereIn('model_id', $classSectionIds)
+                            ->where('model_type', 'App\Models\ClassSection')
+                            ->orWhere(function ($query) use ($classId) {
+                                $query->where(['model_type' => 'App\Models\ClassSchool', 'model_id' => $classId]);
+                            });
+                    }
                 });
             })
-            //subject data filter - only allow filtering by assigned subjects
-            ->when(request('subject_id') != null, function ($query) use ($assigned_subjects) {
-                $query->where('subject_id', request('subject_id'))
-                    ->whereIn('subject_id', $assigned_subjects);
+            // subject data filter
+            ->when(request('subject_id') != null, function ($query) use ($assigned_subjects, $isTeacher) {
+                $query->where('subject_id', request('subject_id'));
+                if ($isTeacher) {
+                    $query->whereIn('subject_id', $assigned_subjects);
+                }
             });
 
         // Get total before applying pagination
@@ -385,17 +412,28 @@ class OnlineExamController extends Controller {
 
     public function getSubjects(Request $request) {
         try {
-            $teacher_id = Auth::user()->teacher->id;
             $subjects = array();
-            if ($request->based_on) {
-                // return the subjects based on class setion
-                $subject_id = SubjectTeacher::where(['class_section_id' => $request->class_section_id, 'teacher_id' => $teacher_id])->pluck('subject_id');
-                $subjects = Subject::whereIn('id', $subject_id)->get();
+            if (Auth::user()->teacher) {
+                $teacher_id = Auth::user()->teacher->id;
+                if ($request->based_on) {
+                    // return the subjects based on class section
+                    $subject_id = SubjectTeacher::where(['class_section_id' => $request->class_section_id, 'teacher_id' => $teacher_id])->pluck('subject_id');
+                    $subjects = Subject::whereIn('id', $subject_id)->get();
+                } else {
+                    // return the subjects based on class
+                    $class_section_id = ClassSection::where('class_id', $request->class_id)->pluck('id');
+                    $subject_id = SubjectTeacher::whereIn('class_section_id', $class_section_id)->where('teacher_id', $teacher_id)->pluck('subject_id');
+                    $subjects = Subject::whereIn('id', $subject_id)->get();
+                }
             } else {
-                // return the subjects based on class
-                $class_section_id = ClassSection::where('class_id', $request->class_id)->pluck('id');
-                $subject_id = SubjectTeacher::whereIn('class_section_id', $class_section_id)->where('teacher_id', $teacher_id)->pluck('subject_id');
-                $subjects = Subject::whereIn('id', $subject_id)->get();
+                if ($request->based_on) {
+                    $class_id = ClassSection::where('id', $request->class_section_id)->pluck('class_id')->first();
+                    $subject_id = ClassSubject::where('class_id', $class_id)->pluck('subject_id');
+                    $subjects = Subject::whereIn('id', $subject_id)->get();
+                } else {
+                    $subject_id = ClassSubject::where('class_id', $request->class_id)->pluck('subject_id');
+                    $subjects = Subject::whereIn('id', $subject_id)->get();
+                }
             }
             $response = array(
                 'error' => false,

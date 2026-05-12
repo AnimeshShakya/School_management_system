@@ -45,9 +45,16 @@ class AttendanceController extends Controller
             );
             return redirect(route('home'))->withErrors($response);
         }
-        $teacher_id = Auth::user()->teacher->id;
-        $class_section_ids = ClassTeacher::where('class_teacher_id', $teacher_id)->pluck('class_section_id');
-        $class_sections = ClassSection::with('class', 'section', 'classTeachers', 'class.streams')->whereIn('id', $class_section_ids)->get();
+        $user = Auth::user();
+        if ($user->teacher) {
+            $teacher_id = $user->teacher->id;
+            $class_section_ids = ClassTeacher::where('class_teacher_id', $teacher_id)->pluck('class_section_id');
+            $class_sections = ClassSection::with('class', 'section', 'classTeachers', 'class.streams')
+                ->whereIn('id', $class_section_ids)
+                ->get();
+        } else {
+            $class_sections = ClassSection::with('class', 'section', 'classTeachers', 'class.streams')->get();
+        }
         return view('attendance.index', compact('class_sections'));
     }
 
@@ -60,9 +67,16 @@ class AttendanceController extends Controller
             );
             return redirect(route('home'))->withErrors($response);
         }
-        $teacher_id = Auth::user()->teacher->id;
-        $class_section_ids = ClassTeacher::where('class_teacher_id', $teacher_id)->pluck('class_section_id');
-        $class_sections = ClassSection::with('class', 'section', 'classTeachers', 'class.streams')->whereIn('id', $class_section_ids)->get();
+        $user = Auth::user();
+        if ($user->teacher) {
+            $teacher_id = $user->teacher->id;
+            $class_section_ids = ClassTeacher::where('class_teacher_id', $teacher_id)->pluck('class_section_id');
+            $class_sections = ClassSection::with('class', 'section', 'classTeachers', 'class.streams')
+                ->whereIn('id', $class_section_ids)
+                ->get();
+        } else {
+            $class_sections = ClassSection::with('class', 'section', 'classTeachers', 'class.streams')->get();
+        }
         return view('attendance.view', compact('class_sections'));
     }
 
@@ -396,9 +410,16 @@ class AttendanceController extends Controller
             );
             return redirect(route('home'))->withErrors($response);
         }
-        $teacher_id = Auth::user()->teacher->id;
-        $class_section_ids = ClassTeacher::where('class_teacher_id', $teacher_id)->pluck('class_section_id');
-        $class_sections = ClassSection::with('class', 'section', 'classTeachers', 'class.streams')->whereIn('id', $class_section_ids)->get();
+        $user = Auth::user();
+        if ($user->teacher) {
+            $teacher_id = $user->teacher->id;
+            $class_section_ids = ClassTeacher::where('class_teacher_id', $teacher_id)->pluck('class_section_id');
+            $class_sections = ClassSection::with('class', 'section', 'classTeachers', 'class.streams')
+                ->whereIn('id', $class_section_ids)
+                ->get();
+        } else {
+            $class_sections = ClassSection::with('class', 'section', 'classTeachers', 'class.streams')->get();
+        }
         return view('attendance.add_bulk_data', compact('class_sections'));
     }
 

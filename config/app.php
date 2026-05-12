@@ -29,8 +29,8 @@ use Illuminate\Support\Facades\Facade;
 use Illuminate\Translation\TranslationServiceProvider;
 use Illuminate\Validation\ValidationServiceProvider;
 use Illuminate\View\ViewServiceProvider;
-use Laravel\Boost\BoostServiceProvider;
-use Laravel\Mcp\Server\McpServiceProvider;
+// use Laravel\Boost\BoostServiceProvider;
+// use Laravel\Mcp\Server\McpServiceProvider;
 use Laravel\Sanctum\SanctumServiceProvider;
 use Maatwebsite\Excel\ExcelServiceProvider;
 use Maatwebsite\Excel\Facades\Excel;
@@ -199,8 +199,8 @@ return [
         ViewServiceProvider::class,
         ServiceProvider::class,
         Barryvdh\Debugbar\ServiceProvider::class,
-        McpServiceProvider::class,
-        BoostServiceProvider::class,
+        // McpServiceProvider::class,
+        // BoostServiceProvider::class,
         // Unicodeveloper\Paystack\PaystackServiceProvider::class,
 
         /*
