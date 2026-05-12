@@ -511,9 +511,16 @@ class LeaveController extends Controller
                 });
             })
             ->get();
+        $staff = Staff::with('user')
+            ->whereHas('user', function ($query) {
+                $query->whereDoesntHave('roles', function ($roleQuery) {
+                    $roleQuery->where('name', 'Super Admin');
+                });
+            })
+            ->get();
 
-        // Only teachers should appear in the staff filter.
-        $users = $teachers->sortBy(function ($item) {
+        // Show teachers and staff (excluding Super Admin) in the staff filter.
+        $users = $teachers->concat($staff)->sortBy(function ($item) {
             return $item->user->first_name;
         })->values(); // Reset array keys after sorting
 

@@ -23,15 +23,35 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // -----------------------------------------------
+        // Form Service Singleton
+        // -----------------------------------------------
         $this->app->singleton('form', function ($app) {
             return new FormService;
         });
 
+        // -----------------------------------------------
+        // Nepali Date Service Singleton
+        // -----------------------------------------------
         $this->app->singleton(NepaliDateService::class, fn () => new NepaliDateService);
 
+        // -----------------------------------------------
+        // Bind Vendor Installer Controllers to App Controllers
+        // -----------------------------------------------
         $this->app->bind(VendorInstallSetDatabaseController::class, AppInstallSetDatabaseController::class);
         $this->app->bind(VendorInstallSetMigrationsController::class, AppInstallSetMigrationsController::class);
         $this->app->bind(VendorInstallSetKeysController::class, AppInstallSetKeysController::class);
+
+        // -----------------------------------------------
+        // Debugbar — Register only in local/dev (Copilot fix)
+        // Safe: checks environment + class existence
+        // -----------------------------------------------
+        if (
+            $this->app->environment('local', 'development')
+            && class_exists(\Barryvdh\Debugbar\ServiceProvider::class)
+        ) {
+            $this->app->register(\Barryvdh\Debugbar\ServiceProvider::class);
+        }
     }
 
     /**
@@ -39,9 +59,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Set default string length for MySQL
+        // -----------------------------------------------
+        // Set default string length for MySQL compatibility
+        // -----------------------------------------------
         Schema::defaultStringLength(191);
 
+        // -----------------------------------------------
+        // Use Bootstrap 4 pagination views
+        // -----------------------------------------------
         Paginator::useBootstrapFour();
     }
 }

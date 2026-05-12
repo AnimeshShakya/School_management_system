@@ -1,5 +1,27 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # -----------------------------------------------
+    # 1. Skip rewrite for real files and directories
+    # -----------------------------------------------
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # -----------------------------------------------
+    # 2. Exception: Allow /.well-known/ (SSL/ACME challenges)
+    # -----------------------------------------------
+    RewriteCond %{REQUEST_URI} ^/\.well-known/
+    RewriteRule ^ - [L]
+
+    # -----------------------------------------------
+    # 3. Exception: Skip if already inside /public/
+    # -----------------------------------------------
     RewriteCond %{REQUEST_URI} !^/public/
+
+    # -----------------------------------------------
+    # 4. Route everything else to /public/
+    # -----------------------------------------------
     RewriteRule ^(.*)$ public/$1 [L,QSA]
+
 </IfModule>
