@@ -33,16 +33,22 @@ class OnlineExamQuestionController extends Controller {
             );
             return redirect(route('home'))->withErrors($response);
         }
-        $teacher_id = Auth::user()->teacher->id;
+        $user = Auth::user();
+        if ($user->teacher) {
+            $teacher_id = $user->teacher->id;
 
-        //get the class and subject according to subject teacher
-        $subject_teacher = SubjectTeacher::where('teacher_id', $teacher_id);
-        $class_section_id = $subject_teacher->pluck('class_section_id');
-        $class_id = ClassSection::whereIn('id', $class_section_id)->pluck('class_id');
-        $subject_id = $subject_teacher->pluck('subject_id');
+            // get the class and subject according to subject teacher
+            $subject_teacher = SubjectTeacher::where('teacher_id', $teacher_id);
+            $class_section_id = $subject_teacher->pluck('class_section_id');
+            $class_id = ClassSection::whereIn('id', $class_section_id)->pluck('class_id');
+            $subject_id = $subject_teacher->pluck('subject_id');
 
-        $classes = ClassSchool::whereIn('id', $class_id)->with('medium', 'streams')->get();
-        $all_subjects = Subject::whereIn('id', $subject_id)->get();
+            $classes = ClassSchool::whereIn('id', $class_id)->with('medium', 'streams')->get();
+            $all_subjects = Subject::whereIn('id', $subject_id)->get();
+        } else {
+            $classes = ClassSchool::with('medium', 'streams')->get();
+            $all_subjects = Subject::all();
+        }
         return response(view('online_exam.class_questions', compact('classes', 'all_subjects')));
     }
 

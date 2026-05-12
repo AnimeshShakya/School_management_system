@@ -9,7 +9,9 @@
     <div class="page-header">
       <h3 class="page-title">{{ __('users') }}</h3>
       @can('staff-create')
-        <a class="btn btn-theme" href="{{ route('users.create') }}">{{ __('create') . ' ' . __('user') }}</a>
+        <div class="page-header-right">
+          <a class="btn btn-theme" href="{{ route('users.create') }}">{{ __('create') . ' ' . __('user') }}</a>
+        </div>
       @endcan
     </div>
 
