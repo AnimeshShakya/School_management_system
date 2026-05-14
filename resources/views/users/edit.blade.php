@@ -44,7 +44,7 @@
                                 </div>
                                 <div class="form-group col-md-6">
                                     <label>{{ __('role') }} <span class="text-danger">*</span></label>
-                                    <select name="roles[]" class="form-control" multiple required>
+                                    <select id="roles" name="roles[]" class="form-control" multiple required>
                                         @foreach ($roles as $roleValue => $roleLabel)
                                             <option value="{{ $roleValue }}"
                                                 {{ in_array($roleValue, old('roles', array_values($userRole)), true) ? 'selected' : '' }}>
@@ -54,12 +54,40 @@
                                     </select>
                                 </div>
                                 <div class="form-group col-md-6">
+                                    <label>{{ __('current_password') }}</label>
+                                    <div class="input-group">
+                                        <input type="password" id="current_password" name="current_password" class="form-control" placeholder="{{ __('required_to_change_password') }}">
+                                        <div class="input-group-append">
+                                            <span class="input-group-text" style="cursor:pointer;">
+                                                <i class="fa fa-eye-slash" id="toggleCurrentPassword"></i>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <small class="form-text text-muted">{{ __('enter_current_password_to_change') }}</small>
+                                </div>
+                                <div class="form-group col-md-6">
                                     <label>{{ __('password') }}</label>
-                                    <input type="password" name="password" class="form-control" placeholder="Leave blank to keep current password">
+                                    <div class="input-group">
+                                        <input type="password" id="password" name="password" class="form-control" placeholder="Leave blank to keep current password">
+                                        <div class="input-group-append">
+                                            <span class="input-group-text" style="cursor:pointer;">
+                                                <i class="fa fa-eye-slash" id="togglePassword"></i>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <small class="form-text text-muted">{{ __('minimum 8 characters') }}</small>
                                 </div>
                                 <div class="form-group col-md-6">
                                     <label>{{ __('confirm') . ' ' . __('password') }}</label>
-                                    <input type="password" name="password_confirmation" class="form-control">
+                                    <div class="input-group">
+                                        <input type="password" id="password_confirmation" name="password_confirmation" class="form-control">
+                                        <div class="input-group-append">
+                                            <span class="input-group-text" style="cursor:pointer;">
+                                                <i class="fa fa-eye-slash" id="toggleConfirmPassword"></i>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <small id="password-match-msg" class="form-text"></small>
                                 </div>
                             </div>
 
@@ -70,4 +98,68 @@
             </div>
         </div>
     </div>
+@endsection
+
+@section('script')
+<script>
+    // Select2 for roles
+    $('#roles').select2({
+        placeholder: '{{ __('select') . ' ' . __('role') }}',
+        allowClear: false,
+    });
+
+    // Password eye toggles
+    $('#toggleCurrentPassword').on('click', function () {
+        const input = document.querySelector('#current_password');
+        input.type = input.type === 'password' ? 'text' : 'password';
+        $(this).toggleClass('fa-eye-slash fa-eye');
+    });
+
+    $('#togglePassword').on('click', function () {
+        const input = document.querySelector('#password');
+        input.type = input.type === 'password' ? 'text' : 'password';
+        $(this).toggleClass('fa-eye-slash fa-eye');
+    });
+
+    $('#toggleConfirmPassword').on('click', function () {
+        const input = document.querySelector('#password_confirmation');
+        input.type = input.type === 'password' ? 'text' : 'password';
+        $(this).toggleClass('fa-eye-slash fa-eye');
+    });
+
+    // Real-time password match feedback
+    function checkPasswordMatch() {
+        const pw = $('#password').val();
+        const pwc = $('#password_confirmation').val();
+        const msg = $('#password-match-msg');
+        const confirmInput = $('#password_confirmation');
+
+        if (!pwc.length) {
+            msg.text('').removeClass('text-danger text-success');
+            confirmInput.removeClass('is-invalid is-valid');
+            return;
+        }
+
+        if (pw === pwc) {
+            msg.text('{{ __('passwords_match') }}').removeClass('text-danger').addClass('text-success');
+            confirmInput.removeClass('is-invalid').addClass('is-valid');
+        } else {
+            msg.text('{{ __('passwords_not_match') }}').removeClass('text-success').addClass('text-danger');
+            confirmInput.removeClass('is-valid').addClass('is-invalid');
+        }
+    }
+
+    $('#password, #password_confirmation').on('input', checkPasswordMatch);
+
+    // Block submit if passwords are filled but don't match
+    $('form').on('submit', function (e) {
+        const pw = $('#password').val();
+        const pwc = $('#password_confirmation').val();
+        if (pw && pw !== pwc) {
+            e.preventDefault();
+            checkPasswordMatch();
+            $('#password_confirmation').focus();
+        }
+    });
+</script>
 @endsection

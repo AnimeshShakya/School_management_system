@@ -102,6 +102,7 @@ class UserController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,'.$id,
+            'current_password' => 'nullable|string|required_with:password',
             'password' => 'nullable|string|min:8|confirmed',
             'roles' => 'required|array|min:1',
             'roles.*' => 'required|exists:roles,name',
@@ -109,6 +110,9 @@ class UserController extends Controller
 
         $input = $request->only(['first_name', 'last_name', 'email']);
         if (! empty($request->input('password'))) {
+            if (! Hash::check((string) $request->input('current_password'), auth()->user()->password)) {
+                return back()->withErrors(['current_password' => trans('current_password_incorrect')])->withInput();
+            }
             $input['password'] = Hash::make((string) $request->input('password'));
         }
 
