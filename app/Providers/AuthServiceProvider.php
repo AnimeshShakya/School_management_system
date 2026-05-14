@@ -54,7 +54,7 @@ class AuthServiceProvider extends ServiceProvider
 
                 // Fallback: allow a seeded superadmin email to act as super admin.
                 // Configure SUPERADMIN_EMAIL in .env if you need a different email.
-                $superAdminEmail = env('SUPERADMIN_EMAIL', 'superadmin@gmail.com');
+                $superAdminEmail = config('app.superadmin_email', 'superadmin@gmail.com');
                 if (! empty($user->email) && strcasecmp($user->email, $superAdminEmail) === 0) {
                     return true;
                 }
