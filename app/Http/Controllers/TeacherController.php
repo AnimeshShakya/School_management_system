@@ -4,55 +4,62 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use Throwable;
-use App\Models\User;
-use App\Models\Teacher;
-use App\Models\FormField;
 use App\Models\ClassTeacher;
-use Illuminate\Http\Request;
+use App\Models\FormField;
 use App\Models\SubjectTeacher;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use App\Models\Teacher;
+use App\Models\User;
 use App\Services\MailService;
 use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Throwable;
 
-class TeacherController extends Controller {
+class TeacherController extends Controller
+{
     /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
      */
-    public function index() {
-        if (!Auth::user()->can('teacher-list')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+    public function index()
+    {
+        if (! Auth::user()->can('teacher-list')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $teacherFields = $this->getTeacherFields();
+
         return view('teacher.index', compact('teacherFields'));
     }
 
-    public function teacherListIndex() {
-        if (!Auth::user()->can('teacher-list')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+    public function teacherListIndex()
+    {
+        if (! Auth::user()->can('teacher-list')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $teacherFields = $this->getTeacherFields();
+
         return view('teacher.details', compact('teacherFields'));
     }
 
     private function getTeacherFields(): Collection
     {
-        if (!Schema::hasTable('form_fields') || !Schema::hasColumn('form_fields', 'for')) {
+        if (! Schema::hasTable('form_fields') || ! Schema::hasColumn('form_fields', 'for')) {
             return collect();
         }
 
@@ -68,14 +75,15 @@ class TeacherController extends Controller {
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request) {
-        if (!Auth::user()->can('teacher-create') || !Auth::user()->can('teacher-edit')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+    public function store(Request $request)
+    {
+        if (! Auth::user()->can('teacher-create') || ! Auth::user()->can('teacher-edit')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return response()->json($response);
         }
         $validator = Validator::make(
@@ -92,14 +100,15 @@ class TeacherController extends Controller {
                 'permanent_address' => 'required',
             ],
             [
-                'mobile.regex' => __('The mobile number must be a length of 7 to 15 digits.')
+                'mobile.regex' => __('The mobile number must be a length of 7 to 15 digits.'),
             ]
         );
         if ($validator->fails()) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => $validator->errors()->first()
-            );
+                'message' => $validator->errors()->first(),
+            ];
+
             return response()->json($response);
         }
         try {
@@ -112,18 +121,18 @@ class TeacherController extends Controller {
                 if ($request->hasFile('image')) {
                     $image = $request->file('image');
                     // made file name with combination of current time
-                    $file_name = time() . '-' . $image->getClientOriginalName();
-                    //made file path to store in database
-                    $file_path = 'teachers/' . $file_name;
-                    //resized image
+                    $file_name = time().'-'.$image->getClientOriginalName();
+                    // made file path to store in database
+                    $file_path = 'teachers/'.$file_name;
+                    // resized image
                     resizeImage($image);
-                    //stored image to storage/public/teachers folder
+                    // stored image to storage/public/teachers folder
                     $destinationPath = storage_path('app/public/teachers');
                     $image->move($destinationPath, $file_name);
 
                     $user->image = $file_path;
                 } else {
-                    $user->image = "";
+                    $user->image = '';
                 }
                 $teacher_plain_text_password = Str::random(12);
                 $user->password = Hash::make($teacher_plain_text_password);
@@ -146,7 +155,7 @@ class TeacherController extends Controller {
                     $teacher = Teacher::findOrFail($teacher_exists->id);
 
                     $formFields = FormField::where('for', 3)->orderBy('rank', 'ASC')->get();
-                    $data = array();
+                    $data = [];
                     $status = 0;
                     $dynamic_data = json_decode($teacher->dynamic_field_values ?? '[]', true);
                     foreach ($formFields as $form_field) {
@@ -157,10 +166,10 @@ class TeacherController extends Controller {
                                     $data[] = $request->input('checkbox', []);
                                     $status = 1;
                                 }
-                            } else if ($form_field->type == 'file') {
+                            } elseif ($form_field->type == 'file') {
                                 // INPUT TYPE FILE
                                 $get_file = '';
-                                $field = str_replace(" ", "_", $form_field->name);
+                                $field = str_replace(' ', '_', $form_field->name);
                                 if ($dynamic_data && count($dynamic_data) > 0) {
                                     foreach ($dynamic_data as $field_data) {
                                         if (isset($field_data[$field])) { // GET OLD FILE IF EXISTS
@@ -168,22 +177,22 @@ class TeacherController extends Controller {
                                         }
                                     }
                                 }
-                                $hidden_file_name = 'file-' . $field;
+                                $hidden_file_name = 'file-'.$field;
 
                                 if ($request->hasFile($field)) {
                                     if ($get_file) {
                                         Storage::disk('public')->delete($get_file); // DELETE OLD FILE IF NEW FILE IS SELECT
                                     }
-                                    $data[] = [str_replace(" ", "_", $form_field->name) => $request->file($field)->store('teachers', 'public')];
+                                    $data[] = [str_replace(' ', '_', $form_field->name) => $request->file($field)->store('teachers', 'public')];
                                 } else {
                                     if ($request->$hidden_file_name) {
-                                        $data[] = [str_replace(" ", "_", $form_field->name) => $request->$hidden_file_name];
+                                        $data[] = [str_replace(' ', '_', $form_field->name) => $request->$hidden_file_name];
                                     }
                                 }
                             } else {
-                                $field = str_replace(" ", "_", $form_field->name);
+                                $field = str_replace(' ', '_', $form_field->name);
                                 $fieldValue = $request->input($field, null);
-                                $data[] = [str_replace(" ", "_", $form_field->name) => $fieldValue];
+                                $data[] = [str_replace(' ', '_', $form_field->name) => $fieldValue];
                             }
                         } catch (Exception $e) {
                             // Log the error but continue processing other fields
@@ -203,7 +212,7 @@ class TeacherController extends Controller {
                         'student-delete',
                         'parents-create',
                         'parents-list',
-                        'parents-edit'
+                        'parents-edit',
                     ]);
                 } else {
                     $user->revokePermissionTo([
@@ -213,39 +222,39 @@ class TeacherController extends Controller {
                         'student-delete',
                         'parents-create',
                         'parents-list',
-                        'parents-edit'
+                        'parents-edit',
                     ]);
                 }
                 $user->assignRole([2]);
                 $school_name = getSettings('school_name');
                 $data = [
-                    'subject' => 'Welcome to ' . $school_name['school_name'],
+                    'subject' => 'Welcome to '.$school_name['school_name'],
                     'name' => $request->first_name,
                     'email' => $request->email,
                     'password' => $teacher_plain_text_password,
-                    'school_name' => $school_name['school_name']
+                    'school_name' => $school_name['school_name'],
                 ];
 
                 MailService::sendWithFallback('teacher.email', $data, function ($message) use ($data) {
                     $message->to($data['email'])->subject($data['subject']);
                 });
             } else {
-                $user = new User();
+                $user = new User;
                 if ($request->hasFile('image')) {
                     $image = $request->file('image');
                     // made file name with combination of current time
-                    $file_name = time() . '-' . $image->getClientOriginalName();
-                    //made file path to store in database
-                    $file_path = 'teachers/' . $file_name;
-                    //resized image
+                    $file_name = time().'-'.$image->getClientOriginalName();
+                    // made file path to store in database
+                    $file_path = 'teachers/'.$file_name;
+                    // resized image
                     resizeImage($image);
-                    //stored image to storage/public/teachers folder
+                    // stored image to storage/public/teachers folder
                     $destinationPath = storage_path('app/public/teachers');
                     $image->move($destinationPath, $file_name);
 
                     $user->image = $file_path;
                 } else {
-                    $user->image = "";
+                    $user->image = '';
                 }
                 $teacher_plain_text_password = Str::random(12);
                 $user->password = Hash::make($teacher_plain_text_password);
@@ -260,11 +269,10 @@ class TeacherController extends Controller {
                 $user->dob = date('Y-m-d', strtotime($request->dob));
                 $user->save();
 
-
-                $teacher = new Teacher();
+                $teacher = new Teacher;
 
                 $formFields = FormField::where('for', 3)->orderBy('rank', 'ASC')->get();
-                $data = array();
+                $data = [];
                 $status = 0;
                 $dynamic_data = json_decode($teacher->dynamic_field_values ?? '[]', true);
                 foreach ($formFields as $form_field) {
@@ -275,10 +283,10 @@ class TeacherController extends Controller {
                                 $data[] = $request->input('checkbox', []);
                                 $status = 1;
                             }
-                        } else if ($form_field->type == 'file') {
+                        } elseif ($form_field->type == 'file') {
                             // INPUT TYPE FILE
                             $get_file = '';
-                            $field = str_replace(" ", "_", $form_field->name);
+                            $field = str_replace(' ', '_', $form_field->name);
                             if ($dynamic_data && count($dynamic_data) > 0) {
                                 foreach ($dynamic_data as $field_data) {
                                     if (isset($field_data[$field])) { // GET OLD FILE IF EXISTS
@@ -286,22 +294,22 @@ class TeacherController extends Controller {
                                     }
                                 }
                             }
-                            $hidden_file_name = 'file-' . $field;
+                            $hidden_file_name = 'file-'.$field;
 
                             if ($request->hasFile($field)) {
                                 if ($get_file) {
                                     Storage::disk('public')->delete($get_file); // DELETE OLD FILE IF NEW FILE IS SELECT
                                 }
-                                $data[] = [str_replace(" ", "_", $form_field->name) => $request->file($field)->store('teachers', 'public')];
+                                $data[] = [str_replace(' ', '_', $form_field->name) => $request->file($field)->store('teachers', 'public')];
                             } else {
                                 if ($request->$hidden_file_name) {
-                                    $data[] = [str_replace(" ", "_", $form_field->name) => $request->$hidden_file_name];
+                                    $data[] = [str_replace(' ', '_', $form_field->name) => $request->$hidden_file_name];
                                 }
                             }
                         } else {
-                            $field = str_replace(" ", "_", $form_field->name);
+                            $field = str_replace(' ', '_', $form_field->name);
                             $fieldValue = $request->input($field, null);
-                            $data[] = [str_replace(" ", "_", $form_field->name) => $fieldValue];
+                            $data[] = [str_replace(' ', '_', $form_field->name) => $fieldValue];
                         }
                     } catch (Exception $e) {
                         throw $e;
@@ -319,7 +327,7 @@ class TeacherController extends Controller {
                         'student-delete',
                         'parents-create',
                         'parents-list',
-                        'parents-edit'
+                        'parents-edit',
                     ]);
                 } else {
                     $user->revokePermissionTo([
@@ -329,17 +337,17 @@ class TeacherController extends Controller {
                         'student-delete',
                         'parents-create',
                         'parents-list',
-                        'parents-edit'
+                        'parents-edit',
                     ]);
                 }
                 $user->assignRole([2]);
                 $school_name = getSettings('school_name');
                 $data = [
-                    'subject' => 'Welcome to ' . $school_name['school_name'],
+                    'subject' => 'Welcome to '.$school_name['school_name'],
                     'name' => $request->first_name,
                     'email' => $request->email,
                     'password' => $teacher_plain_text_password,
-                    'school_name' => $school_name['school_name']
+                    'school_name' => $school_name['school_name'],
                 ];
 
                 MailService::sendWithFallback('teacher.email', $data, function ($message) use ($data) {
@@ -348,33 +356,36 @@ class TeacherController extends Controller {
             }
             $response = [
                 'error' => false,
-                'message' => trans('data_store_successfully')
+                'message' => trans('data_store_successfully'),
             ];
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => trans('error_occurred') . ': ' . $e->getMessage(),
+                'message' => trans('error_occurred').': '.$e->getMessage(),
                 'data' => [
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            );
+                    'trace' => $e->getTraceAsString(),
+                ],
+            ];
         }
+
         return response()->json($response);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param int $id
+     * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show() {
-        if (!Auth::user()->can('teacher-list')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+    public function show()
+    {
+        if (! Auth::user()->can('teacher-list')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return response()->json($response);
         }
         $offset = 0;
@@ -382,18 +393,22 @@ class TeacherController extends Controller {
         $sort = 'id';
         $order = 'DESC';
 
-        if (isset($_GET['offset']))
+        if (isset($_GET['offset'])) {
             $offset = $_GET['offset'];
-        if (isset($_GET['limit']))
+        }
+        if (isset($_GET['limit'])) {
             $limit = $_GET['limit'];
+        }
 
-        if (isset($_GET['sort']))
+        if (isset($_GET['sort'])) {
             $sort = $_GET['sort'];
-        if (isset($_GET['order']))
+        }
+        if (isset($_GET['order'])) {
             $order = $_GET['order'];
+        }
 
         $sql = Teacher::with('user');
-        if (isset($_GET['search']) && !empty($_GET['search'])) {
+        if (isset($_GET['search']) && ! empty($_GET['search'])) {
             $search = $_GET['search'];
             $sql->where('id', 'LIKE', "%$search%")
                 ->orwhere('user_id', 'LIKE', "%$search%")
@@ -402,7 +417,7 @@ class TeacherController extends Controller {
                         ->orwhere('last_name', 'LIKE', "%$search%")
                         ->orwhere('gender', 'LIKE', "%$search%")
                         ->orwhere('email', 'LIKE', "%$search%")
-                        ->orwhere('dob', 'LIKE', "%" . date('Y-m-d', strtotime($search)) . "%")
+                        ->orwhere('dob', 'LIKE', '%'.date('Y-m-d', strtotime($search)).'%')
                         ->orwhere('qualification', 'LIKE', "%$search%")
                         ->orwhere('current_address', 'LIKE', "%$search%")
                         ->orwhere('permanent_address', 'LIKE', "%$search%");
@@ -413,14 +428,14 @@ class TeacherController extends Controller {
         $sql->orderBy($sort, $order)->skip($offset)->take($limit);
         $res = $sql->get();
 
-        $bulkData = array();
+        $bulkData = [];
         $bulkData['total'] = $total;
-        $rows = array();
-        $tempRow = array();
+        $rows = [];
+        $tempRow = [];
         $no = 1;
         foreach ($res as $row) {
-            $operate = '<a class="btn btn-xs btn-gradient-primary btn-rounded btn-icon editdata" data-id=' . $row->id . ' data-url=' . url('teachers') . ' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
-            $operate .= '<a class="btn btn-xs btn-gradient-danger btn-rounded btn-icon deletedata" data-id=' . $row->id . ' data-user_id=' . $row->user_id . ' data-url=' . url('teachers', $row->user_id) . ' title="Delete"><i class="fa fa-trash"></i></a>';
+            $operate = '<a class="btn btn-xs btn-gradient-primary btn-rounded btn-icon editdata" data-id='.$row->id.' data-url='.url('teachers').' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
+            $operate .= '<a class="btn btn-xs btn-gradient-danger btn-rounded btn-icon deletedata" data-id='.$row->id.' data-user_id='.$row->user_id.' data-url='.url('teachers', $row->user_id).' title="Delete"><i class="fa fa-trash"></i></a>';
 
             $data = getSettings('date_formate');
 
@@ -433,9 +448,9 @@ class TeacherController extends Controller {
             $tempRow['current_address'] = $row->user->current_address;
             $tempRow['permanent_address'] = $row->user->permanent_address;
             $tempRow['email'] = $row->user->email;
-            $tempRow['dob'] = date($data['date_formate'], strtotime($row->user->dob));
+            $tempRow['dob'] = $row->user->dob ? date($data['date_formate'], strtotime($row->user->dob)) : '';
             $tempRow['mobile'] = $row->user->mobile;
-            $tempRow['image'] =  $row->user->image;
+            $tempRow['image'] = $row->user->image;
             $tempRow['qualification'] = $row->qualification;
             $tempRow['dynamic_data_field'] = json_decode($row->dynamic_fields);
 
@@ -450,26 +465,30 @@ class TeacherController extends Controller {
         }
 
         $bulkData['rows'] = $rows;
+
         return response()->json($bulkData);
     }
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param int $id
+     * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function edit($id) {
+    public function edit($id)
+    {
         $teacher = Teacher::find($id);
+
         return response($teacher);
     }
 
+    public function update(Request $request)
+    {
+        if (! Auth::user()->can('teacher-edit')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
 
-    public function update(Request $request) {
-        if (!Auth::user()->can('teacher-edit')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
             return response()->json($response);
         }
         $validator = Validator::make(
@@ -478,7 +497,7 @@ class TeacherController extends Controller {
                 'first_name' => 'required',
                 'last_name' => 'required',
                 'gender' => 'required',
-                'email' => 'required|email|unique:users,email,' . $request->user_id . ',id,deleted_at,NULL',
+                'email' => 'required|email|unique:users,email,'.$request->user_id.',id,deleted_at,NULL',
                 'mobile' => 'required|numeric|regex:/^[0-9]{7,16}$/',
                 'dob' => 'required|date',
                 'qualification' => 'required',
@@ -486,14 +505,15 @@ class TeacherController extends Controller {
                 'permanent_address' => 'required',
             ],
             [
-                'mobile.regex' => __('The mobile number must be a length of 7 to 15 digits.')
+                'mobile.regex' => __('The mobile number must be a length of 7 to 15 digits.'),
             ]
         );
         if ($validator->fails()) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => $validator->errors()->first()
-            );
+                'message' => $validator->errors()->first(),
+            ];
+
             return response()->json($response);
         }
         try {
@@ -504,12 +524,12 @@ class TeacherController extends Controller {
                 }
                 $image = $request->file('image');
                 // made file name with combination of current time
-                $file_name = time() . '-' . $image->getClientOriginalName();
-                //made file path to store in database
-                $file_path = 'teachers/' . $file_name;
-                //resized image
+                $file_name = time().'-'.$image->getClientOriginalName();
+                // made file path to store in database
+                $file_path = 'teachers/'.$file_name;
+                // resized image
                 resizeImage($image);
-                //stored image to storage/public/teachers folder
+                // stored image to storage/public/teachers folder
                 $destinationPath = storage_path('app/public/teachers');
                 $image->move($destinationPath, $file_name);
 
@@ -529,7 +549,7 @@ class TeacherController extends Controller {
 
             // Teacher dynamic fields
             $formFields = FormField::where('for', 3)->orderBy('rank', 'ASC')->get();
-            $data = array();
+            $data = [];
             $status = 0;
             $i = 0;
             $dynamic_data = json_decode($teacher->dynamic_fields, true);
@@ -540,11 +560,11 @@ class TeacherController extends Controller {
                         $data[] = $request->input('checkbox', []);
                         $status = 1;
                     }
-                } else if ($form_field->type == 'file') {
+                } elseif ($form_field->type == 'file') {
                     // INPUT TYPE FILE
                     $get_file = '';
-                    $field = str_replace(" ", "_", $form_field->name);
-                    if (!is_null($dynamic_data)) {
+                    $field = str_replace(' ', '_', $form_field->name);
+                    if (! is_null($dynamic_data)) {
                         foreach ($dynamic_data as $field_data) {
                             if (isset($field_data[$field])) { // GET OLD FILE IF EXISTS
                                 $get_file = $field_data[$field];
@@ -558,19 +578,19 @@ class TeacherController extends Controller {
                             Storage::disk('public')->delete($get_file); // DELETE OLD FILE IF NEW FILE IS SELECT
                         }
                         $data[] = [
-                            str_replace(" ", "_", $form_field->name) => $request->file($field)->store('teachers', 'public')
+                            str_replace(' ', '_', $form_field->name) => $request->file($field)->store('teachers', 'public'),
                         ];
                     } else {
                         if ($request->$hidden_file_name) {
                             $data[] = [
-                                str_replace(" ", "_", $form_field->name) => $request->$hidden_file_name
+                                str_replace(' ', '_', $form_field->name) => $request->$hidden_file_name,
                             ];
                         }
                     }
                 } else {
-                    $field = str_replace(" ", "_", $form_field->name);
+                    $field = str_replace(' ', '_', $form_field->name);
                     $data[] = [
-                        str_replace(" ", "_", $form_field->name) => $request->$field
+                        str_replace(' ', '_', $form_field->name) => $request->$field,
                     ];
                 }
             }
@@ -589,7 +609,7 @@ class TeacherController extends Controller {
                     'student-delete',
                     'parents-create',
                     'parents-list',
-                    'parents-edit'
+                    'parents-edit',
                 ]);
             } else {
                 $user->revokePermissionTo([
@@ -599,35 +619,38 @@ class TeacherController extends Controller {
                     'student-delete',
                     'parents-create',
                     'parents-list',
-                    'parents-edit'
+                    'parents-edit',
                 ]);
             }
 
             $response = [
                 'error' => false,
-                'message' => trans('data_update_successfully')
+                'message' => trans('data_update_successfully'),
             ];
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-                'data' => $e
-            );
+                'data' => $e,
+            ];
         }
+
         return response()->json($response);
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
+     * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id) {
-        if (!Auth::user()->can('teacher-delete')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+    public function destroy($id)
+    {
+        if (! Auth::user()->can('teacher-delete')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return response()->json($response);
         }
         try {
@@ -639,7 +662,7 @@ class TeacherController extends Controller {
             if ($subject_teacherCount > 0 || $class_teacherCount > 0) {
                 $response = [
                     'error' => true,
-                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data')
+                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data'),
                 ];
             } else {
                 // Delete related records and user
@@ -659,15 +682,16 @@ class TeacherController extends Controller {
                 Teacher::where('user_id', $id)->delete();
                 $response = [
                     'error' => false,
-                    'message' => trans('data_delete_successfully')
+                    'message' => trans('data_delete_successfully'),
                 ];
             }
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => trans('error_occurred')
-            );
+                'message' => trans('error_occurred'),
+            ];
         }
+
         return response()->json($response);
     }
 }

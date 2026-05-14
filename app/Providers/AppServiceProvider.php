@@ -68,5 +68,18 @@ class AppServiceProvider extends ServiceProvider
         // Use Bootstrap 4 pagination views
         // -----------------------------------------------
         Paginator::useBootstrapFour();
+
+        // -----------------------------------------------
+        // Create storage symlink without exec() (Hostinger fix)
+        // Hostinger shared hosting disables exec(), so
+        // `php artisan storage:link` fails at runtime.
+        // PHP's native symlink() is a direct syscall and works fine.
+        // -----------------------------------------------
+        $linkPath = public_path('storage');
+        $targetPath = storage_path('app/public');
+
+        if (! file_exists($linkPath) && ! is_link($linkPath)) {
+            symlink($targetPath, $linkPath);
+        }
     }
 }
