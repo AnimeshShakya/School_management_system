@@ -40,8 +40,21 @@
     $login_image_path = $login_image_setting['login_image'] ?? env('LOGIN_IMAGE');
     $default_login_image = asset('/assets/images/heroImg1.png');
 
+    if (!empty($login_image_path)) {
+        if (str_starts_with($login_image_path, 'http://') || str_starts_with($login_image_path, 'https://')) {
+            $parsed_path = parse_url($login_image_path, PHP_URL_PATH);
+            if (is_string($parsed_path) && str_contains($parsed_path, '/storage/')) {
+                $login_image_path = ltrim(explode('/storage/', $parsed_path, 2)[1] ?? '', '/');
+            }
+        }
+
+        if (str_starts_with($login_image_path, 'storage/')) {
+            $login_image_path = ltrim(substr($login_image_path, 8), '/');
+        }
+    }
+
     if (!empty($login_image_path) && Storage::disk('public')->exists($login_image_path)) {
-        $login_image = asset('storage/' . $login_image_path);
+        $login_image = url(Storage::url($login_image_path));
     } else {
         $login_image = $default_login_image;
     }
@@ -50,7 +63,7 @@
 <style>
     :root {
         --theme-color: {{ $theme_color }};
-        --image-url: url({{ $login_image }});
+        --image-url: url('{{ $login_image }}');
     }
 </style>
 <script>

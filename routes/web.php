@@ -90,7 +90,10 @@ Route::get('password/reset', [ForgotPasswordController::class, 'showLinkRequestF
 Route::post('password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
 Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
 Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
-Route::get('/', [WebController::class, 'index']);
+Route::get('/', static function () {
+    return redirect('login');
+});
+Route::get('landing-page', [WebController::class, 'index'])->name('landing-page');
 Route::get('about', [WebController::class, 'about'])->name('about.us');
 Route::get('contact', [WebController::class, 'contact_us'])->name('contact.us');
 Route::get('photo', [WebController::class, 'photo'])->name('photo');
@@ -102,9 +105,6 @@ Route::get('registration', [WebController::class, 'registrationIndex'])->name('s
 Route::post('student-register', [WebController::class, 'studentRegistration'])->name('student-registration-store');
 
 Route::get('error-page', [WebController::class, 'errorPage'])->name('error-page');
-Route::get('/login', function () {
-    return view('auth.login');
-})->name('login');
 // Route::get('/login', [WebController::class, 'auth.login'])->name('login');
 
 Route::group(['middleware' => ['Role', 'auth']], function () {

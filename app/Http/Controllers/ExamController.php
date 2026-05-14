@@ -4,32 +4,32 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use Throwable;
-use App\Models\Exam;
-use App\Models\Grade;
-use App\Models\Subject;
-use App\Models\Students;
-use App\Models\ExamClass;
-use App\Models\ExamMarks;
-use App\Models\ExamResult;
+use App\Imports\ExamMarksImport;
 use App\Models\ClassSchool;
-use App\Models\SessionYear;
 use App\Models\ClassSection;
 use App\Models\ClassSubject;
 use App\Models\ClassTeacher;
-use Illuminate\Http\Request;
+use App\Models\Exam;
+use App\Models\ExamClass;
+use App\Models\ExamMarks;
+use App\Models\ExamResult;
 use App\Models\ExamTimetable;
-use Illuminate\Http\Response;
+use App\Models\Grade;
+use App\Models\SessionYear;
+use App\Models\Students;
 use App\Models\StudentSubject;
+use App\Models\Subject;
 use App\Services\ResponseService;
-use App\Imports\ExamMarksImport;
-use Illuminate\Support\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
+use Throwable;
 
 class ExamController extends Controller
 {
@@ -40,30 +40,32 @@ class ExamController extends Controller
      */
     public function index()
     {
-        if (!Auth::user()->can('exam-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('exam-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $classes = ClassSchool::with('medium', 'streams')->get();
         $subjects = Subject::orderBy('id', 'DESC')->get();
         $session_year_all = SessionYear::select('id', 'name', 'default')->get();
+
         return response(view('exams.index', compact('classes', 'subjects', 'session_year_all')));
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
      * @return JsonResponse
      */
     public function store(Request $request)
     {
-        if (!Auth::user()->can('exam-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('exam-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $validator = Validator::make($request->all(), [
@@ -86,7 +88,7 @@ class ExamController extends Controller
         try {
             DB::beginTransaction();
 
-            $exam = new Exam();
+            $exam = new Exam;
             $exam->name = trim($request->name);
             $exam->description = trim($request->description ?? '');
             $exam->session_year_id = $request->session_year_id;
@@ -97,17 +99,17 @@ class ExamController extends Controller
                 foreach ($request->class_id as $class_id) {
                     // Verify class exists
                     $classExists = ClassSchool::find($class_id);
-                    if (!$classExists) {
+                    if (! $classExists) {
                         throw new \Exception("Class with ID {$class_id} does not exist.");
                     }
 
-                    $exam_classes[] = array(
+                    $exam_classes[] = [
                         'exam_id' => $exam->id,
                         'class_id' => $class_id,
-                    );
+                    ];
                 }
 
-                if (!empty($exam_classes)) {
+                if (! empty($exam_classes)) {
                     ExamClass::insert($exam_classes);
                 }
             }
@@ -116,7 +118,7 @@ class ExamController extends Controller
             ResponseService::successResponse('data_store_successfully');
         } catch (Throwable $e) {
             DB::rollBack();
-            ResponseService::errorResponse("error_occurred", null, 103, $e);
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -127,15 +129,16 @@ class ExamController extends Controller
      * AJAX listing. Making the parameter optional avoids argument count
      * errors when the route supplies an id that this method doesn't use.
      *
-     * @param int|null $id
+     * @param  int|null  $id
      * @return JsonResponse
      */
     public function show($id = null)
     {
-        if (!Auth::user()->can('exam-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('exam-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $offset = 0;
@@ -143,18 +146,22 @@ class ExamController extends Controller
         $sort = 'id';
         $order = 'DESC';
 
-        if (isset($_GET['offset']))
+        if (isset($_GET['offset'])) {
             $offset = $_GET['offset'];
-        if (isset($_GET['limit']))
+        }
+        if (isset($_GET['limit'])) {
             $limit = $_GET['limit'];
+        }
 
-        if (isset($_GET['sort']))
+        if (isset($_GET['sort'])) {
             $sort = $_GET['sort'];
-        if (isset($_GET['order']))
+        }
+        if (isset($_GET['order'])) {
             $order = $_GET['order'];
+        }
 
         $sql = Exam::with('exam_classes.class.medium', 'exam_classes.class.streams', 'session_year', 'timetable');
-        if (isset($_GET['search']) && !empty($_GET['search'])) {
+        if (isset($_GET['search']) && ! empty($_GET['search'])) {
             $search = $_GET['search'];
             $sql->where(function ($query) use ($search) {
                 $query->where('id', 'LIKE', "%$search%")
@@ -176,43 +183,42 @@ class ExamController extends Controller
 
         $sql->orderBy($sort, $order)->skip($offset)->take($limit);
         $res = $sql->get();
-        $bulkData = array();
+        $bulkData = [];
         $bulkData['total'] = $total;
-        $rows = array();
-        $tempRow = array();
+        $rows = [];
+        $tempRow = [];
         $no = 1;
         foreach ($res as $row) {
+            $exam_status = null;
             $operate = '';
             if ($row->publish == 0) {
-                $operate .= '<a href="#" class="btn btn-xs btn-gradient-success btn-rounded btn-icon publish-exam-result" data-id=' . $row->id . ' title="Publish Exam Result"><i class="fa fa-check-circle"></i></a>&nbsp;&nbsp;';
+                $operate .= '<a href="#" class="btn btn-xs btn-gradient-success btn-rounded btn-icon publish-exam-result" data-id='.$row->id.' title="Publish Exam Result"><i class="fa fa-check-circle"></i></a>&nbsp;&nbsp;';
             } else {
-                $operate .= '<a href="#" class="btn btn-xs btn-gradient-warning btn-rounded btn-icon publish-exam-result" data-id=' . $row->id . ' title="Unpublish Exam Result"><i class="fa fa-times-circle"></i></a>&nbsp;&nbsp;';
+                $operate .= '<a href="#" class="btn btn-xs btn-gradient-warning btn-rounded btn-icon publish-exam-result" data-id='.$row->id.' title="Unpublish Exam Result"><i class="fa fa-times-circle"></i></a>&nbsp;&nbsp;';
             }
-            if (sizeof($row->timetable)) {
-                foreach ($row->exam_classes as $data) {
-                    $starting_date_db = ExamTimetable::select(DB::raw("min(date)"))->where(['exam_id' => $data->exam_id, 'class_id' => $data->class_id])->first();
-                    $starting_date = $starting_date_db['min(date)'];
-                    $ending_date_db = ExamTimetable::select(DB::raw("max(date)"))->where(['exam_id' => $data->exam_id, 'class_id' => $data->class_id])->first();
-                    $ending_date = $ending_date_db['max(date)'];
-                    $currentTime = Carbon::now();
-                    $current_date = date($currentTime->toDateString());
+            if ($row->timetable->isNotEmpty()) {
+                $starting_date = $row->timetable->min('date');
+                $ending_date = $row->timetable->max('date');
+                $current_date = Carbon::now()->toDateString();
+
+                if ($starting_date && $ending_date) {
                     if ($current_date >= $starting_date && $current_date <= $ending_date) {
-                        $exam_status = "1"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                        $exam_status = '1'; // Upcoming = 0 , On Going = 1 , Completed = 2
                     } elseif ($current_date < $starting_date) {
-                        $exam_status = "0"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                        $exam_status = '0'; // Upcoming = 0 , On Going = 1 , Completed = 2
                     } else {
-                        $exam_status = "2"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                        $exam_status = '2'; // Upcoming = 0 , On Going = 1 , Completed = 2
                     }
                 }
             }
             if (isset($exam_status)) {
                 if ($exam_status == 0) {
-                    $operate .= '<a href="#" class="btn btn-xs btn-gradient-primary btn-rounded btn-icon edit-data" data-id=' . $row->id . ' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
+                    $operate .= '<a href="#" class="btn btn-xs btn-gradient-primary btn-rounded btn-icon edit-data" data-id='.$row->id.' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
                 }
             } else {
-                $operate .= '<a href="#" class="btn btn-xs btn-gradient-primary btn-rounded btn-icon edit-data" data-id=' . $row->id . ' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
+                $operate .= '<a href="#" class="btn btn-xs btn-gradient-primary btn-rounded btn-icon edit-data" data-id='.$row->id.' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
             }
-            $operate .= '<a href="' . route('exams.destroy', $row->id) . '" class="btn btn-xs btn-gradient-danger btn-rounded btn-icon delete-form" data-id=' . $row->id . '><i class="fa fa-trash"></i></a>';
+            $operate .= '<a href="'.route('exams.destroy', $row->id).'" class="btn btn-xs btn-gradient-danger btn-rounded btn-icon delete-form" data-id='.$row->id.'><i class="fa fa-trash"></i></a>';
 
             $tempRow['id'] = $row->id;
             $tempRow['no'] = $no++;
@@ -220,7 +226,7 @@ class ExamController extends Controller
             $tempRow['description'] = $row->description;
             $tempRow['class_name'] = [];
             foreach ($row->exam_classes as $exam_class) {
-                $tempRow['class_name'][] = $exam_class->class->name . '-' . $exam_class->class->medium->name . ' ' . ($exam_class->class->streams->name ?? '');
+                $tempRow['class_name'][] = $exam_class->class->name.'-'.$exam_class->class->medium->name.' '.($exam_class->class->streams->name ?? '');
             }
             $tempRow['class_id'] = $row->exam_classes->pluck('class.id');
             $tempRow['session_year_name'] = $row->session_year->name;
@@ -233,22 +239,23 @@ class ExamController extends Controller
         }
 
         $bulkData['rows'] = $rows;
+
         return response()->json($bulkData);
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
+     * @param  int  $id
      * @return JsonResponse
      */
     public function update(Request $request, $id)
     {
-        if (!Auth::user()->can('exam-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('exam-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $validator = Validator::make($request->all(), [
@@ -262,10 +269,11 @@ class ExamController extends Controller
             'class_id.*.exists' => 'The selected class is invalid.',
         ]);
         if ($validator->fails()) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => $validator->errors()->first()
-            );
+                'message' => $validator->errors()->first(),
+            ];
+
             return response()->json($response);
         }
         try {
@@ -276,14 +284,14 @@ class ExamController extends Controller
 
             $all_exam_classes_id = ExamClass::whereIn('class_id', $request->class_id)->where('exam_id', $request->edit_id)->pluck('class_id')->toArray();
             $delete_exam_classes = $exam->exam_classes->pluck('class_id')->toArray();
-            $exam_classes = array();
+            $exam_classes = [];
 
             foreach ($request->class_id as $class_id) {
-                if (!in_array($class_id, $all_exam_classes_id)) {
-                    $exam_classes[] = array(
+                if (! in_array($class_id, $all_exam_classes_id)) {
+                    $exam_classes[] = [
                         'exam_id' => $exam->id,
-                        'class_id' => $class_id
-                    );
+                        'class_id' => $class_id,
+                    ];
                 } else {
                     unset($delete_exam_classes[array_search($class_id, $delete_exam_classes)]);
                 }
@@ -293,42 +301,44 @@ class ExamController extends Controller
             // //Remaining Data in $all_exam_classes_id should be deleted
             ExamClass::whereIn('class_id', $delete_exam_classes)->where('exam_id', $id)->delete();
 
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_store_successfully'),
-            );
+            ];
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-            );
+            ];
         }
+
         return response()->json($response);
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param int $id
+     * @param  int  $id
      * @return JsonResponse
      */
     public function destroy($id)
     {
-        if (!Auth::user()->can('exam-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('exam-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         try {
-            //check wheather exam id is associate with other tables ..
+            // check wheather exam id is associate with other tables ..
             $exam_timetables = ExamTimetable::where('exam_id', $id)->count();
             $exam_results = ExamResult::where('exam_id', $id)->count();
             if ($exam_timetables || $exam_results) {
-                $response = array(
+                $response = [
                     'error' => true,
-                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data')
-                );
+                    'message' => trans('cannot_delete_beacuse_data_is_associated_with_other_data'),
+                ];
             } else {
                 $exam = Exam::find($id);
                 $exam->delete();
@@ -337,17 +347,18 @@ class ExamController extends Controller
                 ExamTimetable::whereIn('id', $exam_timetable_id)->delete();
                 ExamMarks::whereIn('exam_timetable_id', $exam_timetable_id)->delete();
                 ExamResult::where('exam_id', $id)->delete();
-                $response = array(
+                $response = [
                     'error' => false,
-                    'message' => trans('data_delete_successfully')
-                );
+                    'message' => trans('data_delete_successfully'),
+                ];
             }
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => trans('error_occurred')
-            );
+                'message' => trans('error_occurred'),
+            ];
         }
+
         return response()->json($response);
     }
 
@@ -356,11 +367,12 @@ class ExamController extends Controller
         try {
             $exam_marks_db = ExamTimetable::where('exam_id', $id)->with('exam_marks')->get();
             foreach ($exam_marks_db as $data) {
-                if (sizeof($data->exam_marks) == 0) {
-                    $response = array(
+                if (count($data->exam_marks) == 0) {
+                    $response = [
                         'error' => true,
                         'message' => trans('marks_are_not_submitted'),
-                    );
+                    ];
+
                     return response()->json($response);
                 }
             }
@@ -371,28 +383,26 @@ class ExamController extends Controller
                 $query->selectRaw('exam_id')->groupby('class_id');
             }])->with('exam_classes')->where('id', $id)->first();
 
-
-
             foreach ($exam->exam_classes as $data) {
-                $starting_date_db = ExamTimetable::select(DB::raw("min(date)"))->where(['exam_id' => $data->exam_id, 'class_id' => $data->class_id])->first();
+                $starting_date_db = ExamTimetable::select(DB::raw('min(date)'))->where(['exam_id' => $data->exam_id, 'class_id' => $data->class_id])->first();
                 $starting_date = $starting_date_db['min(date)'];
-                $ending_date_db = ExamTimetable::select(DB::raw("max(date)"))->where(['exam_id' => $data->exam_id, 'class_id' => $data->class_id])->first();
+                $ending_date_db = ExamTimetable::select(DB::raw('max(date)'))->where(['exam_id' => $data->exam_id, 'class_id' => $data->class_id])->first();
                 $ending_date = $ending_date_db['max(date)'];
                 $currentTime = Carbon::now();
                 $current_date = date($currentTime->toDateString());
                 if ($current_date >= $starting_date && $current_date <= $ending_date) {
-                    $exam_status = "1"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                    $exam_status = '1'; // Upcoming = 0 , On Going = 1 , Completed = 2
                 } elseif ($current_date < $starting_date) {
-                    $exam_status = "0"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                    $exam_status = '0'; // Upcoming = 0 , On Going = 1 , Completed = 2
                 } else {
-                    $exam_status = "2"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                    $exam_status = '2'; // Upcoming = 0 , On Going = 1 , Completed = 2
                 }
                 break;
             }
-            $size_of_timetable_array = sizeof($exam->timetable);
-            $size_of_marks_array = sizeof($exam->marks);
+            $size_of_timetable_array = count($exam->timetable);
+            $size_of_marks_array = count($exam->marks);
             if ($exam_status == 2 && $size_of_timetable_array != 0 && $size_of_marks_array != 0) {
-                //If Exam timetable is empty then don't allow to publish function
+                // If Exam timetable is empty then don't allow to publish function
                 if ($exam->publish == 0) {
                     // If exam is Unpublished then Insert ExamResult records and Publish the Exam
                     $exam_result = [];
@@ -401,10 +411,11 @@ class ExamController extends Controller
                         $grade = findExamGrade($percentage);
 
                         if ($grade == null) {
-                            $response = array(
+                            $response = [
                                 'error' => true,
                                 'message' => trans('grades_data_does_not_exists'),
-                            );
+                            ];
+
                             return response()->json($response);
                         }
 
@@ -422,47 +433,50 @@ class ExamController extends Controller
                     ExamResult::insert($exam_result);
                     $exam->publish = 1;
                 } else {
-                    //If Exam is already published then unpublished it and delete Exam Result
+                    // If Exam is already published then unpublished it and delete Exam Result
                     ExamResult::where('exam_id', $id)->delete();
                     $exam->publish = 0;
                 }
                 $exam->save();
-                $response = array(
+                $response = [
                     'error' => false,
                     'message' => trans('data_store_successfully'),
-                );
+                ];
             } else {
-                $response = array(
+                $response = [
                     'error' => true,
                     'message' => trans('exam_not_completed_yet'),
-                );
+                ];
             }
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-            );
+            ];
         }
+
         return response()->json($response);
     }
 
     public function uploadMarks()
     {
-        if (!Auth::user()->can('exam-upload-marks')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('exam-upload-marks')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
 
         // Guard: ensure the authenticated user has a teacher relation
         $user = Auth::user();
         $teacher = $user->teacher ?? null;
-        if (!$teacher) {
+        if (! $teacher) {
             // No teacher record attached to user; return a friendly error instead of a server error
-            $response = array(
-                'message' => trans('no_teacher_attached') ?? 'No teacher record attached to your account.'
-            );
+            $response = [
+                'message' => trans('no_teacher_attached') ?? 'No teacher record attached to your account.',
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
 
@@ -476,10 +490,11 @@ class ExamController extends Controller
 
     public function importMarksForm()
     {
-        if (!Auth::user()->can('exam-upload-marks')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('exam-upload-marks')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
 
@@ -493,16 +508,16 @@ class ExamController extends Controller
 
     public function importMarksPreview(Request $request)
     {
-        if (!Auth::user()->can('exam-upload-marks')) {
+        if (! Auth::user()->can('exam-upload-marks')) {
             return response()->json(['error' => true, 'message' => trans('no_permission_message')]);
         }
 
         $validator = Validator::make($request->all(), [
             'class_section_id' => 'required|exists:class_sections,id',
-            'class_id'         => 'required|exists:classes,id',
-            'exam_id'          => 'required|exists:exams,id',
-            'subject_id'       => 'required|exists:subjects,id',
-            'file'             => 'required|file|mimes:csv,txt,xlsx,xls',
+            'class_id' => 'required|exists:classes,id',
+            'exam_id' => 'required|exists:exams,id',
+            'subject_id' => 'required|exists:subjects,id',
+            'file' => 'required|file|mimes:csv,txt,xlsx,xls',
         ]);
 
         if ($validator->fails()) {
@@ -512,12 +527,12 @@ class ExamController extends Controller
         try {
             // Verify the exam timetable exists for this combination
             $examTimetable = ExamTimetable::where([
-                'exam_id'    => $request->exam_id,
-                'class_id'   => $request->class_id,
+                'exam_id' => $request->exam_id,
+                'class_id' => $request->class_id,
                 'subject_id' => $request->subject_id,
             ])->first();
 
-            if (!$examTimetable) {
+            if (! $examTimetable) {
                 return response()->json(['error' => true, 'message' => trans('exam_timetable_does_not_exists')]);
             }
 
@@ -531,20 +546,21 @@ class ExamController extends Controller
             Excel::import($import, $request->file('file'));
 
             return response()->json([
-                'error'       => false,
-                'valid'       => $import->valid,
-                'errors'      => $import->errors,
+                'error' => false,
+                'valid' => $import->valid,
+                'errors' => $import->errors,
                 'total_marks' => $examTimetable->total_marks,
             ]);
         } catch (Throwable $e) {
             Log::error('ExamMarksImport error', ['exception' => $e]);
+
             return response()->json(['error' => true, 'message' => trans('error_occurred')]);
         }
     }
 
     public function downloadMarksTemplate()
     {
-        if (!Auth::user()->can('exam-upload-marks')) {
+        if (! Auth::user()->can('exam-upload-marks')) {
             return redirect(route('home'));
         }
 
@@ -560,7 +576,7 @@ class ExamController extends Controller
         };
 
         return response()->stream($callback, 200, array_merge($headers, [
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]));
     }
 
@@ -569,7 +585,7 @@ class ExamController extends Controller
         try {
             $user = Auth::user();
             $teacher = $user->teacher ?? null;
-            if (!$teacher) {
+            if (! $teacher) {
                 throw new \Exception('No teacher record attached to user');
             }
 
@@ -577,72 +593,79 @@ class ExamController extends Controller
             $class_section_id = ClassTeacher::where('class_teacher_id', $teacher_id)->pluck('class_section_id');
             $class_id = ClassSection::whereIn('id', $class_section_id)->pluck('class_id');
             $subjects = ExamTimetable::with('subject')->where('exam_id', $exam_id)->whereIn('class_id', $class_id)->get();
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_fetch_successfully'),
-                'data' => $subjects
-            );
+                'data' => $subjects,
+            ];
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => trans('error_occurred')
-            );
+                'message' => trans('error_occurred'),
+            ];
         }
+
         return response()->json($response);
     }
 
     public function marksList(Request $request)
     {
-        if (!Auth::user()->can('exam-upload-marks')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('exam-upload-marks')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
-        if (!$request->exam_id || !$request->subject_id || !$request->class_id || !$request->class_section_id) {
+        if (! $request->exam_id || ! $request->subject_id || ! $request->class_id || ! $request->class_section_id) {
             return false;
         }
         $sort = 'id';
         $order = 'DESC';
 
-        if (isset($_GET['offset']))
+        if (isset($_GET['offset'])) {
             $offset = $_GET['offset'];
-        if (isset($_GET['limit']))
+        }
+        if (isset($_GET['limit'])) {
             $limit = $_GET['limit'];
+        }
 
-        if (isset($_GET['sort']))
+        if (isset($_GET['sort'])) {
             $sort = $_GET['sort'];
-        if (isset($_GET['order']))
+        }
+        if (isset($_GET['order'])) {
             $order = $_GET['order'];
+        }
 
         $teacher_id = Auth::user()->teacher->id;
         $class_section_id = ClassSection::where('id', $request->class_section_id)->where('class_id', $request->class_id)->pluck('id');
 
         $exam_timetable_id = ExamTimetable::where(['exam_id' => $request->exam_id, 'class_id' => $request->class_id, 'subject_id' => $request->subject_id])->pluck('id')->first();
 
-        $starting_date_db = ExamTimetable::select(DB::raw("min(date)"))->where(['exam_id' => $request->exam_id, 'class_id' => $request->class_id])->first();
+        $starting_date_db = ExamTimetable::select(DB::raw('min(date)'))->where(['exam_id' => $request->exam_id, 'class_id' => $request->class_id])->first();
         $starting_date = $starting_date_db['min(date)'];
-        $ending_date_db = ExamTimetable::select(DB::raw("max(date)"))->where(['exam_id' => $request->exam_id, 'class_id' => $request->class_id])->first();
+        $ending_date_db = ExamTimetable::select(DB::raw('max(date)'))->where(['exam_id' => $request->exam_id, 'class_id' => $request->class_id])->first();
         $ending_date = $ending_date_db['max(date)'];
         $currentTime = Carbon::now();
         $current_date = date($currentTime->toDateString());
         if ($current_date >= $starting_date && $current_date <= $ending_date) {
-            $exam_status = "1"; // Upcoming = 0 , On Going = 1 , Completed = 2
+            $exam_status = '1'; // Upcoming = 0 , On Going = 1 , Completed = 2
         } elseif ($current_date < $starting_date) {
-            $exam_status = "0"; // Upcoming = 0 , On Going = 1 , Completed = 2
+            $exam_status = '0'; // Upcoming = 0 , On Going = 1 , Completed = 2
         } else {
-            $exam_status = "2"; // Upcoming = 0 , On Going = 1 , Completed = 2
+            $exam_status = '2'; // Upcoming = 0 , On Going = 1 , Completed = 2
         }
 
         if ($exam_status != 2) {
-            $response = array(
+            $response = [
                 'error' => true,
                 'message' => trans('exam_not_completed_yet'),
-            );
+            ];
+
             return response()->json($response);
         }
 
-        //Fetching Students Data on Basis of Class Section ID with Realtion Exam Marks
+        // Fetching Students Data on Basis of Class Section ID with Realtion Exam Marks
         $sql = Students::with(['user:id,first_name,last_name'])->with(['class_section.class.allSubjects' => function ($q) use ($request) {
             $q->where('subject_id', $request->subject_id)->with('subject');
         }])->with(['exam_marks' => function ($q) use ($exam_timetable_id) {
@@ -651,7 +674,7 @@ class ExamController extends Controller
 
         $subject_total_marks = ExamTimetable::where(['exam_id' => $request->exam_id, 'class_id' => $request->class_id, 'subject_id' => $request->subject_id])->pluck('total_marks');
 
-        if (isset($_GET['search']) && !empty($_GET['search'])) {
+        if (isset($_GET['search']) && ! empty($_GET['search'])) {
             $search = $_GET['search'];
             $sql->where(function ($query) use ($search) {
                 $query->where('id', 'LIKE', "%$search%")
@@ -665,24 +688,24 @@ class ExamController extends Controller
         $sql->orderBy($sort, $order);
         $res = $sql->get();
 
-        $bulkData = array();
+        $bulkData = [];
         $bulkData['total'] = $total;
-        $rows = array();
-        $tempRow = array();
+        $rows = [];
+        $tempRow = [];
         $no = 1;
         $session_year = getSettings('session_year');
         $class_subject = ClassSubject::where('subject_id', $request->subject_id)->where('class_id', $request->class_id)->first();
 
         foreach ($res as $row) {
 
-            if ($class_subject->type == "Elective") {
+            if ($class_subject->type == 'Elective') {
                 $student_subject = StudentSubject::where('student_id', $row->id)->where('subject_id', $request->subject_id)->where('class_section_id', $row->class_section_id)->where('session_year_id', $session_year['session_year'])->first();
                 if ($student_subject) {
-                    $operate = '<a href=' . route('exams.edit', $row->id) . ' class="btn btn-xs btn-secondary btn-icon edit-data" data-id=' . $row->id . ' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
-                    $operate .= '<a href=' . route('exams.destroy', $row->id) . ' class="btn btn-xs btn-secondary btn-icon delete-form" data-id=' . $row->id . '><i class="fa fa-trash"></i></a>';
+                    $operate = '<a href='.route('exams.edit', $row->id).' class="btn btn-xs btn-secondary btn-icon edit-data" data-id='.$row->id.' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
+                    $operate .= '<a href='.route('exams.destroy', $row->id).' class="btn btn-xs btn-secondary btn-icon delete-form" data-id='.$row->id.'><i class="fa fa-trash"></i></a>';
                     $tempRow['id'] = $row->id;
                     $tempRow['no'] = $no++;
-                    $tempRow['student_name'] = $row->user->first_name . ' ' . $row->user->last_name;
+                    $tempRow['student_name'] = $row->user->first_name.' '.$row->user->last_name;
                     $tempRow['student_id'] = $row->id;
                     foreach ($subject_total_marks as $total_marks) {
                         $tempRow['total_marks'] = $total_marks;
@@ -697,11 +720,11 @@ class ExamController extends Controller
                     $rows[] = $tempRow;
                 }
             } else {
-                $operate = '<a href=' . route('exams.edit', $row->id) . ' class="btn btn-xs btn-secondary btn-icon edit-data" data-id=' . $row->id . ' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
-                $operate .= '<a href=' . route('exams.destroy', $row->id) . ' class="btn btn-xs btn-secondary btn-icon delete-form" data-id=' . $row->id . '><i class="fa fa-trash"></i></a>';
+                $operate = '<a href='.route('exams.edit', $row->id).' class="btn btn-xs btn-secondary btn-icon edit-data" data-id='.$row->id.' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
+                $operate .= '<a href='.route('exams.destroy', $row->id).' class="btn btn-xs btn-secondary btn-icon delete-form" data-id='.$row->id.'><i class="fa fa-trash"></i></a>';
                 $tempRow['id'] = $row->id;
                 $tempRow['no'] = $no++;
-                $tempRow['student_name'] = $row->user->first_name . ' ' . $row->user->last_name;
+                $tempRow['student_name'] = $row->user->first_name.' '.$row->user->last_name;
                 $tempRow['student_id'] = $row->id;
                 foreach ($subject_total_marks as $total_marks) {
                     $tempRow['total_marks'] = $total_marks;
@@ -718,6 +741,7 @@ class ExamController extends Controller
             }
         }
         $bulkData['rows'] = $rows;
+
         return response()->json($bulkData);
     }
 
@@ -732,51 +756,52 @@ class ExamController extends Controller
             'exam_marks.*.obtained_marks' => 'required|numeric|lte:exam_marks.*.total_marks',
         ]);
         if ($validator->fails()) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => $validator->errors()->first()
-            );
+                'message' => $validator->errors()->first(),
+            ];
+
             return response()->json($response);
         }
 
         try {
-            $teacher_id = Auth::user()->teacher->id;
             $exam_timetable = ExamTimetable::where(['exam_id' => $request->exam_id, 'class_id' => $request->class_id])->where('subject_id', $request->subject_id)->firstOrFail();
 
-            foreach ($request->exam_marks as $exam_marks) {
-                $passing_marks = $exam_timetable->passing_marks;
-                if ($exam_marks['obtained_marks'] >= $passing_marks) {
-                    $status = 1;
-                } else {
-                    $status = 0;
-                }
-                $marks_percentage = ($exam_marks['obtained_marks'] / $exam_marks['total_marks']) * 100;
-                $exam_grade = findExamGrade($marks_percentage);
+            DB::transaction(function () use ($request, $exam_timetable): void {
+                foreach ($request->exam_marks as $exam_marks) {
+                    $passing_marks = $exam_timetable->passing_marks;
+                    $status = $exam_marks['obtained_marks'] >= $passing_marks ? 1 : 0;
 
-                if ($exam_grade == null) {
-                    $response = array(
-                        'error' => true,
-                        'message' => trans('grades_data_does_not_exists'),
+                    if ((float) $exam_marks['total_marks'] <= 0) {
+                        throw new \RuntimeException('Invalid total marks.');
+                    }
+
+                    $marks_percentage = ($exam_marks['obtained_marks'] / $exam_marks['total_marks']) * 100;
+                    $exam_grade = findExamGrade($marks_percentage);
+
+                    if ($exam_grade == null) {
+                        throw new \RuntimeException(trans('grades_data_does_not_exists'));
+                    }
+
+                    ExamMarks::updateOrInsert(
+                        ['id' => isset($exam_marks['exam_marks_id']) ? $exam_marks['exam_marks_id'] : null],
+                        ['exam_timetable_id' => $exam_timetable->id, 'student_id' => $exam_marks['student_id'], 'subject_id' => $request->subject_id, 'obtained_marks' => $exam_marks['obtained_marks'], 'passing_status' => $status, 'session_year_id' => $exam_timetable->session_year_id, 'grade' => $exam_grade]
                     );
-                    return response()->json($response);
                 }
+            });
 
-                ExamMarks::updateOrInsert(
-                    ['id' => isset($exam_marks['exam_marks_id']) ? $exam_marks['exam_marks_id'] : null],
-                    ['exam_timetable_id' => $exam_timetable->id, 'student_id' => $exam_marks['student_id'], 'subject_id' => $request->subject_id, 'obtained_marks' => $exam_marks['obtained_marks'], 'passing_status' => $status, 'session_year_id' => $exam_timetable->session_year_id, 'grade' => $exam_grade,]
-                );
-            }
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_store_successfully'),
-            );
+            ];
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
                 'message' => trans('error_occurred'),
-                'data' => $e
-            );
+                'data' => $e,
+            ];
         }
+
         return response()->json($response);
     }
 
@@ -784,17 +809,18 @@ class ExamController extends Controller
     {
         try {
             $exam_timetable = ExamTimetable::with('subject')->where('class_id', $class_id)->where('exam_id', $exam_id)->get();
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_fetch_successfully'),
-                'data' => $exam_timetable
-            );
+                'data' => $exam_timetable,
+            ];
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => trans('error_occurred')
-            );
+                'message' => trans('error_occurred'),
+            ];
         }
+
         return response()->json($response);
     }
 
@@ -803,37 +829,41 @@ class ExamController extends Controller
         try {
             $exam_timetable = ExamTimetable::find($id);
             $exam_timetable->delete();
-            $response = array(
+            $response = [
                 'error' => false,
-                'message' => trans('data_delete_successfully')
-            );
+                'message' => trans('data_delete_successfully'),
+            ];
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => trans('error_occurred')
-            );
+                'message' => trans('error_occurred'),
+            ];
         }
+
         return response()->json($response);
     }
 
     public function indexGrades()
     {
-        if (!Auth::user()->can('grade-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('grade-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $grades = Grade::get();
+
         return response(view('exams.exam-grade', compact('grades')));
     }
 
     public function createGrades(Request $request)
     {
-        if (!Auth::user()->can('grade-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('grade-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $validator = Validator::make($request->all(), [
@@ -842,10 +872,11 @@ class ExamController extends Controller
             'grade.*.grades' => 'required',
         ]);
         if ($validator->fails()) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => $validator->errors()->first()
-            );
+                'message' => $validator->errors()->first(),
+            ];
+
             return response()->json($response);
         }
         try {
@@ -855,60 +886,65 @@ class ExamController extends Controller
                     ['starting_range' => $grade['starting_range'], 'ending_range' => $grade['ending_range'], 'grade' => $grade['grades']]
                 );
             }
-            $response = array(
+            $response = [
                 'error' => false,
-                'message' => trans('data_store_successfully')
-            );
+                'message' => trans('data_store_successfully'),
+            ];
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => trans('error_occurred')
-            );
+                'message' => trans('error_occurred'),
+            ];
         }
+
         return response()->json($response);
     }
 
     public function destroyGrades($id)
     {
-        if (!Auth::user()->can('grade-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('grade-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         try {
             $grade = Grade::find($id);
             $grade->delete();
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_delete_successfully'),
-            );
+            ];
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => trans('error_occurred')
-            );
+                'message' => trans('error_occurred'),
+            ];
         }
+
         return response()->json($response);
     }
 
     public function getExamResultIndex()
     {
-        if (!Auth::user()->can('exam-result')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('exam-result')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
 
         // Guard: ensure the authenticated user has a teacher relation
         $user = Auth::user();
         $teacher = $user->teacher ?? null;
-        if (!$teacher) {
+        if (! $teacher) {
             // No teacher record attached to user; return a friendly error instead of a server error
-            $response = array(
-                'message' => trans('no_teacher_attached') ?? 'No teacher record attached to your account.'
-            );
+            $response = [
+                'message' => trans('no_teacher_attached') ?? 'No teacher record attached to your account.',
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
 
@@ -923,10 +959,11 @@ class ExamController extends Controller
 
     public function showExamResult(Request $request)
     {
-        if (!Auth::user()->can('exam-result')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('exam-result')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
 
@@ -942,24 +979,24 @@ class ExamController extends Controller
         ]);
 
         if ($validator->fails()) {
-            //Sagar : Commented this code to prevent popup on Page load in teacher panel
+            // Sagar : Commented this code to prevent popup on Page load in teacher panel
             return response()->json([
                 'error' => true,
                 'message' => $validator->errors()->first(),
                 'total' => 0,
-                'rows' => []
+                'rows' => [],
             ]);
         }
 
         // Verify teacher has access to this class section
         $user = Auth::user();
         $teacher = $user->teacher ?? null;
-        if (!$teacher) {
+        if (! $teacher) {
             return response()->json([
                 'error' => true,
                 'message' => 'No teacher record attached to your account.',
                 'total' => 0,
-                'rows' => []
+                'rows' => [],
             ]);
         }
 
@@ -968,12 +1005,12 @@ class ExamController extends Controller
             ->pluck('class_section_id')
             ->toArray();
 
-        if (!in_array($request->class_section_id, $teacherClassSections)) {
+        if (! in_array($request->class_section_id, $teacherClassSections)) {
             return response()->json([
                 'error' => true,
                 'message' => 'You do not have access to this class section.',
                 'total' => 0,
-                'rows' => []
+                'rows' => [],
             ]);
         }
 
@@ -984,15 +1021,19 @@ class ExamController extends Controller
                 $sort = 'id';
                 $order = 'DESC';
 
-                if (isset($_GET['offset']))
+                if (isset($_GET['offset'])) {
                     $offset = $_GET['offset'];
-                if (isset($_GET['limit']))
+                }
+                if (isset($_GET['limit'])) {
                     $limit = $_GET['limit'];
+                }
 
-                if (isset($_GET['sort']))
+                if (isset($_GET['sort'])) {
                     $sort = $_GET['sort'];
-                if (isset($_GET['order']))
+                }
+                if (isset($_GET['order'])) {
                     $order = $_GET['order'];
+                }
 
                 $exam_timetable_id = ExamTimetable::where('exam_id', $request->exam_id)->pluck('id');
 
@@ -1001,7 +1042,7 @@ class ExamController extends Controller
                         'error' => true,
                         'message' => 'No exam timetable found for the selected exam.',
                         'total' => 0,
-                        'rows' => []
+                        'rows' => [],
                     ]);
                 }
 
@@ -1011,41 +1052,48 @@ class ExamController extends Controller
                     }])
                     ->where(['exam_id' => $request->exam_id, 'class_section_id' => $request->class_section_id]);
 
-
-                if (isset($_GET['search']) && !empty($_GET['search'])) {
+                if (isset($_GET['search']) && ! empty($_GET['search'])) {
                     $search = $_GET['search'];
-                    $sql = $sql->where('id', 'LIKE', "%$search%")
-                        ->orwhere('total_marks', 'LIKE', "%$search%")
-                        ->orwhere('grade', 'LIKE', "%$search%")
-                        ->orwhere('obtained_marks', 'LIKE', "%$search%")
-                        ->orwhere('percentage', 'LIKE', "%$search%")
-                        ->orwhere('created_at', 'LIKE', "%" . date('Y-m-d H:i:s', strtotime($search)) . "%")
-                        ->orwhere('updated_at', 'LIKE', "%" . date('Y-m-d H:i:s', strtotime($search)) . "%")
-                        ->orWhereHas('student.user', function ($q) use ($search) {
-                            $q->where('first_name', 'LIKE', "%$search%")->orWhere('last_name', 'LIKE', "%$search%");
-                        })->where('exam_id', $request->exam_id)
-                        ->orWhereHas('session_year', function ($q) use ($search) {
+                    $sql = $sql->where(function ($query) use ($search) {
+                        $query->where('id', 'LIKE', "%$search%")
+                            ->orWhere('total_marks', 'LIKE', "%$search%")
+                            ->orWhere('grade', 'LIKE', "%$search%")
+                            ->orWhere('obtained_marks', 'LIKE', "%$search%")
+                            ->orWhere('percentage', 'LIKE', "%$search%");
+
+                        $timestamp = strtotime($search);
+                        if ($timestamp !== false) {
+                            $date = date('Y-m-d H:i:s', $timestamp);
+                            $query->orWhere('created_at', 'LIKE', "%$date%")
+                                ->orWhere('updated_at', 'LIKE', "%$date%");
+                        }
+
+                        $query->orWhereHas('student.user', function ($q) use ($search) {
+                            $q->where('first_name', 'LIKE', "%$search%")
+                                ->orWhere('last_name', 'LIKE', "%$search%");
+                        })->orWhereHas('session_year', function ($q) use ($search) {
                             $q->where('name', 'LIKE', "%$search%");
                         });
+                    });
                 }
                 $total = $sql->count();
 
                 $sql->orderBy($sort, $order)->skip($offset)->take($limit);
                 $res = $sql->get();
 
-                $bulkData = array();
+                $bulkData = [];
                 $bulkData['total'] = $total;
-                $rows = array();
-                $tempRow = array();
+                $rows = [];
+                $tempRow = [];
                 $no = 1;
                 foreach ($res as $row) {
                     $operate = '';
-                    $operate .= '<a href="#" class="btn btn-xs btn-gradient-primary btn-rounded btn-icon edit-data" data-id="' . $row->id . '" data-student_id ="' . $row->student_id . '" title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
+                    $operate .= '<a href="#" class="btn btn-xs btn-gradient-primary btn-rounded btn-icon edit-data" data-id="'.$row->id.'" data-student_id ="'.$row->student_id.'" title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
 
                     $tempRow['id'] = $row->id;
                     $tempRow['no'] = $no++;
                     $tempRow['student_id'] = $row->student_id;
-                    $tempRow['student_name'] = $row->student->user->first_name . ' ' . $row->student->user->last_name;
+                    $tempRow['student_name'] = $row->student->user->first_name.' '.$row->student->user->last_name;
                     $tempRow['total_marks'] = $row->total_marks;
                     $tempRow['obtained_marks'] = $row->obtained_marks;
                     $tempRow['percentage'] = $row->percentage;
@@ -1059,30 +1107,33 @@ class ExamController extends Controller
                 }
 
                 $bulkData['rows'] = $rows;
+
                 return response()->json($bulkData);
             } else {
                 return response()->json([
                     'error' => true,
                     'message' => 'Exam ID is required.',
                     'total' => 0,
-                    'rows' => []
+                    'rows' => [],
                 ]);
             }
         } catch (Throwable $e) {
             return response()->json([
                 'error' => true,
-                'message' => 'Error loading exam results: ' . $e->getMessage(),
+                'message' => 'Error loading exam results: '.$e->getMessage(),
                 'total' => 0,
-                'rows' => []
+                'rows' => [],
             ]);
         }
     }
+
     public function updateExamResultMarks(Request $request)
     {
-        if (!Auth::user()->can('exam-upload-marks')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('exam-upload-marks')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $validator = Validator::make($request->all(), [
@@ -1090,10 +1141,11 @@ class ExamController extends Controller
             'edit.*.obtained_marks' => 'required|numeric|lte:edit.*.total_marks',
         ]);
         if ($validator->fails()) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => $validator->errors()->first()
-            );
+                'message' => $validator->errors()->first(),
+            ];
+
             return response()->json($response);
         }
         try {
@@ -1103,7 +1155,6 @@ class ExamController extends Controller
                 $class_id = ExamClass::where('exam_id', $data['exam_id'])->pluck('class_id')->first();
                 $marks_db = ExamMarks::find($data['marks_id']);
                 $marks_db->obtained_marks = $data['obtained_marks'];
-
 
                 $passing_marks = $data['passing_marks'];
                 if ($data['obtained_marks'] >= $passing_marks) {
@@ -1116,10 +1167,11 @@ class ExamController extends Controller
 
                 $grade = findExamGrade($marks_percentage);
                 if ($grade == null) {
-                    $response = array(
+                    $response = [
                         'error' => true,
                         'message' => trans('grades_data_does_not_exists'),
-                    );
+                    ];
+
                     return response()->json($response);
                 }
                 $marks_db->grade = $grade;
@@ -1138,10 +1190,11 @@ class ExamController extends Controller
 
                     $grade = findExamGrade($percentage);
                     if ($grade == null) {
-                        $response = array(
+                        $response = [
                             'error' => true,
                             'message' => trans('grades_data_does_not_exists'),
-                        );
+                        ];
+
                         return response()->json($response);
                     }
 
@@ -1151,18 +1204,19 @@ class ExamController extends Controller
                     $exam_result_db->grade = $grade;
                     $exam_result_db->save();
 
-                    $response = array(
+                    $response = [
                         'error' => false,
                         'message' => trans('data_update_successfully'),
-                    );
+                    ];
                 }
             }
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => trans('error_occurred')
-            );
+                'message' => trans('error_occurred'),
+            ];
         }
+
         return response()->json($response);
     }
 
@@ -1183,20 +1237,20 @@ class ExamController extends Controller
                 ->get();
 
             foreach ($exam_data as $data) {
-                if (sizeof($data->timetable)) {
-                    $starting_date_db = ExamTimetable::select(DB::raw("min(date)"))->where('exam_id', $data->id)->where('class_id', $class_id)->where('session_year_id', $session_year_id)->first();
+                if (count($data->timetable)) {
+                    $starting_date_db = ExamTimetable::select(DB::raw('min(date)'))->where('exam_id', $data->id)->where('class_id', $class_id)->where('session_year_id', $session_year_id)->first();
                     $starting_date = $starting_date_db['min(date)'];
-                    $ending_date_db = ExamTimetable::select(DB::raw("max(date)"))->where('exam_id', $data->id)->where('class_id', $class_id)->where('session_year_id', $session_year_id)->first();
+                    $ending_date_db = ExamTimetable::select(DB::raw('max(date)'))->where('exam_id', $data->id)->where('class_id', $class_id)->where('session_year_id', $session_year_id)->first();
                     $ending_date = $ending_date_db['max(date)'];
                     $currentTime = Carbon::now();
                     $current_date = date($currentTime->toDateString());
 
                     if ($current_date >= $starting_date && $current_date <= $ending_date) {
-                        $exam_status = "1"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                        $exam_status = '1'; // Upcoming = 0 , On Going = 1 , Completed = 2
                     } elseif ($current_date < $starting_date) {
-                        $exam_status = "0"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                        $exam_status = '0'; // Upcoming = 0 , On Going = 1 , Completed = 2
                     } else {
-                        $exam_status = "2"; // Upcoming = 0 , On Going = 1 , Completed = 2
+                        $exam_status = '2'; // Upcoming = 0 , On Going = 1 , Completed = 2
                     }
                     if ($exam_status == 2) {
                         $exams[] = $data;
@@ -1204,17 +1258,18 @@ class ExamController extends Controller
                 }
             }
 
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_fetch_successfully'),
-                'data' => $exams
-            );
+                'data' => $exams,
+            ];
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => trans('error_occurred')
-            );
+                'message' => trans('error_occurred'),
+            ];
         }
+
         return response()->json($response);
     }
 
@@ -1226,17 +1281,18 @@ class ExamController extends Controller
                 $query->where('publish', 1);
             })->get();
 
-            $response = array(
+            $response = [
                 'error' => false,
                 'message' => trans('data_fetch_successfully'),
-                'data' => $exam_data
-            );
+                'data' => $exam_data,
+            ];
         } catch (Throwable $e) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => trans('error_occurred')
-            );
+                'message' => trans('error_occurred'),
+            ];
         }
+
         return response()->json($response);
     }
 
@@ -1247,8 +1303,9 @@ class ExamController extends Controller
         $exam_class->delete();
         $response = [
             'error' => false,
-            'message' => trans('data_delete_successfully')
+            'message' => trans('data_delete_successfully'),
         ];
+
         return response()->json($response);
     }
 }

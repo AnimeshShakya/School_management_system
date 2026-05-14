@@ -13,7 +13,9 @@ use App\Models\Semester;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 class ExamTimetableController extends Controller
@@ -73,15 +75,25 @@ class ExamTimetableController extends Controller
         $validator = Validator::make(
             $request->all(),
             [
-                'exam_id' => 'required',
-                'class_id' => 'required',
+                'exam_id' => 'required|exists:exams,id',
+                'class_id' => 'required|exists:classes,id',
+                'timetable' => 'required|array|min:1',
+                'timetable.*.subject_id' => [
+                    'required',
+                    Rule::exists('class_subjects', 'subject_id')->where(function ($query) use ($request) {
+                        $query->where('class_id', $request->class_id);
+                    }),
+                ],
+                'timetable.*.total_marks' => 'required|numeric|min:1',
                 'timetable.*.passing_marks' => 'required|lte:timetable.*.total_marks',
+                'timetable.*.start_time' => 'required',
                 'timetable.*.end_time' => 'required|after:timetable.*.start_time',
                 'timetable.*.date' => 'required|date|after:yesterday',
             ],
             [
                 'timetable.*.passing_marks.lte' => trans('passing_marks_should_less_than_or_equal_to_total_marks'),
                 'timetable.*.end_time.after' => trans('end_time_should_be_greater_than_start_time'),
+                'timetable.*.subject_id.exists' => 'Selected subject is not assigned to this class.',
             ]
         );
         if ($validator->fails()) {
@@ -95,21 +107,34 @@ class ExamTimetableController extends Controller
         try {
             $session_year_id = Exam::with('session_year')->where('id', $request->exam_id)->pluck('session_year_id')->first();
 
-            foreach ($request->timetable as $timetable) {
-                $date = date('Y-m-d', strtotime($timetable['date']));
-                $exam_timetable[] = [
-                    'exam_id' => $request->exam_id,
-                    'class_id' => $request->class_id,
-                    'subject_id' => $timetable['subject_id'],
-                    'total_marks' => $timetable['total_marks'],
-                    'passing_marks' => $timetable['passing_marks'],
-                    'start_time' => $timetable['start_time'],
-                    'end_time' => $timetable['end_time'],
-                    'date' => $date,
-                    'session_year_id' => $session_year_id,
-                ];
+            $subjectIds = collect($request->timetable)->pluck('subject_id');
+            if ($subjectIds->count() !== $subjectIds->unique()->count()) {
+                return response()->json([
+                    'error' => true,
+                    'message' => trans('duplicate_data') ?: 'Duplicate subject in timetable is not allowed.',
+                ]);
             }
-            ExamTimetable::insert($exam_timetable);
+
+            DB::transaction(function () use ($request, $session_year_id): void {
+                $exam_timetable = [];
+                foreach ($request->timetable as $timetable) {
+                    $date = date('Y-m-d', strtotime($timetable['date']));
+                    $exam_timetable[] = [
+                        'exam_id' => $request->exam_id,
+                        'class_id' => $request->class_id,
+                        'subject_id' => $timetable['subject_id'],
+                        'total_marks' => $timetable['total_marks'],
+                        'passing_marks' => $timetable['passing_marks'],
+                        'start_time' => $timetable['start_time'],
+                        'end_time' => $timetable['end_time'],
+                        'date' => $date,
+                        'session_year_id' => $session_year_id,
+                    ];
+                }
+
+                ExamTimetable::insert($exam_timetable);
+            });
+
             $response = [
                 'error' => false,
                 'message' => trans('data_store_successfully'),
@@ -162,7 +187,7 @@ class ExamTimetableController extends Controller
         $currentSemester = Semester::get()->first(function ($semester) {
             return $semester->current;
         });
-        $sql = ExamClass::with(['exam.session_year:id,name', 'class']);
+        $sql = ExamClass::with(['exam.session_year:id,name', 'class.medium', 'class.streams']);
 
         if (isset($_GET['search']) && ! empty($_GET['search'])) {
             $search = $_GET['search'];
@@ -172,9 +197,14 @@ class ExamTimetableController extends Controller
                     ->orWhere('passing_marks', 'LIKE', "%$search%")
                     ->orWhere('start_time', 'LIKE', "%$search%")
                     ->orWhere('end_time', 'LIKE', "%$search%")
-                    ->orWhere('date', 'LIKE', "%$search%")
-                    ->orWhere('created_at', 'LIKE', '%'.date('Y-m-d H:i:s', strtotime($search)).'%')
-                    ->orWhere('updated_at', 'LIKE', '%'.date('Y-m-d H:i:s', strtotime($search)).'%');
+                    ->orWhere('date', 'LIKE', "%$search%");
+
+                $timestamp = strtotime($search);
+                if ($timestamp !== false) {
+                    $date = date('Y-m-d H:i:s', $timestamp);
+                    $q->orWhere('created_at', 'LIKE', "%$date%")
+                        ->orWhere('updated_at', 'LIKE', "%$date%");
+                }
             })->orWhereHas('exam', function ($q) use ($search) {
                 $q->where('name', 'LIKE', "%$search%");
             })->orWhereHas('class', function ($q) use ($search) {
@@ -186,7 +216,7 @@ class ExamTimetableController extends Controller
             });
         }
         if (isset($_GET['exam_id']) && $_GET['exam_id'] != null) {
-            $sql->orWhere('exam_id', $_GET['exam_id']);
+            $sql->where('exam_id', $_GET['exam_id']);
         }
         if (isset($_GET['class_id']) && $_GET['class_id'] != null) {
             $sql->where('class_id', $_GET['class_id']);
@@ -201,15 +231,26 @@ class ExamTimetableController extends Controller
         $rows = [];
         $tempRow = [];
         $no = 1;
+
+        $classIds = $res->pluck('class_id')->unique()->values();
+        $examIds = $res->pluck('exam_id')->unique()->values();
+
+        $classSubjectQuery = ClassSubject::with('subject')->whereIn('class_id', $classIds);
+        $classSubjectsByClass = $classSubjectQuery->get()->groupBy('class_id');
+
+        $timetableByExamClass = ExamTimetable::with('subject:id,name,type')
+            ->whereIn('exam_id', $examIds)
+            ->whereIn('class_id', $classIds)
+            ->get()
+            ->groupBy(function ($item) {
+                return $item->exam_id.'-'.$item->class_id;
+            });
+
         foreach ($res as $row) {
-            $class = ClassSchool::where('id', $row->class_id)->first();
-
-            $class_subjects = '';
-
-            if ($class->include_semesters == 1 && $currentSemester) {
-                $class_subjects = ClassSubject::with('subject')->where('class_id', $row->class_id)->where('semester_id', $currentSemester->id)->get();
-            } else {
-                $class_subjects = ClassSubject::with('subject')->where('class_id', $row->class_id)->get();
+            $class = $row->class;
+            $class_subjects = $classSubjectsByClass->get($row->class_id, collect());
+            if ($class && $class->include_semesters == 1 && $currentSemester) {
+                $class_subjects = $class_subjects->where('semester_id', $currentSemester->id)->values();
             }
 
             $operate = '';
@@ -230,7 +271,7 @@ class ExamTimetableController extends Controller
                     'type' => $subjects->subject->type,
                 ];
             }
-            $tempRow['timetable'] = $row->class_timetable($row->exam_id, $row->class_id)->with('subject:id,name,type')->get();
+            $tempRow['timetable'] = $timetableByExamClass->get($row->exam_id.'-'.$row->class_id, collect())->values();
             $tempRow['session_year_id'] = $row->exam?->session_year?->id ?? null;
             $tempRow['session_year'] = $row->exam?->session_year?->name ?? 'N/A (Session Year Not Found)';
             $tempRow['created_at'] = convertDateFormat($row->created_at, 'd-m-Y H:i:s');
@@ -372,12 +413,14 @@ class ExamTimetableController extends Controller
         $validator = Validator::make(
             $request->all(),
             [
+                'exam_id' => 'required|exists:exams,id',
+                'class_id' => 'required|exists:classes,id',
                 'edit_timetable.*.subject_id' => 'required',
-                'edit_timetable.*.total_marks' => 'required',
+                'edit_timetable.*.total_marks' => 'required|numeric|min:1',
                 'edit_timetable.*.passing_marks' => 'required|lte:edit_timetable.*.total_marks',
                 'edit_timetable.*.start_time' => 'required',
                 'edit_timetable.*.end_time' => 'required|after:edit_timetable.*.start_time',
-                'edit_timetable.*.date' => 'required|',
+                'edit_timetable.*.date' => 'required|date',
             ],
             [
 

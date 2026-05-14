@@ -40,7 +40,7 @@
                                 </div>
                                 <div class="form-group col-md-6 col-sm-12">
                                     <label>{{ __('school_tagline') }}</label>
-                                    <textarea name="school_tagline" required placeholder="{{ __('school_tagline') }}" class="form-control">{{ isset($settings['school_tagline']) ? $settings['school_tagline'] : '' }}</textarea>
+                                    <textarea name="school_tagline" placeholder="{{ __('school_tagline') }}" class="form-control">{{ isset($settings['school_tagline']) ? $settings['school_tagline'] : '' }}</textarea>
                                 </div>
                             </div>
                             <div class="row">
@@ -138,13 +138,18 @@
                                 <div class="form-group col-md-4 col-sm-12">
                                     <label>{{ __('login_image') }}</label>
                                     <input type="file" name="login_image" class="file-upload-default" accept="image/*"/>
+                                    @php
+                                        $loginImagePreview = isset($settings['login_image']) && !empty($settings['login_image'])
+                                            ? url(Storage::url(ltrim(str_replace('storage/', '', $settings['login_image']), '/')))
+                                            : asset('/assets/images/heroImg1.png');
+                                    @endphp
                                     <div class="input-group col-xs-12">
                                         <input type="text" class="form-control file-upload-info" disabled="" placeholder="{{ __('login_image') }}"/>
                                         <span class="input-group-append">
                                           <button class="file-upload-browse btn btn-theme" type="button">{{ __('upload') }}</button>
                                         </span>
                                         <div class="col-md-12 mt-2">
-                                            <img height="50px" src='{{ isset($settings['login_image']) ? url(Storage::url($settings['login_image'])) : url(Storage::url('eschool.jpg')) }}'>
+                                            <img height="50px" src="{{ $loginImagePreview }}">
                                         </div>
                                     </div>
                                 </div>
@@ -215,22 +220,22 @@
                             <hr>
                             <div class="row">
                                 <div class="form-group col-md-4 col-sm-12">
-                                    <label>{{  __('facebook') }}</label><span class="ml-1 text-danger">*</span>
-                                    <input name="facebook" value="{{ isset($settings['facebook']) ? $settings['facebook'] : '' }}" type="text" required placeholder="{{  __('facebook').' '. __('url') }}" class="form-control"/>
+                                    <label>{{  __('facebook') }}</label>
+                                    <input name="facebook" value="{{ isset($settings['facebook']) ? $settings['facebook'] : '' }}" type="text" placeholder="{{  __('facebook').' '. __('url') }}" class="form-control"/>
                                 </div>
                                 <div class="form-group col-md-4 col-sm-12">
-                                    <label>{{  __('instagram')}}</label><span class="ml-1 text-danger">*</span>
-                                    <input name="instagram" value="{{ isset($settings['instagram']) ? $settings['instagram'] : '' }}" type="text" required placeholder="{{  __('instagram').' '. __('url') }}" class="form-control"/>
+                                    <label>{{  __('instagram')}}</label>
+                                    <input name="instagram" value="{{ isset($settings['instagram']) ? $settings['instagram'] : '' }}" type="text" placeholder="{{  __('instagram').' '. __('url') }}" class="form-control"/>
                                 </div>
                                 <div class="form-group col-md-4 col-sm-12">
-                                    <label>{{  __('linkedin')}}</label><span class="ml-1 text-danger">*</span>
-                                    <input name="linkedin" value="{{ isset($settings['linkedin']) ? $settings['linkedin'] : '' }}" type="text" required placeholder="{{  __('linkedin').' '. __('url') }}" class="form-control"/>
+                                    <label>{{  __('linkedin')}}</label>
+                                    <input name="linkedin" value="{{ isset($settings['linkedin']) ? $settings['linkedin'] : '' }}" type="text" placeholder="{{  __('linkedin').' '. __('url') }}" class="form-control"/>
                                 </div>
                             </div>
                             <div class="row mb-5">
                                 <div class="form-group col-md-12 col-sm-12">
-                                    <label>{{  __('google_map_link') }}</label> <span class="ml-1 text-danger">*</span>
-                                    <input name="maplink" value="{{ isset($settings['maplink']) ? $settings['maplink'] : '' }}" type="text" required placeholder="{{  __('google_map_link') }}" class="form-control"/>
+                                    <label>{{  __('google_map_link') }}</label>
+                                    <input name="maplink" value="{{ isset($settings['maplink']) ? $settings['maplink'] : '' }}" type="text" placeholder="{{  __('google_map_link') }}" class="form-control"/>
                                 </div>
                                 <div class="col-sm-12 col-xs-12">
                                     <span style="font-size: 14px; color:"> <b>{{__('Note')}} :- </b>{{__('get_the_link_from_google_map_with_embed_url_and_paste_only_src_from_it')}}</span>
@@ -244,12 +249,12 @@
                             <hr>
                             <div class="row">
                                 <div class="form-group col-md-4 col-sm-12">
-                                    <label>{{  __('site_key') }}</label><span class="ml-1 text-danger">*</span>
-                                    <input name="recaptcha_site_key" value="{{ isset($settings['recaptcha_site_key']) ? $settings['recaptcha_site_key'] : '' }}" type="text" required placeholder="{{  __('site_key')}}" class="form-control"/>
+                                    <label>{{  __('site_key') }}</label>
+                                    <input name="recaptcha_site_key" value="{{ isset($settings['recaptcha_site_key']) ? $settings['recaptcha_site_key'] : '' }}" type="text" placeholder="{{  __('site_key')}}" class="form-control"/>
                                 </div>
                                 <div class="form-group col-md-4 col-sm-12">
-                                    <label>{{  __('secret_key')}}</label><span class="ml-1 text-danger">*</span>
-                                    <input name="recaptcha_secret_key" value="{{ isset($settings['recaptcha_secret_key']) ? $settings['recaptcha_secret_key'] : '' }}" type="text" required placeholder="{{  __('secret_key')}}" class="form-control"/>
+                                    <label>{{  __('secret_key')}}</label>
+                                    <input name="recaptcha_secret_key" value="{{ isset($settings['recaptcha_secret_key']) ? $settings['recaptcha_secret_key'] : '' }}" type="text" placeholder="{{  __('secret_key')}}" class="form-control"/>
                                 </div>
                                 <div class="form-group col-md-4 col-sm-12">
                                     <label>{{  __('status')}}</label><span class="ml-1 text-danger">*</span>

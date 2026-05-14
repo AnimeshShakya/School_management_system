@@ -1185,6 +1185,77 @@ class StudentApiController extends Controller
 
     /**
      * @param
+     * assignment_submission_id : 1
+     */
+    public function editAssignmentSubmission(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'assignment_submission_id' => 'required|numeric',
+            'text_submission' => 'nullable',
+            'files' => 'nullable|array',
+            'files.*' => 'mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
+        ]);
+
+        if ($validator->fails()) {
+            ResponseService::validationError($validator->errors()->first());
+        }
+
+        try {
+            $student = $request->user()->student;
+
+            $assignment_submission = AssignmentSubmission::where('id', $request->assignment_submission_id)
+                ->where('student_id', $student->id)
+                ->with('file')
+                ->first();
+
+            if (empty($assignment_submission)) {
+                ResponseService::errorResponse('Assignment submission not found.', null, 104);
+            }
+
+            if ($assignment_submission->status != 0) {
+                ResponseService::errorResponse('You can not edit assignment', null, 110);
+            }
+
+            $hasNewText = ! empty($request->text_submission);
+            $hasNewFiles = $request->hasFile('files');
+            $hasExistingFiles = $assignment_submission->file->isNotEmpty();
+
+            if (! $hasNewText && ! $hasNewFiles && ! $hasExistingFiles) {
+                ResponseService::validationError('The text submission field is required when files are not present.');
+            }
+
+            $assignment_submission->text_submission = $request->text_submission;
+            $assignment_submission->save();
+
+            if ($hasNewFiles) {
+                foreach ($assignment_submission->file as $file) {
+                    if (Storage::disk('public')->exists($file->file_url)) {
+                        Storage::disk('public')->delete($file->file_url);
+                    }
+                }
+                $assignment_submission->file()->delete();
+
+                foreach ($request->file('files') as $image) {
+                    $file = new File;
+                    $file->file_name = $image->getClientOriginalName();
+                    $file->modal()->associate($assignment_submission);
+                    $file->type = 1;
+                    $uuid = Str::uuid();
+                    $extension = $image->extension();
+                    $file->file_url = $image->storeAs('assignment', $uuid.'.'.$extension, 'public');
+                    $file->save();
+                }
+            }
+
+            $submitted_assignment = AssignmentSubmission::where('id', $assignment_submission->id)->with('file')->get();
+            ResponseService::successResponse('Assignments Edited Successfully', $submitted_assignment);
+        } catch (Throwable $e) {
+            ResponseService::errorResponse('error_occurred', null, 103, $e);
+        }
+    }
+
+    /**
+     * @param
      * assignment_id : 1    //OPTIONAL
      * subject_id : 1       //OPTIONAL
      */
@@ -1842,6 +1913,8 @@ class StudentApiController extends Controller
             'online_exam_id' => 'required|numeric',
             'answers_data' => 'required|array',
             'answers_data.*.question_id' => 'required|numeric',
+            'answers_data.*.option_id' => 'required|array|size:1',
+            'answers_data.*.option_id.*' => 'required|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -1850,59 +1923,65 @@ class StudentApiController extends Controller
         try {
             $student = $request->user()->student;
 
-            // checks the online exam exists
-            $check_online_exam_id = OnlineExam::where('id', $request->online_exam_id)->count();
-            if ($check_online_exam_id) {
-
-                $answers_exists = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $request->online_exam_id])->count();
-                if ($answers_exists) {
-                    ResponseService::errorResponse('Answers already submitted', null, 103);
-                }
-
-                foreach ($request->answers_data as $answer_data) {
-
-                    // checks the question exists with provided exam id
-                    $check_question_exists = OnlineExamQuestionChoice::where(['id' => $answer_data['question_id']])->count();
-                    if ($check_question_exists) {
-
-                        // get the question id from question choiced
-                        $question_id = OnlineExamQuestionChoice::where(['id' => $answer_data['question_id'], 'online_exam_id' => $request->online_exam_id])->pluck('question_id')->first();
-
-                        // checks the option exists with provided question
-                        $check_option_exists = OnlineExamQuestionOption::where(['id' => $answer_data['option_id'], 'question_id' => $question_id])->count();
-
-                        // get the current date
-                        $currentTime = Carbon::now();
-                        $current_date = date($currentTime->toDateString());
-
-                        if ($check_option_exists) {
-                            foreach ($answer_data['option_id'] as $options) {
-                                // add the data of answers
-                                $store_answers = new OnlineExamStudentAnswer;
-                                $store_answers->student_id = $student->id;
-                                $store_answers->online_exam_id = $request->online_exam_id;
-                                $store_answers->question_id = $answer_data['question_id'];
-                                $store_answers->option_id = $options;
-                                $store_answers->submitted_date = $current_date;
-                                $store_answers->save();
-                            }
-
-                            $student_exam_status_id = StudentOnlineExamStatus::where(['student_id' => $student->id, 'online_exam_id' => $request->online_exam_id])->pluck('id')->first();
-                            if (isset($student_exam_status_id) && ! empty($student_exam_status_id)) {
-                                $update_status = StudentOnlineExamStatus::find($student_exam_status_id);
-                                $update_status->status = 2;
-                                $update_status->save();
-                            }
-                        }
-                    } else {
-                        ResponseService::errorResponse('invalid_question_id', null, 103);
-                    }
-                }
-                ResponseService::successResponse('data_store_successfully');
-            } else {
+            $onlineExam = OnlineExam::find($request->online_exam_id);
+            if (! $onlineExam) {
                 ResponseService::errorResponse('invalid_online_exam_id', null, 103);
             }
+
+            $answers_exists = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $request->online_exam_id])->exists();
+            if ($answers_exists) {
+                ResponseService::errorResponse('Answers already submitted', null, 103);
+            }
+
+            $questionIds = collect($request->answers_data)->pluck('question_id');
+            if ($questionIds->count() !== $questionIds->unique()->count()) {
+                ResponseService::errorResponse('Duplicate question answers are not allowed', null, 103);
+            }
+
+            DB::transaction(function () use ($request, $student): void {
+                $current_date = Carbon::now()->toDateString();
+
+                foreach ($request->answers_data as $answer_data) {
+                    $questionChoice = OnlineExamQuestionChoice::where([
+                        'id' => $answer_data['question_id'],
+                        'online_exam_id' => $request->online_exam_id,
+                    ])->first();
+
+                    if (! $questionChoice) {
+                        throw new \RuntimeException('invalid_question_id');
+                    }
+
+                    $selectedOptionId = (int) data_get($answer_data, 'option_id.0');
+
+                    $check_option_exists = OnlineExamQuestionOption::where([
+                        'id' => $selectedOptionId,
+                        'question_id' => $questionChoice->question_id,
+                    ])->exists();
+
+                    if (! $check_option_exists) {
+                        throw new \RuntimeException('invalid_question_id');
+                    }
+
+                    $store_answers = new OnlineExamStudentAnswer;
+                    $store_answers->student_id = $student->id;
+                    $store_answers->online_exam_id = $request->online_exam_id;
+                    $store_answers->question_id = $questionChoice->id;
+                    $store_answers->option_id = $selectedOptionId;
+                    $store_answers->submitted_date = $current_date;
+                    $store_answers->save();
+                }
+
+                StudentOnlineExamStatus::updateOrCreate(
+                    ['student_id' => $student->id, 'online_exam_id' => $request->online_exam_id],
+                    ['status' => 2]
+                );
+            });
+
+            ResponseService::successResponse('data_store_successfully');
         } catch (Throwable $e) {
+            if ($e instanceof \RuntimeException && $e->getMessage() === 'invalid_question_id') {
+                ResponseService::errorResponse('invalid_question_id', null, 103);
+            }
             ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
@@ -2258,85 +2337,75 @@ class StudentApiController extends Controller
         try {
             $student = $request->user()->student;
 
-            // get the total questions count
-            $total_questions = OnlineExamQuestionChoice::where('online_exam_id', $request->online_exam_id)->count();
+            $choices = OnlineExamQuestionChoice::where('online_exam_id', $request->online_exam_id)
+                ->get(['id', 'question_id', 'marks']);
 
-            // get the exam's choiced question id
-            $exam_choiced_question_ids = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $request->online_exam_id])->pluck('question_id');
+            $total_questions = $choices->count();
+            $choiceIdToQuestionId = $choices->pluck('question_id', 'id');
+            $choiceIdByQuestionId = $choices->pluck('id', 'question_id');
+            $marksByQuestionId = $choices->pluck('marks', 'question_id');
 
-            // get the questions id
-            $question_ids = OnlineExamQuestionChoice::whereIn('id', $exam_choiced_question_ids)->pluck('question_id');
+            $attemptedAnswers = OnlineExamStudentAnswer::where([
+                'student_id' => $student->id,
+                'online_exam_id' => $request->online_exam_id,
+            ])->get(['question_id', 'option_id']);
 
-            // get the options submitted by student
-            $exam_attempted_answers = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $request->online_exam_id])->pluck('option_id');
+            $attemptedQuestionIds = $attemptedAnswers
+                ->pluck('question_id')
+                ->map(function ($choiceId) use ($choiceIdToQuestionId) {
+                    return $choiceIdToQuestionId[$choiceId] ?? null;
+                })
+                ->filter()
+                ->unique()
+                ->values();
 
-            // removes the question id of the question if one of the answer of particular question is wrong
-            foreach ($question_ids as $question_id) {
-                $check_questions_answers_exists = OnlineExamQuestionAnswer::where('question_id', $question_id)->whereNotIn('answer', $exam_attempted_answers)->count();
-                if ($check_questions_answers_exists) {
-                    unset($question_ids[array_search($question_id, $question_ids->toArray())]);
-                }
+            $attemptedOptionIds = $attemptedAnswers->pluck('option_id')->unique();
+
+            $correctQuestionIds = collect();
+            if ($attemptedQuestionIds->isNotEmpty() && $attemptedOptionIds->isNotEmpty()) {
+                $correctQuestionIds = OnlineExamQuestionAnswer::whereIn('question_id', $attemptedQuestionIds)
+                    ->whereIn('answer', $attemptedOptionIds)
+                    ->pluck('question_id')
+                    ->unique()
+                    ->values();
             }
 
-            // get the correct answers counter
-            $exam_correct_answers = OnlineExamQuestionAnswer::whereIn('question_id', $question_ids)->whereIn('answer', $exam_attempted_answers)->groupby('question_id')->pluck('question_id')->count();
+            $allQuestionIds = $choices->pluck('question_id')->unique()->values();
+            $incorrectQuestionIds = $allQuestionIds->diff($correctQuestionIds)->values();
 
-            // question id of correct answers
-            $exam_correct_answers_question_id = OnlineExamQuestionAnswer::whereIn('question_id', $question_ids)->whereIn('answer', $exam_attempted_answers)->pluck('question_id');
-
-            // data of correct answers
-            $exam_correct_answers_data = OnlineExamQuestionAnswer::whereIn('question_id', $question_ids)->whereIn('answer', $exam_attempted_answers)->groupby('question_id')->get();
-
-            // array of correct answer with choiced exam id and marks
-            $correct_answers_data = [];
-            foreach ($exam_correct_answers_data as $correct_data) {
-                $choice_questions = OnlineExamQuestionChoice::where(['online_exam_id' => $request->online_exam_id, 'question_id' => $correct_data->question_id])->first();
-                $correct_answers_data[] = [
-                    'question_id' => $choice_questions->id,
-                    'marks' => $choice_questions->marks,
+            $correct_answers_data = $correctQuestionIds->map(function ($questionId) use ($choiceIdByQuestionId, $marksByQuestionId) {
+                return [
+                    'question_id' => $choiceIdByQuestionId[$questionId] ?? null,
+                    'marks' => (int) ($marksByQuestionId[$questionId] ?? 0),
                 ];
-            }
+            })->filter(fn ($item) => ! is_null($item['question_id']))->values()->all();
 
-            // get questions ids
-            $all_questions_ids = OnlineExamQuestionChoice::whereNotIn('question_id', $question_ids)->where('online_exam_id', $request->online_exam_id)->pluck('question_id');
+            $in_correct_answers_data = $incorrectQuestionIds->map(function ($questionId) use ($choiceIdByQuestionId, $marksByQuestionId) {
+                return [
+                    'question_id' => $choiceIdByQuestionId[$questionId] ?? null,
+                    'marks' => (int) ($marksByQuestionId[$questionId] ?? 0),
+                ];
+            })->filter(fn ($item) => ! is_null($item['question_id']))->values()->all();
 
-            // get the incorrect answers && unattempted counter
-            $exam_in_correct_answers = OnlineExamQuestionAnswer::whereIn('question_id', $all_questions_ids)->whereNotIn('answer', $exam_attempted_answers)->groupby('question_id')->pluck('question_id')->count();
+            $total_obtained_marks = $correctQuestionIds->sum(function ($questionId) use ($marksByQuestionId) {
+                return (int) ($marksByQuestionId[$questionId] ?? 0);
+            });
 
-            // data of in correct && unattempted answers
-            $exam_in_correct_answers_data = OnlineExamQuestionAnswer::whereIn('question_id', $all_questions_ids)->whereNotIn('answer', $exam_attempted_answers)->groupby('question_id')->get();
-
-            // array of in correct answer && unattempted with choiced exam id and marks
-            $in_correct_answers_data = [];
-            foreach ($exam_in_correct_answers_data as $in_correct_data) {
-                $choice_questions = OnlineExamQuestionChoice::where(['online_exam_id' => $request->online_exam_id, 'question_id' => $in_correct_data->question_id])->first();
-                if (isset($choice_questions) && ! empty($choice_questions)) {
-                    $in_correct_answers_data[] = [
-                        'question_id' => $choice_questions->id,
-                        'marks' => $choice_questions->marks,
-                    ];
-                }
-            }
-
-            // total obtained and total marks
-            $total_obtained_marks = OnlineExamQuestionChoice::select(DB::raw('sum(marks)'))->where('online_exam_id', $request->online_exam_id)->whereIn('question_id', $exam_correct_answers_question_id)->first();
-            $total_obtained_marks = $total_obtained_marks['sum(marks)'];
-            $total_marks = OnlineExamQuestionChoice::select(DB::raw('sum(marks)'))->where('online_exam_id', $request->online_exam_id)->first();
-            $total_marks = $total_marks['sum(marks)'];
+            $total_marks = (int) $choices->sum('marks');
 
             // final array data
             $exam_result = [
                 'total_questions' => $total_questions,
                 'correct_answers' => [
-                    'total_questions' => $exam_correct_answers,
+                    'total_questions' => count($correct_answers_data),
                     'question_data' => $correct_answers_data ?? '',
                 ],
                 'in_correct_answers' => [
-                    'total_questions' => $exam_in_correct_answers,
+                    'total_questions' => count($in_correct_answers_data),
                     'question_data' => $in_correct_answers_data ?? '',
                 ],
-                'total_obtained_marks' => $total_obtained_marks ?? '0',
-                'total_marks' => $total_marks,
+                'total_obtained_marks' => (string) ($total_obtained_marks ?? 0),
+                'total_marks' => (string) $total_marks,
             ];
             ResponseService::successResponse('Exam Result Fetched Successfully', $exam_result ?? '');
         } catch (Throwable $e) {
