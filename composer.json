@@ -25,6 +25,7 @@
         "maatwebsite/excel": "^3.1",
         "mahesh-kerai/update-generator": "^2.1",
         "razorpay/razorpay": "^2.9",
+        "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/laravel-permission": "^6.0",
         "stripe/stripe-php": "^18.0",
         "unicodeveloper/laravel-paystack": "dev-l12-compatibility"
@@ -42,6 +43,7 @@
     "require-dev": {
         "barryvdh/laravel-debugbar": "^3.16.5",
         "fakerphp/faker": "^1.23",
+        "laravel/boost": "^1.8",
         "laravel/pail": "^1.2.2",
         "laravel/pint": "^1.13",
         "laravel/sail": "^1.41",
@@ -57,7 +59,8 @@
         },
         "files": [
             "app/Helpers/notification_helper.php",
-            "app/Helpers/settings_helper.php"
+            "app/Helpers/settings_helper.php",
+            "app/Helpers/NepaliDateConverter.php"
         ]
     },
     "autoload-dev": {
