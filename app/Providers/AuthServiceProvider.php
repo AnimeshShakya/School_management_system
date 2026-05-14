@@ -24,7 +24,24 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerPolicies();
-        
+
+        // -----------------------------------------------
+        // Log Viewer — restrict access to Super Admin only
+        // -----------------------------------------------
+        Gate::define('viewLogViewer', function ($user) {
+            try {
+                if (method_exists($user, 'hasRole') && $user->hasRole('Super Admin')) {
+                    return true;
+                }
+
+                $superAdminEmail = config('app.superadmin_email', 'superadmin@gmail.com');
+
+                return ! empty($user->email) && strcasecmp($user->email, $superAdminEmail) === 0;
+            } catch (\Throwable $e) {
+                return false;
+            }
+        });
+
         // Implicitly grant "Super Admin" role (or a fallback superadmin email) all permissions.
         // This ensures UI checks like @can, @hasrole and auth()->user()->hasRole('Super Admin')
         // behave as expected even if the 'Super Admin' role record is missing from the DB.
@@ -38,7 +55,7 @@ class AuthServiceProvider extends ServiceProvider
                 // Fallback: allow a seeded superadmin email to act as super admin.
                 // Configure SUPERADMIN_EMAIL in .env if you need a different email.
                 $superAdminEmail = env('SUPERADMIN_EMAIL', 'superadmin@gmail.com');
-                if (!empty($user->email) && strcasecmp($user->email, $superAdminEmail) === 0) {
+                if (! empty($user->email) && strcasecmp($user->email, $superAdminEmail) === 0) {
                     return true;
                 }
             } catch (\Throwable $e) {

@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Facade;
-use Illuminate\Support\ServiceProvider;  
+use Illuminate\Support\ServiceProvider;
 
 return [
 
@@ -20,6 +20,8 @@ return [
 
     'timezone' => 'Asia/Kathmandu',
 
+    'superadmin_email' => env('SUPERADMIN_EMAIL', 'superadmin@gmail.com'),
+
     'locale' => 'en',
 
     'fallback_locale' => 'en',
@@ -30,8 +32,7 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
- 
-    'providers' => ServiceProvider::defaultProviders()->merge([  
+    'providers' => ServiceProvider::defaultProviders()->merge([
 
         /*
          * Application Service Providers
@@ -42,11 +43,8 @@ return [
         App\Providers\RouteServiceProvider::class,
         Illuminate\View\ViewServiceProvider::class,
 
-    
-
     ])->toArray(),
 
-   
     'aliases' => Facade::defaultAliases()->merge([
         // 'Example' => App\Facades\Example::class,
     ])->toArray(),
