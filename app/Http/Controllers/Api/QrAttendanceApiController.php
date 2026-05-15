@@ -58,6 +58,10 @@ class QrAttendanceApiController extends Controller
                 return response()->json(['error' => true, 'message' => 'Invalid or unrecognized QR code.'], 422);
             }
 
+            if (! $student->registration_payment_status) {
+                return response()->json(['error' => true, 'message' => 'Registration payment is pending. This student\'s QR card is not active.'], 403);
+            }
+
             $sessionYear = getSettings('session_year');
             $sessionYearId = (int) $sessionYear['session_year'];
             $classSectionId = (int) $request->class_section_id;

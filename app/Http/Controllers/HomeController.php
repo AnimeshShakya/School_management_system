@@ -173,7 +173,12 @@ class HomeController extends Controller
         $data['student_qr_code_base64'] = null;
         if ($user->hasRole('Student')) {
             $studentRecord = $user->student;
-            if ($studentRecord && ! empty($studentRecord->qr_token)) {
+            if ($studentRecord) {
+                // Backfill missing qr_token for students created before the column was added
+                if (empty($studentRecord->qr_token)) {
+                    $studentRecord->qr_token = bin2hex(random_bytes(32));
+                    $studentRecord->saveQuietly();
+                }
                 $payload = base64_encode(json_encode(['s' => $studentRecord->id, 't' => $studentRecord->qr_token]));
                 $data['student_qr_code_base64'] = base64_encode(
                     (string) QrCode::format('png')->size(220)->margin(1)->generate($payload)

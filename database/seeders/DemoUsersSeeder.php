@@ -34,6 +34,7 @@ class DemoUsersSeeder extends Seeder
         $teacherRole = $this->getRole('Teacher');
         $parentRole = $this->getRole('Parent');
         $studentRole = $this->getRole('Student');
+        $attendeeRole = $this->getRole('Attendee Teacher');
 
         $allPermissionNames = Permission::query()->pluck('name')->all();
 
@@ -99,7 +100,13 @@ class DemoUsersSeeder extends Seeder
             'subject-list',
             'subject-teacher-list',
             'lesson-list',
+            'lesson-create',
+            'lesson-edit',
+            'lesson-delete',
             'topic-list',
+            'topic-create',
+            'topic-edit',
+            'topic-delete',
             'semester-list',
             'stream-list',
             'shift-list',
@@ -113,18 +120,30 @@ class DemoUsersSeeder extends Seeder
             'class-timetable',
             'teacher-timetable',
             'class-attendance',
+            'attendance-create',
+            'attendance-edit',
             'student-assignment',
+            'assignment-create',
+            'assignment-list',
+            'assignment-edit',
+            'assignment-delete',
             'assignment-submission',
             'exam-list',
             'exam-result',
             'holiday-list',
             'session-year-list',
             'announcement-list',
+            'announcement-create',
+            'announcement-edit',
+            'announcement-delete',
         ];
         $this->syncRolePermissions($teacherRole, $teacherPermissions);
 
-        // Parent User: one-student timetable/attendance/fees views, exam, announcement, events, session year.
-        $parentPermissions = [
+        // Student & Parent share the same login credentials — merged permission set.
+        $studentParentPermissions = [
+            'student-list',
+            'student-assignment',
+            'assignment-submission',
             'timetable-list',
             'class-timetable',
             'class-attendance',
@@ -135,17 +154,16 @@ class DemoUsersSeeder extends Seeder
             'event-list',
             'session-year-list',
         ];
-        $this->syncRolePermissions($parentRole, $parentPermissions);
+        $this->syncRolePermissions($studentRole, $studentParentPermissions);
+        $this->syncRolePermissions($parentRole, $studentParentPermissions);
 
-        // Student User: self student view, student assignment, announcement, event.
-        $studentPermissions = [
-            'student-list',
-            'student-assignment',
-            'assignment-submission',
-            'announcement-list',
-            'event-list',
+        // Attendee Teacher: can only scan QR codes and view attendance records.
+        $attendeePermissions = [
+            'qr-attendance-scan',
+            'attendance-list',
+            'attendance-create',
         ];
-        $this->syncRolePermissions($studentRole, $studentPermissions);
+        $this->syncRolePermissions($attendeeRole, $attendeePermissions);
 
         $this->seedUser($superAdminRole, 'superadmin@gmail.com', [
             'first_name' => 'super',
@@ -179,6 +197,15 @@ class DemoUsersSeeder extends Seeder
             $teacherProfile->qualification = 'Graduate';
             $teacherProfile->save();
         }
+
+        $this->seedUser($attendeeRole, 'attendee@gmail.com', [
+            'first_name' => 'attendee',
+            'last_name' => 'user',
+            'password' => Hash::make('attendee123'),
+            'gender' => 'Male',
+            'image' => 'logo.svg',
+            'mobile' => '',
+        ]);
 
         $parentUser = $this->seedUser($parentRole, 'parent@gmail.com', [
             'first_name' => 'parent',

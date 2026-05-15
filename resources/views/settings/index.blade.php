@@ -277,6 +277,34 @@
                             </div>
                             <input class="btn btn-theme" type="submit" value="Submit">
                         </form>
+
+                        {{-- Payment Toggle PIN --}}
+                        <hr>
+                        <h4 class="card-title mt-4">
+                            <i class="fa fa-lock mr-2"></i>{{ __('payment_toggle_pin_label') }}
+                        </h4>
+                        <p class="text-muted" style="font-size:0.9rem;">{{ __('payment_toggle_pin_desc') }}</p>
+                        <div class="row align-items-end">
+                            <div class="form-group col-md-3 col-sm-12 mb-0">
+                                <label>{{ __('payment_toggle_pin_label') }}</label>
+                                <div class="input-group">
+                                    <input type="password" id="pin_setting_input" class="form-control"
+                                           placeholder="{{ __('enter_4_digit_pin') }}" maxlength="4" inputmode="numeric" pattern="\d{4}"
+                                           value="{{ isset($settings['payment_toggle_pin']) ? $settings['payment_toggle_pin'] : '' }}">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary" type="button" id="togglePinVisibility">
+                                            <i class="fa fa-eye-slash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted">{{ __('pin_must_be_4_digits') }}</small>
+                            </div>
+                            <div class="col-md-2 col-sm-12 mb-3">
+                                <button id="save_pin_btn" class="btn btn-theme">
+                                    <i class="fa fa-save mr-1"></i>{{ __('save') }}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -286,6 +314,40 @@
 
 @section('script')
     <script type='text/javascript'>
+        // ── Payment Toggle PIN ────────────────────────────────────────────
+        $('#togglePinVisibility').on('click', function () {
+            var $input = $('#pin_setting_input');
+            var isPassword = $input.attr('type') === 'password';
+            $input.attr('type', isPassword ? 'text' : 'password');
+            $(this).find('i').toggleClass('fa-eye-slash fa-eye');
+        });
+
+        $('#save_pin_btn').on('click', function () {
+            var pin = $('#pin_setting_input').val().trim();
+            if (!/^\d{4}$/.test(pin)) {
+                showErrorToast('{{ __('pin_must_be_4_digits') }}');
+                return;
+            }
+            var $btn = $(this);
+            $btn.prop('disabled', true);
+            $.ajax({
+                url: '{{ route('students.payment-toggle-pin.update') }}',
+                type: 'POST',
+                data: { _token: '{{ csrf_token() }}', pin: pin },
+                success: function (res) {
+                    if (res.error) { showErrorToast(res.message); }
+                    else {
+                        showSuccessToast(res.message);
+                        $('#pin_setting_input').attr('type', 'password');
+                        $('#togglePinVisibility').find('i').removeClass('fa-eye').addClass('fa-eye-slash');
+                    }
+                },
+                error: function () { showErrorToast('{{ __('error_occurred') }}'); },
+                complete: function () { $btn.prop('disabled', false); }
+            });
+        });
+
+        // ── General settings ─────────────────────────────────────────────
         if ($(".color-picker").length) {
             $('.color-picker').asColorPicker();
         }

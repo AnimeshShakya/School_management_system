@@ -1842,15 +1842,63 @@ class StudentController extends Controller
             return response()->json(['error' => true, 'message' => trans('no_permission_message')]);
         }
 
+        // Validate the PIN to prevent accidental toggles
+        $settings = getSettings('payment_toggle_pin');
+        $expectedPin = $settings['payment_toggle_pin'] ?? '1234';
+
+        if ((string) $request->input('pin') !== (string) $expectedPin) {
+            return response()->json(['error' => true, 'message' => trans('incorrect_pin')]);
+        }
+
         $student = Students::findOrFail($id);
         $student->registration_payment_status = ! $student->registration_payment_status;
+
+        // Ensure the student has a QR token when marked as paid
+        if ($student->registration_payment_status && empty($student->qr_token)) {
+            $student->qr_token = bin2hex(random_bytes(32));
+        }
+
         $student->save();
+
+        $qrCodeUrl = null;
+        if ($student->registration_payment_status && ! empty($student->qr_token)) {
+            $qrCodeUrl = route('students.qr-code', $student->id);
+        }
 
         return response()->json([
             'error' => false,
             'message' => trans('data_saved_successfully'),
             'status' => $student->registration_payment_status ? 'paid' : 'unpaid',
+            'qr_code_url' => $qrCodeUrl,
+            'student_name' => $student->user->full_name ?? '',
         ]);
+    }
+
+    public function getPaymentTogglePin(): JsonResponse
+    {
+        abort_unless(Auth::user()->hasRole('Super Admin'), 403);
+
+        $settings = getSettings('payment_toggle_pin');
+
+        return response()->json([
+            'pin' => $settings['payment_toggle_pin'] ?? '1234',
+        ]);
+    }
+
+    public function updatePaymentTogglePin(Request $request): JsonResponse
+    {
+        abort_unless(Auth::user()->hasRole('Super Admin'), 403);
+
+        $request->validate([
+            'pin' => 'required|digits:4',
+        ]);
+
+        Settings::updateOrCreate(
+            ['type' => 'payment_toggle_pin'],
+            ['message' => $request->input('pin')]
+        );
+
+        return response()->json(['error' => false, 'message' => trans('data_saved_successfully')]);
     }
 
     public function idCardSettingIndex()

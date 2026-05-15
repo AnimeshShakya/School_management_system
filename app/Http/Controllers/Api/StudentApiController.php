@@ -29,6 +29,7 @@ use App\Models\Holiday;
 use App\Models\InstallmentFee;
 use App\Models\Leave;
 use App\Models\LeaveDetail;
+use App\Models\LeaveMaster;
 use App\Models\Lesson;
 use App\Models\LessonTopic;
 use App\Models\MultipleEvent;
@@ -99,7 +100,18 @@ class StudentApiController extends Controller
 
         $current_date = Carbon::now()->toDateString();
 
-        if (Auth::attempt(['email' => $request->gr_number, 'password' => $request->password])) {
+        $loginEmail = $request->gr_number;
+        if (! Auth::attempt(['email' => $loginEmail, 'password' => $request->password])) {
+            // Fallback: try looking up student by admission_no to get the real email
+            $student = \App\Models\Students::where('admission_no', $request->gr_number)->first();
+            if ($student) {
+                $fallbackUser = \App\Models\User::find($student->user_id);
+                if ($fallbackUser) {
+                    $loginEmail = $fallbackUser->email;
+                }
+            }
+        }
+        if (Auth::attempt(['email' => $loginEmail, 'password' => $request->password])) {
             //        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
             // Here Email Field is referenced as a GR Number for Student
             $auth = Auth::user();
@@ -502,7 +514,7 @@ class StudentApiController extends Controller
                     $q->where('student_id', $student->id);
                 })
                 ->where('due_date', '>', $date)
-                ->with(['subject', 'file'])
+                ->with(['subject', 'file', 'submission'])
                 ->orderBy('due_date', 'asc')
                 ->limit(2)
                 ->get();
@@ -677,7 +689,7 @@ class StudentApiController extends Controller
         $validator = Validator::make($request->all(), [
             'gr_no' => 'required',
             'dob' => 'required|date',
-            'email' => 'required|email',
+            'email' => 'nullable|email',
         ]);
 
         if ($validator->fails()) {
@@ -688,9 +700,11 @@ class StudentApiController extends Controller
             $get_id = Students::select('user_id')->where('admission_no', $request->gr_no)->pluck('user_id')->first();
             if (isset($get_id) && ! empty($get_id)) {
                 $user = User::where('id', $get_id)
-                    ->whereDate('dob', '=', date('Y-m-d', strtotime($request->dob)))
-                    ->where('email', $request->email)
-                    ->first();
+                    ->whereDate('dob', '=', date('Y-m-d', strtotime($request->dob)));
+                if ($request->filled('email')) {
+                    $user->where('email', $request->email);
+                }
+                $user = $user->first();
                 if ($user) {
                     $user->reset_request = 1;
                     $user->save();
@@ -3032,6 +3046,7 @@ class StudentApiController extends Controller
                         'due_date' => date('Y-m-d', strtotime($data->due_date)),
                         'due_charges' => $data->due_charges,
                         'is_paid' => $paid_installment_data->status ?? 0,
+                        'amount' => $paid_installment_data->amount ?? null,
                         'paid_date' => $paid_installment_data->date ?? null,
                         'paid_due_charges' => ! empty($paid_installment_data) ? number_format($paid_installment_data->due_charges ?? 0, 2) : '',
                     ];
@@ -3312,7 +3327,7 @@ class StudentApiController extends Controller
             $fees_payment_transactions = $fees_payment_transactions->toArray();
 
             ResponseService::successResponse('Fees Payment Transactions Fetched Successfully',
-                $fees_payment_transactions['data'],
+                ['feesTransactions' => $fees_payment_transactions['data']],
                 [],
                 null,
                 [
@@ -3588,6 +3603,7 @@ class StudentApiController extends Controller
             });
 
             $data = [
+                'monthly_allowed_leaves' => LeaveMaster::where('session_year_id', $session_year_id)->first()->total_leave ?? 0,
                 'taken_leaves' => $sql->where('status', 1)->sum('days'),
                 'leave_details' => $sql,
             ];

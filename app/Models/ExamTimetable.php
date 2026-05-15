@@ -11,26 +11,42 @@ class ExamTimetable extends Model
 {
     use HasFactory;
 
-    protected $hidden = ["deleted_at", "created_at", "updated_at"];
+    protected $hidden = ['deleted_at', 'created_at', 'updated_at'];
 
-    public function subject() {
+    protected $appends = ['starting_time', 'ending_time'];
+
+    public function getStartingTimeAttribute(): ?string
+    {
+        return $this->start_time;
+    }
+
+    public function getEndingTimeAttribute(): ?string
+    {
+        return $this->end_time;
+    }
+
+    public function subject()
+    {
         return $this->belongsTo(Subject::class, 'subject_id')->withTrashed();
     }
 
-    public function exam() {
+    public function exam()
+    {
         return $this->belongsTo(Exam::class, 'exam_id');
     }
 
-    public function class() {
+    public function class()
+    {
         return $this->belongsTo(ClassSchool::class, 'class_id');
     }
 
-    public function session_year() {
+    public function session_year()
+    {
         return $this->belongsTo(SessionYear::class, 'session_year_id');
     }
 
-    public function exam_marks() {
+    public function exam_marks()
+    {
         return $this->hasMany(ExamMarks::class, 'exam_timetable_id');
     }
-
 }

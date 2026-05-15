@@ -463,6 +463,8 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
 
         Route::get('generate-id', [StudentController::class, 'generateIdCardIndex'])->name('generate_id.index');
         Route::post('students/{id}/registration-payment-status', [StudentController::class, 'updateRegistrationPaymentStatus'])->name('students.registration-payment-status.update');
+        Route::get('students/payment-toggle-pin', [StudentController::class, 'getPaymentTogglePin'])->name('students.payment-toggle-pin.show');
+        Route::post('students/payment-toggle-pin', [StudentController::class, 'updatePaymentTogglePin'])->name('students.payment-toggle-pin.update');
         Route::get('revenue-analysis', [RevenueAnalysisController::class, 'index'])->name('revenue.analysis');
         Route::get('id-card-settings', [StudentController::class, 'idCardSettingIndex'])->name('id_card_setting.index');
         Route::post('id-card-settings/update', [StudentController::class, 'updateIdCardSetting'])->name('id_card_settings.update');
