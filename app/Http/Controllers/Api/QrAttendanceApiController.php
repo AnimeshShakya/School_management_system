@@ -9,6 +9,7 @@ use App\Models\Attendance;
 use App\Models\ClassSection;
 use App\Models\QrAttendanceLog;
 use App\Models\Students;
+use App\Services\ResponseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,49 @@ use Illuminate\Support\Facades\Validator;
 
 class QrAttendanceApiController extends Controller
 {
+    public function login(Request $request): void
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required',
+            'password' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            ResponseService::validationError($validator->errors()->first());
+        }
+
+        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+            $auth = Auth::user();
+
+            if (! $auth->hasRole('Attendee Teacher')) {
+                ResponseService::errorResponse('Invalid Login Credentials', null, 101);
+            }
+
+            $token = $auth->createToken($auth->first_name)->plainTextToken;
+
+            if ($request->fcm_id) {
+                $auth->fcm_id = $request->fcm_id;
+                $auth->save();
+            }
+            if ($request->device_type) {
+                $auth->device_type = $request->device_type;
+                $auth->save();
+            }
+
+            $user = [
+                'id' => $auth->id,
+                'first_name' => $auth->first_name,
+                'last_name' => $auth->last_name,
+                'email' => $auth->email,
+                'image' => $auth->image,
+            ];
+
+            ResponseService::successResponse('User logged-in!', $user, ['token' => $token], 100);
+        } else {
+            ResponseService::errorResponse('Invalid Login Credentials', null, 101);
+        }
+    }
+
     /**
      * Scan a QR code payload and record attendance (mobile app endpoint).
      */

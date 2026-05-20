@@ -156,6 +156,7 @@ Admin: `admin@gmail.com` / `admin123`
 Teacher: `teacher@gmail.com` / `teacher123`
 Student: `student@gmail.com` / `student123`
 Parent: `parent@gmail.com` / `parent123`
+Attendee: `attendee@gmail.com` / `attendee123`
 
 If installer shows **"Invalid code supplied!"** on the purchase-code step, complete the install purchase verification first. Until installation is completed, admin login may not proceed to the dashboard.
 

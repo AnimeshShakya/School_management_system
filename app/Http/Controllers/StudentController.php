@@ -467,67 +467,6 @@ class StudentController extends Controller
                     $class_section_name = $classSection->class->name.' - '.$classSection->section->name.' '.$classSection->class->medium->name.'  '.($classSection->class->streams->name ?? '');
                 }
             }
-            if (isset($father_plaintext_password)) {
-                $father_data = [
-                    'subject' => 'Welcome to '.$school_name,
-                    'email' => $request->father_email,
-                    'name' => ' '.$request->father_first_name.' '.$request->father_last_name,
-                    'username' => ' '.$request->father_email,
-                    'password' => ' '.$father_plaintext_password,
-                    'child_name' => ' '.$request->first_name.' '.$request->last_name,
-                    'child_grnumber' => ' '.$user->email,
-                    'child_password' => '',
-                    'type' => 'application_accept',
-                    'class_name' => $class_section_name,
-                    'school_name' => $school_name,
-                    'school_email' => $school_email,
-                    'school_contact' => $school_contact,
-                ];
-                MailService::sendWithFallback('students.email', $father_data, function ($message) use ($father_data) {
-                    $message->to($father_data['email'])->subject($father_data['subject']);
-                });
-            }
-            if (isset($mother_plaintext_password)) {
-                $mother_data = [
-                    'subject' => 'Welcome to '.$school_name,
-                    'email' => $request->mother_email,
-                    'name' => ' '.$request->mother_first_name.' '.$request->mother_last_name,
-                    'username' => ' '.$request->mother_email,
-                    'password' => ' '.$mother_plaintext_password,
-                    'child_name' => ' '.$request->first_name.' '.$request->last_name,
-                    'child_grnumber' => ' '.$user->email,
-                    'child_password' => '',
-                    'type' => 'application_accept',
-                    'class_name' => $class_section_name,
-                    'school_name' => $school_name,
-                    'school_email' => $school_email,
-                    'school_contact' => $school_contact,
-                ];
-                MailService::sendWithFallback('students.email', $mother_data, function ($message) use ($mother_data) {
-                    $message->to($mother_data['email'])->subject($mother_data['subject']);
-                });
-            }
-            if (isset($guardian_plaintext_password)) {
-                $guardian_data = [
-                    'subject' => 'Welcome to '.$school_name,
-                    'email' => $request->guardian_email,
-                    'name' => ' '.$request->guardian_first_name.' '.$request->guardian_last_name,
-                    'username' => ' '.$request->guardian_email,
-                    'password' => ' '.$guardian_plaintext_password,
-                    'child_name' => ' '.$request->first_name.' '.$request->last_name,
-                    'child_grnumber' => ' '.$user->email,
-                    'child_password' => '',
-                    'type' => 'application_accept',
-                    'class_name' => $class_section_name,
-                    'school_name' => $school_name,
-                    'school_email' => $school_email,
-                    'school_contact' => $school_contact,
-                ];
-                MailService::sendWithFallback('students.email', $guardian_data, function ($message) use ($guardian_data) {
-                    $message->to($guardian_data['email'])->subject($guardian_data['subject']);
-                });
-            }
-
             $response = [
                 'error' => false,
                 'message' => trans('data_store_successfully'),
@@ -1039,65 +978,6 @@ class StudentController extends Controller
             $school_name = $settings['school_name'];
             $school_email = $settings['school_email'];
             $school_contact = $settings['school_phone'];
-
-            if ($request->parent_guardian_type == 'parent') {
-                $father_data = [
-                    'subject' => 'Welcome to '.$school_name,
-                    'email' => $father_email,
-                    'name' => ' '.$father_name,
-                    'username' => ' '.$father_email,
-                    'password' => ' '.$father_plaintext_password,
-                    'child_name' => ' '.$request->first_name.' '.$request->last_name,
-                    'child_grnumber' => ' '.$request->admission_no,
-                    'child_password' => ' '.$child_plaintext_password,
-                    'type' => 'application_accept',
-                    'class_name' => $class_section_name,
-                    'school_name' => $school_name,
-                    'school_email' => $school_email,
-                    'school_contact' => $school_contact,
-                ];
-                MailService::sendWithFallback('students.email', $father_data, function ($message) use ($father_data) {
-                    $message->to($father_data['email'])->subject($father_data['subject']);
-                });
-
-                $mother_data = [
-                    'subject' => 'Welcome to '.$school_name,
-                    'email' => $mother_email,
-                    'name' => ' '.$mother_name,
-                    'username' => ' '.$mother_email,
-                    'password' => ' '.$mother_plaintext_password,
-                    'child_name' => ' '.$request->first_name.' '.$request->last_name,
-                    'child_grnumber' => ' '.$request->admission_no,
-                    'child_password' => ' '.$child_plaintext_password,
-                    'type' => 'application_accept',
-                    'class_name' => $class_section_name,
-                    'school_name' => $school_name,
-                    'school_email' => $school_email,
-                    'school_contact' => $school_contact,
-                ];
-                MailService::sendWithFallback('students.email', $mother_data, function ($message) use ($mother_data) {
-                    $message->to($mother_data['email'])->subject($mother_data['subject']);
-                });
-            } elseif (! empty($guardian_email)) {
-                $guardian_data = [
-                    'subject' => 'Welcome to '.$school_name,
-                    'email' => $guardian_email,
-                    'name' => ' '.$guardian_name,
-                    'username' => ' '.$guardian_email,
-                    'password' => ' '.$guardian_plaintext_password,
-                    'child_name' => ' '.$request->first_name.' '.$request->last_name,
-                    'child_grnumber' => ' '.$request->admission_no,
-                    'child_password' => ' '.$child_plaintext_password,
-                    'type' => 'application_accept',
-                    'class_name' => $class_section_name,
-                    'school_name' => $school_name,
-                    'school_email' => $school_email,
-                    'school_contact' => $school_contact,
-                ];
-                MailService::sendWithFallback('students.email', $guardian_data, function ($message) use ($guardian_data) {
-                    $message->to($guardian_data['email'])->subject($guardian_data['subject']);
-                });
-            }
 
             DB::commit();
             ResponseService::successResponse(trans('data_store_successfully'));
@@ -3026,29 +2906,9 @@ class StudentController extends Controller
                 ]);
 
                 foreach ($parents as $parent) {
-                    $parentPassword = Str::random(12);
                     $parent->user->status = 1;
-                    $parent->user->password = Hash::make($parentPassword);
+                    $parent->user->password = Hash::make(Str::random(12));
                     $parent->user->save();
-
-                    $mailData = [
-                        'subject' => 'Welcome to '.$schoolName,
-                        'email' => $parent->email,
-                        'name' => $parent->first_name.' '.$parent->last_name,
-                        'username' => $parent->email,
-                        'password' => $parentPassword,
-                        'child_name' => $user->first_name.' '.$user->last_name,
-                        'child_grnumber' => $user->email,
-                        'child_password' => $childPassword,
-                        'class_name' => $classSectionName,
-                        'type' => 'application_accept',
-                        'school_name' => $schoolName,
-                        'school_email' => $schoolEmail,
-                        'school_contact' => $schoolContact,
-                    ];
-                    MailService::sendWithFallback('students.email', $mailData, function ($message) use ($mailData) {
-                        $message->to($mailData['email'])->subject($mailData['subject']);
-                    });
                 }
 
                 $response = ['error' => false, 'message' => trans('user_activate_successfully')];
@@ -3143,28 +3003,8 @@ class StudentController extends Controller
 
                 foreach ($parents as $parent) {
                     $parent->user->status = 1;
-                    $parent_plaintext_password = Str::random(12);
-                    $parent->user->password = Hash::make($parent_plaintext_password);
+                    $parent->user->password = Hash::make(Str::random(12));
                     $parent->user->save();
-
-                    $parent_data = [
-                        'subject' => 'Welcome to '.$school_name,
-                        'email' => $parent->email,
-                        'name' => ' '.$parent->first_name.' '.$parent->last_name,
-                        'username' => ' '.$parent->email,
-                        'password' => ' '.$parent_plaintext_password,
-                        'child_name' => ' '.$user->first_name.' '.$user->last_name,
-                        'child_grnumber' => ' '.$user->email,
-                        'child_password' => ' '.$child_plaintext_password,
-                        'class_name' => $class_section_name,
-                        'type' => 'application_accept',
-                        'school_name' => $school_name,
-                        'school_email' => $school_email,
-                        'school_contact' => $school_contact,
-                    ];
-                    MailService::sendWithFallback('students.email', $parent_data, function ($message) use ($parent_data) {
-                        $message->to($parent_data['email'])->subject($parent_data['subject']);
-                    });
                 }
 
                 $response = [

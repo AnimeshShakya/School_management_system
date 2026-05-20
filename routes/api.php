@@ -279,6 +279,8 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 /**
  * QR ATTENDANCE APIs (Attendee Teacher)
  **/
+Route::middleware('throttle:sensitive-api')->post('attendee/login', [QrAttendanceApiController::class, 'login']);
+
 Route::group(['prefix' => 'qr-attendance', 'middleware' => ['auth:sanctum']], function () {
     Route::post('scan', [QrAttendanceApiController::class, 'scan']);
     Route::get('class-sections', [QrAttendanceApiController::class, 'classSections']);
