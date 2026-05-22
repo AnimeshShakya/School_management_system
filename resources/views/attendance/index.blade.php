@@ -94,22 +94,18 @@
         });
 
         $('.btn_attendance').hide();
-        function set_data(){
-            $(document).ready(function()
-            {
-                student_class=$('#timetable_class_section').val();
-                session_year=$('#date').val();
+        function set_data() {
+            var student_class = $('#timetable_class_section').val();
+            var date = $('#date').val();
 
-                if(student_class!='' && date!='' )
-                {
-                    $('.btn_attendance').show();
-                }
-                else{
-                    $('.btn_attendance').hide();
-                }
-            });
+            if (student_class != '' && date != '') {
+                $('.btn_attendance').show();
+            } else {
+                $('.btn_attendance').hide();
+            }
         }
-        $('#timetable_class_section,#date').on('change', function() {
+
+        $('#timetable_class_section,#date').on('change input', function () {
             set_data();
         });
     </script>
@@ -164,7 +160,7 @@
         });
     </script>
     <script>
-        $('#timetable_class_section,#date').on('change , input', function () {
+        $('#timetable_class_section,#date').on('change input', function () {
             date = $('#date').val();
             class_section_id = $('#timetable_class_section').val();
             $.ajax({

@@ -41,15 +41,6 @@ class AttendanceController extends Controller
 
             return redirect(route('home'))->withErrors($response);
         }
-        $teacher_id = Auth::user()?->teacher?->id;
-
-        if ($teacher_id === null) {
-            $response = [
-                'message' => trans('no_permission_message'),
-            ];
-
-            return redirect(route('home'))->withErrors($response);
-        }
         $user = Auth::user();
         if ($user->teacher) {
             $teacher_id = $user->teacher->id;
@@ -66,15 +57,6 @@ class AttendanceController extends Controller
     public function view()
     {
         if (! Auth::user()->can('attendance-list')) {
-            $response = [
-                'message' => trans('no_permission_message'),
-            ];
-
-            return redirect(route('home'))->withErrors($response);
-        }
-        $teacher_id = Auth::user()?->teacher?->id;
-
-        if ($teacher_id === null) {
             $response = [
                 'message' => trans('no_permission_message'),
             ];
@@ -435,15 +417,6 @@ class AttendanceController extends Controller
     public function createBulkData()
     {
         if (! Auth::user()->can('attendance-list')) {
-            $response = [
-                'message' => trans('no_permission_message'),
-            ];
-
-            return redirect(route('home'))->withErrors($response);
-        }
-        $teacher_id = Auth::user()?->teacher?->id;
-
-        if ($teacher_id === null) {
             $response = [
                 'message' => trans('no_permission_message'),
             ];

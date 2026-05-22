@@ -172,7 +172,7 @@
                                         {{ __('assign') . ' ' . __('subject') . ' ' . __('teacher') }}
                                     </a>
                                 </li>
-                            @endcan
+                            @endcanany
                             @can('assign-class-to-new-student')
                                 <li class="nav-item">
                                     <a class="nav-link {{ request()->routeIs('students.assign-class') ? 'active' : '' }}"
@@ -188,8 +188,8 @@
                                         {{ __('promote_student') }}
                                     </a>
                                 </li>
-                            @endcan
-                        </ul>
+                        @endcanany
+                    </ul>
                     </div>
                 </li>
             @endcanany
@@ -432,7 +432,7 @@
                                     {{ __('student') . ' ' . __('leave') . ' ' . __('requests') }}
                                 </a>
                             </li>
-                        @endcan
+                        @endcanany
                     </ul>
                 </div>
             </li>
@@ -649,7 +649,7 @@
                     </ul>
                 </div>
             </li>
-        @endcan
+        @endcanany
 
         {{-- Fees --}}
         @canany(['fees-type', 'fees-classes', 'fees-paid'])
@@ -703,7 +703,7 @@
                     </ul>
                 </div>
             </li>
-        @endcan
+        @endcanany
 
         @canany(['manage-online-exam'])
             <li class="nav-item {{ $onlineExamOpen ? 'active' : '' }}">
@@ -737,10 +737,10 @@
                         @endcan
                     </ul>
                 </div>
-            </li>
-        @endcan
+                    </li>
+                @endcanany
 
-        {{-- communication and updates --}}
+                {{-- communication and updates --}}
         @canany(['announcement-list', 'announcement-create', 'event-list', 'holiday-list', 'notification-list',
             'notification-create'])
             <li class="nav-item nav-category">{{ __('communication') }}</li>
@@ -873,7 +873,7 @@
                     </ul>
                 </div>
             </li>
-        @endcan
+        @endcanany
 
 
         {{-- settings --}}
@@ -922,7 +922,7 @@
                                     href="{{ route('chat_setting.index') }}">
                                     {{ __('chat_settings') }}</a>
                             </li>
-                        @endcan
+                        @endcanany
                         @can('fees-config')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('fees.config.*') ? 'active' : '' }}"
@@ -978,7 +978,7 @@
                     </ul>
                 </div>
             </li>
-            @endif
+            @endcanany
 
             @if (Auth::user()->hasRole('Super Admin'))
                 <li class="nav-item">

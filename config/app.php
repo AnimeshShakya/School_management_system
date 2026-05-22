@@ -37,6 +37,9 @@ return [
         /*
          * Application Service Providers
          */
+        Barryvdh\DomPDF\ServiceProvider::class,
+        Laravel\Mcp\Server\McpServiceProvider::class,
+        Laravel\Boost\BoostServiceProvider::class,
         App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
         App\Providers\EventServiceProvider::class,

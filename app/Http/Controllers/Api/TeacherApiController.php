@@ -1633,6 +1633,16 @@ class TeacherApiController extends Controller
             ResponseService::validationError($validator->errors()->first());
         }
         try {
+            $user = Auth::user();
+
+            $isValidClassTeacher = ClassTeacher::where('class_section_id', $request->class_section_id)
+                ->where('class_teacher_id', $user->teacher->id)
+                ->exists();
+
+            if (! $isValidClassTeacher) {
+                ResponseService::errorResponse('You are not assigned to this class section', null, 103);
+            }
+
             $session_year = getSettings('session_year');
             $session_year_id = $session_year['session_year'];
             $class_section_id = $request->class_section_id;
@@ -1664,38 +1674,46 @@ class TeacherApiController extends Controller
             Attendance::upsert($attendanceData, ['id'], ['class_section_id', 'student_id', 'session_year_id', 'date', 'type', 'status']);
             // Send Notification to parents
             if (! empty($absent_student_ids)) {
-                $student = Students::with('user')->whereIn('id', $absent_student_ids)->get();
-                foreach ($student as $student) {
-                    $user = Parents::where('id', $student->father_id)->orwhere('id', $student->mother_id)->pluck('user_id');
-                    $title = 'Attendance Alert';
-                    $body = $student->user->first_name.' '.$student->user->last_name.' '.'is Absent on'.' '.date('d-m-Y', strtotime($date));
-                    $type = 'attendance';
-                    $image = null;
-                    $userinfo = null;
+                $absentStudents = Students::with('user')->whereIn('id', $absent_student_ids)->get();
+                $notificationTitle = 'Attendance Alert';
+                $notificationType = 'attendance';
+
+                foreach ($absentStudents as $absentStudent) {
+                    $parentUserIds = Parents::where(function ($query) use ($absentStudent) {
+                        $query->where('id', $absentStudent->father_id)
+                            ->orWhere('id', $absentStudent->mother_id)
+                            ->orWhere('id', $absentStudent->guardian_id);
+                    })->pluck('user_id')->toArray();
+
+                    $parentUserIds = array_filter($parentUserIds);
+
+                    if (empty($parentUserIds)) {
+                        continue;
+                    }
+
+                    $body = $absentStudent->user->first_name.' '.$absentStudent->user->last_name.' '.'is Absent on'.' '.date('d-m-Y', strtotime($date));
 
                     $notification = new Notification;
                     $notification->send_to = 3;
-                    $notification->title = $title;
+                    $notification->title = $notificationTitle;
                     $notification->message = $body;
-                    $notification->type = $type;
+                    $notification->type = $notificationType;
                     $notification->date = Carbon::now();
                     $notification->is_custom = 0;
                     $notification->save();
 
-                    // Prepare data for batch insert
-                    $userNotificationData = [];
-                    foreach ($user as $data) {
+                    foreach ($parentUserIds as $userId) {
                         $userNotificationData[] = [
                             'notification_id' => $notification->id,
-                            'user_id' => $data,
+                            'user_id' => $userId,
                             'created_at' => now(),
                             'updated_at' => now(),
                         ];
 
-                        sendSimpleNotification($user, $title, $body, $type, $image, $userinfo);
+                        sendSimpleNotification([$userId], $notificationTitle, $body, $notificationType, null, null);
                     }
                 }
-                // Batch insert all user notifications
+
                 if (! empty($userNotificationData)) {
                     UserNotification::insert($userNotificationData);
                 }

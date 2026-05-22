@@ -936,24 +936,23 @@ class ExamController extends Controller
             return redirect(route('home'))->withErrors($response);
         }
 
-        // Guard: ensure the authenticated user has a teacher relation
         $user = Auth::user();
         $teacher = $user->teacher ?? null;
-        if (! $teacher) {
-            // No teacher record attached to user; return a friendly error instead of a server error
-            $response = [
-                'message' => trans('no_teacher_attached') ?? 'No teacher record attached to your account.',
-            ];
 
-            return redirect(route('home'))->withErrors($response);
+        // For Super Admin and other non-teacher roles, show all class sections
+        if (! $teacher) {
+            $classes = ClassSection::with('class', 'section', 'class.medium', 'streams')->get();
+        } else {
+            // For teachers, only show the class sections they are assigned to
+            $teacher_id = $teacher->id;
+            $class_section_ids = ClassTeacher::where('class_teacher_id', $teacher_id)->pluck('class_section_id');
+            $class_ids = ClassSection::whereIn('id', $class_section_ids)->pluck('class_id');
+            $classes = ClassSection::with('class', 'section', 'class.medium', 'streams')
+                ->whereIn('id', $class_section_ids)
+                ->whereIn('class_id', $class_ids)
+                ->get();
         }
 
-        $teacher_id = $teacher->id;
-        $class_section_id = ClassTeacher::where('class_teacher_id', $teacher_id)->pluck('class_section_id');
-        $class_ids = ClassSection::whereIn('id', $class_section_id)->pluck('class_id');
-        $classes = ClassSection::with('class', 'section', 'class.medium', 'streams')->whereIn('id', $class_section_id)->whereIn('class_id', $class_ids)->get();
-
-        // $exams = Exam::where('publish', 1)->get();
         return view('exams.show_exam_result', compact('classes'));
     }
 
@@ -988,30 +987,23 @@ class ExamController extends Controller
             ]);
         }
 
-        // Verify teacher has access to this class section
+        // Verify teacher has access to this class section (skip for non-teacher roles like Super Admin)
         $user = Auth::user();
         $teacher = $user->teacher ?? null;
-        if (! $teacher) {
-            return response()->json([
-                'error' => true,
-                'message' => 'No teacher record attached to your account.',
-                'total' => 0,
-                'rows' => [],
-            ]);
-        }
+        if ($teacher) {
+            $teacher_id = $teacher->id;
+            $teacherClassSections = ClassTeacher::where('class_teacher_id', $teacher_id)
+                ->pluck('class_section_id')
+                ->toArray();
 
-        $teacher_id = $teacher->id;
-        $teacherClassSections = ClassTeacher::where('class_teacher_id', $teacher_id)
-            ->pluck('class_section_id')
-            ->toArray();
-
-        if (! in_array($request->class_section_id, $teacherClassSections)) {
-            return response()->json([
-                'error' => true,
-                'message' => 'You do not have access to this class section.',
-                'total' => 0,
-                'rows' => [],
-            ]);
+            if (! in_array($request->class_section_id, $teacherClassSections)) {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'You do not have access to this class section.',
+                    'total' => 0,
+                    'rows' => [],
+                ]);
+            }
         }
 
         try {
@@ -1149,8 +1141,6 @@ class ExamController extends Controller
             return response()->json($response);
         }
         try {
-            $teacher_id = Auth::user()->teacher->id;
-
             foreach ($request->edit as $data) {
                 $class_id = ExamClass::where('exam_id', $data['exam_id'])->pluck('class_id')->first();
                 $marks_db = ExamMarks::find($data['marks_id']);

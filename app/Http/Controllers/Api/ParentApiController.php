@@ -183,17 +183,22 @@ class ParentApiController extends Controller
                                                 'due_date' => date('Y-m-d', strtotime($data->due_date)),
                                                 'due_charges' => $data->due_charges,
                                                 'is_paid' => $paid_installment_data->status ?? 0,
+                                                'amount' => $paid_installment_data->amount ?? null,
+                                                'paid_date' => $paid_installment_data->date ?? null,
+                                                'paid_due_charges' => $paid_installment_data->due_charges ?? null,
                                             ];
                                         }
                                     }
+                                    $installment_data = $installment_data ?? [];
                                     // Find the first unpaid installment and set its due date
                                     foreach ($installment_data as $data) {
                                         if ($data['is_paid'] == 0) {
                                             $due_date = $data['due_date'];
-                                            break; // Stop after the first unpaid installment
+                                            break;
                                         }
                                     }
                                     $child->is_fee_payment_due = ($current_date >= $due_date) ? 1 : 0;
+                                    $child->installment_data = $installment_data;
                                 }
                             }
                         } else {
@@ -226,17 +231,22 @@ class ParentApiController extends Controller
                                             'due_date' => date('Y-m-d', strtotime($data->due_date)),
                                             'due_charges' => $data->due_charges,
                                             'is_paid' => $paid_installment_data->status ?? 0,
+                                            'amount' => $paid_installment_data->amount ?? null,
+                                            'paid_date' => $paid_installment_data->date ?? null,
+                                            'paid_due_charges' => $paid_installment_data->due_charges ?? null,
                                         ];
                                     }
                                 }
+                                $installment_data = $installment_data ?? [];
                                 // Find the first unpaid installment and set its due date
                                 foreach ($installment_data as $data) {
                                     if ($data['is_paid'] == 0) {
                                         $due_date = $data['due_date'];
-                                        break; // Stop after the first unpaid installment
+                                        break;
                                     }
                                 }
                                 $child->is_fee_payment_due = ($current_date >= $due_date) ? 1 : 0;
+                                $child->installment_data = $installment_data;
                             }
                         }
                     }
@@ -731,6 +741,11 @@ class ParentApiController extends Controller
             }
             $attendance = $attendance->get();
             $holidays = $holidays->get();
+
+            $nepaliDate = app(NepaliDateService::class);
+            $attendance = $nepaliDate->addBsFieldsToCollection($attendance, ['date']);
+            $holidays = $nepaliDate->addBsFieldsToCollection($holidays, ['date']);
+
             ResponseService::successResponse('Attendance Details Fetched Successfully', ['attendance' => $attendance, 'holidays' => $holidays, 'session_year' => $session_year_data], [], 200);
         } catch (Throwable $e) {
             ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1227,6 +1242,7 @@ class ParentApiController extends Controller
                         'due_date' => date('Y-m-d', strtotime($data->due_date)),
                         'due_charges' => $data->due_charges,
                         'is_paid' => $paid_installment_data->status ?? 0,
+                        'amount' => $paid_installment_data->amount ?? null,
                         'paid_date' => $paid_installment_data->date ?? null,
                         'paid_due_charges' => ! empty($paid_installment_data) ? number_format($paid_installment_data->due_charges ?? 0, 2) : '',
                     ];
@@ -1389,7 +1405,27 @@ class ParentApiController extends Controller
             if ($request->payment_signature) {
                 $transaction_db->payment_signature = $request->payment_signature;
             }
+            $transaction_db->payment_status = 1;
             $transaction_db->save();
+
+            // Update FeesChoiceable records
+            FeesChoiceable::where('payment_transaction_id', $transaction_db->id)->update(['status' => 1]);
+
+            // Update PaidInstallmentFee records
+            PaidInstallmentFee::where('payment_transaction_id', $transaction_db->id)->update(['status' => 1]);
+
+            // Create or update FeesPaid record
+            $feesPaid = FeesPaid::firstOrNew([
+                'student_id' => $transaction_db->student_id,
+                'session_year_id' => $transaction_db->session_year_id,
+                'class_id' => $transaction_db->class_id,
+            ]);
+            $feesPaid->total_amount = $transaction_db->total_amount;
+            $feesPaid->is_fully_paid = 1;
+            $feesPaid->date = date('Y-m-d');
+            $feesPaid->payment_transaction_id = $transaction_db->id;
+            $feesPaid->save();
+
             ResponseService::successResponse('Data Updated Successfully', null, [], 200);
         } catch (Throwable $e) {
             ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1406,7 +1442,7 @@ class ParentApiController extends Controller
             ResponseService::validationError($validator->errors()->first());
         }
         try {
-            $fees_paid = FeesPaid::where(['student_id' => $request->child_id])->with('session_year:id,name', 'class.medium')->get();
+            $fees_paid = FeesPaid::where(['student_id' => $request->child_id])->with('session_year:id,name', 'class.medium', 'payment_transaction')->get();
             ResponseService::successResponse('Fees Paid List Fetched Successfully', $fees_paid, [], 200);
         } catch (Throwable $e) {
             ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2181,17 +2217,22 @@ class ParentApiController extends Controller
                                                 'due_date' => date('Y-m-d', strtotime($data->due_date)),
                                                 'due_charges' => $data->due_charges,
                                                 'is_paid' => $paid_installment_data->status ?? 0,
+                                                'amount' => $paid_installment_data->amount ?? null,
+                                                'paid_date' => $paid_installment_data->date ?? null,
+                                                'paid_due_charges' => $paid_installment_data->due_charges ?? null,
                                             ];
                                         }
                                     }
+                                    $installment_data = $installment_data ?? [];
                                     // Find the first unpaid installment and set its due date
                                     foreach ($installment_data as $data) {
                                         if ($data['is_paid'] == 0) {
                                             $due_date = $data['due_date'];
-                                            break; // Stop after the first unpaid installment
+                                            break;
                                         }
                                     }
                                     $child->is_fee_payment_due = ($current_date >= $due_date) ? 1 : 0;
+                                    $child->installment_data = $installment_data;
                                 }
                             }
                         } else {
@@ -2224,17 +2265,22 @@ class ParentApiController extends Controller
                                             'due_date' => date('Y-m-d', strtotime($data->due_date)),
                                             'due_charges' => $data->due_charges,
                                             'is_paid' => $paid_installment_data->status ?? 0,
+                                            'amount' => $paid_installment_data->amount ?? null,
+                                            'paid_date' => $paid_installment_data->date ?? null,
+                                            'paid_due_charges' => $paid_installment_data->due_charges ?? null,
                                         ];
                                     }
                                 }
+                                $installment_data = $installment_data ?? [];
                                 // Find the first unpaid installment and set its due date
                                 foreach ($installment_data as $data) {
                                     if ($data['is_paid'] == 0) {
                                         $due_date = $data['due_date'];
-                                        break; // Stop after the first unpaid installment
+                                        break;
                                     }
                                 }
                                 $child->is_fee_payment_due = ($current_date >= $due_date) ? 1 : 0;
+                                $child->installment_data = $installment_data;
                             }
                         }
                     }
@@ -2380,15 +2426,18 @@ class ParentApiController extends Controller
         try {
             $settings = getSettings();
 
-            if (isset($settings['razorpay_status']) && $settings['razorpay_status']) {
-                $secretkey = $settings['razorpay_secret_key'] ?? '';
-            }
+            $secretkey = '';
+            $url = '';
 
             if (isset($settings['stripe_status']) && $settings['stripe_status']) {
                 $secretkey = $settings['stripe_secret_key'] ?? '';
+                $url = 'https://api.stripe.com/v1/payment_intents/'.$request->payment_intent_id;
+            } elseif (isset($settings['razorpay_status']) && $settings['razorpay_status']) {
+                $secretkey = $settings['razorpay_secret_key'] ?? '';
+                $url = 'https://api.razorpay.com/v1/payments/'.$request->payment_intent_id;
+            } else {
+                ResponseService::errorResponse('Payment gateway not configured', null, 103);
             }
-
-            $url = 'https://api.stripe.com/v1/payment_intents/'.$request->payment_intent_id;
 
             $payment_status = Http::withHeaders([
                 'Authorization' => 'Bearer '.$secretkey,

@@ -11,58 +11,62 @@ use Illuminate\Pagination\AbstractPaginator;
 use Illuminate\Routing\Redirector;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use JetBrains\PhpStorm\NoReturn;
 use Throwable;
 
-class ResponseService {
+class ResponseService
+{
     /**
-     * @param $permission
      * @return Application|RedirectResponse|Redirector|true
      */
-    public static function noPermissionThenRedirect($permission) {
-        if (!Auth::user()->can($permission)) {
+    public static function noPermissionThenRedirect($permission)
+    {
+        if (! Auth::user()->can($permission)) {
             return redirect(route('home'))->withErrors([
-                'message' => trans("You Don't have enough permissions")
+                'message' => trans("You Don't have enough permissions"),
             ])->send();
         }
+
         return true;
     }
 
     /**
-     * @param $permission
      * @return true
      */
-    public static function noPermissionThenSendJson($permission) {
-        if (!Auth::user()->can($permission)) {
+    public static function noPermissionThenSendJson($permission)
+    {
+        if (! Auth::user()->can($permission)) {
             self::errorResponse("You Don't have enough permissions");
         }
+
         return true;
     }
 
     /**
-     * @param $role
      * @return Application|\Illuminate\Foundation\Application|RedirectResponse|Redirector|true
      */
     // Check user role
-    public static function noRoleThenRedirect($role) {
-        if (!Auth::user()->hasRole($role)) {
+    public static function noRoleThenRedirect($role)
+    {
+        if (! Auth::user()->hasRole($role)) {
             return redirect(route('home'))->withErrors([
-                'message' => trans("You Don't have enough permissions")
+                'message' => trans("You Don't have enough permissions"),
             ])->send();
         }
+
         return true;
     }
 
     /**
-     * @param array $role
      * @return bool|Application|\Illuminate\Foundation\Application|RedirectResponse|Redirector
      */
-    public static function noAnyRoleThenRedirect(array $role) {
-        if (!Auth::user()->hasAnyRole($role)) {
+    public static function noAnyRoleThenRedirect(array $role)
+    {
+        if (! Auth::user()->hasAnyRole($role)) {
             return redirect(route('home'))->withErrors([
-                'message' => trans("You Don't have enough permissions")
+                'message' => trans("You Don't have enough permissions"),
             ])->send();
         }
+
         return true;
     }
 
@@ -79,63 +83,66 @@ class ResponseService {
     //    }
 
     /**
-     * @param $feature
      * @return RedirectResponse|true
      */
     // Check Feature
-    public static function noFeatureThenRedirect($feature) {
-        if (Auth::user()->school_id && !app(FeaturesService::class)->hasFeature($feature)) {
+    public static function noFeatureThenRedirect($feature)
+    {
+        if (Auth::user()->school_id && ! app(FeaturesService::class)->hasFeature($feature)) {
             return redirect()->back()->withErrors([
-                'message' => trans('Purchase') . " " . trans($feature) . " " . trans("to Continue using this functionality")
+                'message' => trans('Purchase').' '.trans($feature).' '.trans('to Continue using this functionality'),
             ])->send();
         }
+
         return true;
     }
 
-    public static function noFeatureThenSendJson($feature) {
-        if (Auth::user()->school_id && !app(FeaturesService::class)->hasFeature($feature)) {
-            self::errorResponse(trans('Purchase') . " " . trans($feature) . " " . trans("to Continue using this functionality"));
+    public static function noFeatureThenSendJson($feature)
+    {
+        if (Auth::user()->school_id && ! app(FeaturesService::class)->hasFeature($feature)) {
+            self::errorResponse(trans('Purchase').' '.trans($feature).' '.trans('to Continue using this functionality'));
         }
+
         return true;
     }
 
     /**
      * If User don't have any of the permission that is specified in Array then Redirect will happen
-     * @param array $permissions
+     *
      * @return RedirectResponse|true
      */
-    public static function noAnyPermissionThenRedirect(array $permissions) {
-        if (!Auth::user()->canany($permissions)) {
+    public static function noAnyPermissionThenRedirect(array $permissions)
+    {
+        if (! Auth::user()->canany($permissions)) {
             return redirect()->back()->withErrors([
-                'message' => trans("You Don't have enough permissions")
+                'message' => trans("You Don't have enough permissions"),
             ])->send();
         }
+
         return true;
     }
 
     /**
      * If User don't have any of the permission that is specified in Array then Json Response will be sent
-     * @param array $permissions
+     *
      * @return true
      */
-    public static function noAnyPermissionThenSendJson(array $permissions) {
-        if (!Auth::user()->canany($permissions)) {
+    public static function noAnyPermissionThenSendJson(array $permissions)
+    {
+        if (! Auth::user()->canany($permissions)) {
             self::errorResponse("You Don't have enough permissions");
         }
+
         return true;
     }
 
     /**
-     * @param string $message
-     * @param $data
-     * @param array $customData
-     * @param $code
-     * @param array $meta
-     * @return void
+     * @return JsonResponse
      */
-    #[NoReturn] public static function successResponse(string $message = "Success", $data = null, array $customData = array(), $code = null, array $meta = []) {
+    public static function successResponse(string $message = 'Success', $data = null, array $customData = [], $code = null, array $meta = [])
+    {
         // Merge customData into data to enforce a consistent envelope
-        if (!empty($customData)) {
+        if (! empty($customData)) {
             if (is_null($data)) {
                 $data = $customData;
             } elseif (is_array($data)) {
@@ -147,130 +154,125 @@ class ResponseService {
         if ($data instanceof AbstractPaginator && empty($meta)) {
             $meta = [
                 'current_page' => $data->currentPage(),
-                'last_page'    => $data->lastPage(),
-                'per_page'     => $data->perPage(),
-                'total'        => $data->total(),
-                'from'         => $data->firstItem(),
-                'to'           => $data->lastItem(),
+                'last_page' => $data->lastPage(),
+                'per_page' => $data->perPage(),
+                'total' => $data->total(),
+                'from' => $data->firstItem(),
+                'to' => $data->lastItem(),
             ];
             $data = $data->items();
         }
 
         $response = [
-            'status'  => true,
+            'status' => true,
             'message' => trans($message),
-            'data'    => $data,
-            'code'    => $code ?? 200,
+            'data' => $data,
+            'code' => $code ?? 200,
         ];
 
-        if (!empty($meta)) {
+        if (! empty($meta)) {
             $response['meta'] = $meta;
         }
 
-        response()->json($response)->send();
-        exit();
+        return response()->json($response);
     }
 
     /**
-     * @param string $message
-     * @param $url
      * @return Application|\Illuminate\Foundation\Application|RedirectResponse|Redirector
      */
-    public static function successRedirectResponse(string $message = "success", $url = null)
+    public static function successRedirectResponse(string $message = 'success', $url = null)
     {
         return isset($url) ? redirect($url)->with([
-            'success' => trans($message)
+            'success' => trans($message),
         ])->send() : redirect()->back()->with([
-            'success' => trans($message)
+            'success' => trans($message),
         ])->send();
     }
 
     /**
-     *
-     * @param string $message - Pass the Translatable Field
-     * @param null $data
-     * @param null $code
-     * @param null $e
-     * @return void
+     * @param  string  $message  - Pass the Translatable Field
+     * @param  null  $data
+     * @param  null  $code
+     * @param  null  $e
+     * @return JsonResponse
      */
-    #[NoReturn] public static function errorResponse(string $message = 'Error Occurred', $data = null, $code = null, $e = null) {
+    public static function errorResponse(string $message = 'Error Occurred', $data = null, $code = null, $e = null)
+    {
         if ($e) {
             self::logErrorResponse($e);
             self::logCurlRequest();
         }
 
-        response()->json([
-            'status'  => false,
+        return response()->json([
+            'status' => false,
             'message' => trans($message),
-            'data'    => $data,
-            'code'    => $code ?? config('constants.RESPONSE_CODE.EXCEPTION_ERROR'),
-            'details' => (!empty($e) && is_object($e)) ? $e->getMessage() . ' --> ' . $e->getFile() . ' At Line : ' . $e->getLine() : ''
-        ])->send();
-        exit();
+            'data' => $data,
+            'code' => $code ?? config('constants.RESPONSE_CODE.EXCEPTION_ERROR'),
+            'details' => (config('app.debug') && ! empty($e) && is_object($e)) ? $e->getMessage() : '',
+        ]);
     }
 
     /**
-     * @param string $message
-     * @param $url
      * @return Application|\Illuminate\Foundation\Application|RedirectResponse|Redirector
      */
-    public static function errorRedirectResponse($url = null, string $message = 'Error Occurred') {
+    public static function errorRedirectResponse($url = null, string $message = 'Error Occurred')
+    {
         return (($url != null) ? redirect($url) : redirect()->back())->withErrors([
-            'message' => trans($message)
-        ])->send();
-    }
-
-    /**
-     * @param string $message
-     * @param null $data
-     * @param null $code
-     * @return void
-     */
-    #[NoReturn] public static function warningResponse(string $message = 'Error Occurred', $data = null, $code = null) {
-        response()->json([
-            'status'  => false,
-            'warning' => true,
-            'code'    => $code,
             'message' => trans($message),
-            'data'    => $data,
         ])->send();
-        exit();
-    }
-
-
-    /**
-     * @param string $message
-     * @param null $data
-     * @return void
-     */
-    #[NoReturn] public static function validationError(string $message = 'Error Occurred', $data = null) {
-        self::errorResponse($message, $data, config('constants.RESPONSE_CODE.VALIDATION_ERROR'));
     }
 
     /**
-     * @param Throwable|Exception $e
-     * @param string $logMessage
-     * @param string $responseMessage
-     * @param bool $jsonResponse
+     * @param  null  $data
+     * @param  null  $code
+     * @return JsonResponse
+     */
+    public static function warningResponse(string $message = 'Error Occurred', $data = null, $code = null)
+    {
+        return response()->json([
+            'status' => false,
+            'warning' => true,
+            'code' => $code,
+            'message' => trans($message),
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * @param  null  $data
+     * @return JsonResponse
+     */
+    public static function validationError(string $message = 'Error Occurred', $data = null)
+    {
+        return self::errorResponse($message, $data, config('constants.RESPONSE_CODE.VALIDATION_ERROR'));
+    }
+
+    /**
+     * @param  string  $logMessage
+     * @param  string  $responseMessage
+     * @param  bool  $jsonResponse
      * @return void
      */
-    public static function logErrorResponse(Throwable|Exception $e) {
+    public static function logErrorResponse(Throwable|Exception $e)
+    {
         report($e);
         $token = request()->bearerToken();
+        $redactedToken = $token ? substr($token, 0, 8).'...' : 'none';
 
-        Log::error($e->getMessage() . '---> ' . $e->getFile() . ' At Line : ' . $e->getLine() . "\n\n" . request()->method() . " : " . request()->fullUrl() . "\nToken : " . $token . "\nParams : ", request()->all());
+        Log::error($e->getMessage().'---> '.$e->getFile().' At Line : '.$e->getLine()."\n\n".request()->method().' : '.request()->fullUrl()."\nToken : ".$redactedToken."\nParams : ", request()->all());
     }
 
-    public static function logCurlRequest() {
+    public static function logCurlRequest()
+    {
         $request = request();
         // Log::error("CURL Request:\n", $request->all());
-        $method  = strtoupper($request->method());
-        $url     = $request->fullUrl();
+        $method = strtoupper($request->method());
+        $url = $request->fullUrl();
         $headers = [];
 
         foreach ($request->headers->all() as $key => $values) {
             foreach ($values as $value) {
-                $headers[] = "-H '" . $key . ": " . $value . "'";
+                $headers[] = "-H '".$key.': '.$value."'";
             }
         }
 
@@ -311,12 +313,11 @@ class ResponseService {
                 }
             }
 
-
-            $data = " " . implode(" \\\n  ", $parts);
+            $data = ' '.implode(" \\\n  ", $parts);
         }
 
-        $curl = "curl -X {$method} '" . $url . "' \\\n  " . implode(" \\\n  ", $headers) . $data;
+        $curl = "curl -X {$method} '".$url."' \\\n  ".implode(" \\\n  ", $headers).$data;
 
-        Log::error("CURL Request:\n" . $curl);
+        Log::error("CURL Request:\n".$curl);
     }
 }
