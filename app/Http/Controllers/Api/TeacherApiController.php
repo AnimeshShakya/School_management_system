@@ -1848,7 +1848,7 @@ class TeacherApiController extends Controller
                     $guardian_data = Parents::where('id', $student_data_ids['guardian_id'])->get();
 
                     ResponseService::successResponse('Student Details Fetched Successfully', null, [
-                        'gurdian_data' => $guardian_data,
+                        'guardian_data' => $guardian_data,
                         'father_data' => $father_data,
                         'mother_data' => $mother_data,
                         'total_present' => $student_total_present,
