@@ -34,9 +34,9 @@ class ApiController extends Controller
             $user->update(['fcm_id' => '']);
             $user->currentAccessToken()->delete();
 
-            ResponseService::successResponse('Logout Successfully done.');
+            return ResponseService::successResponse('Logout Successfully done.');
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -49,9 +49,10 @@ class ApiController extends Controller
             $nepaliDate = app(NepaliDateService::class);
             $data = Holiday::all()
                 ->map(fn ($holiday) => $nepaliDate->addBsFields($holiday->toArray(), ['date']));
-            ResponseService::successResponse('Holidays Fetched Successfully.', $data);
+
+            return ResponseService::successResponse('Holidays Fetched Successfully.', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -62,9 +63,10 @@ class ApiController extends Controller
     {
         try {
             $data = Slider::whereIn('type', [1, 3])->get();
-            ResponseService::successResponse('Sliders Fetched Successfully.', $data);
+
+            return ResponseService::successResponse('Sliders Fetched Successfully.', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -80,9 +82,9 @@ class ApiController extends Controller
             $data = app(NepaliDateService::class)
                 ->addBsFields($sessionYear->toArray(), ['start_date', 'end_date']);
 
-            ResponseService::successResponse('Session Year Fetched Successfully.', $data);
+            return ResponseService::successResponse('Session Year Fetched Successfully.', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -96,9 +98,9 @@ class ApiController extends Controller
                 ->orderBy('id', 'DESC')
                 ->get();
 
-            ResponseService::successResponse('Session Years Fetched Successfully.', $data);
+            return ResponseService::successResponse('Session Years Fetched Successfully.', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -109,7 +111,7 @@ class ApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $settings = getSettings();
@@ -254,9 +256,9 @@ class ApiController extends Controller
                 $data = $settings[$request->type] ?? '';
             }
 
-            ResponseService::successResponse('Data Fetched Successfully', $data);
+            return ResponseService::successResponse('Data Fetched Successfully', $data);
         } catch (\Exception $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -270,17 +272,17 @@ class ApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
 
         try {
             $response = Password::sendResetLink($request->only('email'));
 
-            $response === Password::RESET_LINK_SENT
+            return $response === Password::RESET_LINK_SENT
                 ? ResponseService::successResponse('Password reset link sent to your email.')
                 : ResponseService::errorResponse('Unable to send password reset link.');
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -297,23 +299,23 @@ class ApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
 
         try {
             $user = $request->user();
 
             if (! Hash::check($request->input('current_password'), $user->password)) {
-                ResponseService::errorResponse('Current password is incorrect.');
+                return ResponseService::errorResponse('Current password is incorrect.');
             }
 
             $user->update([
                 'password' => Hash::make($request->input('new_password')),
             ]);
 
-            ResponseService::successResponse('Password changed successfully.');
+            return ResponseService::successResponse('Password changed successfully.');
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -379,12 +381,12 @@ class ApiController extends Controller
                 ]);
             }
 
-            ResponseService::successResponse(
+            return ResponseService::successResponse(
                 'Events Fetched Successfully.',
                 $allEvents->values()->toArray()
             );
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -394,13 +396,14 @@ class ApiController extends Controller
             'event_id' => 'required|nullable',
         ]);
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $data = MultipleEvent::where('event_id', $request->event_id)->get();
-            ResponseService::successResponse('Events Details Fetched Successfully', $data);
+
+            return ResponseService::successResponse('Events Details Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 }

@@ -10,8 +10,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $role = Role::findByName('Super Admin', 'web');
-        $role->syncPermissions(Permission::all());
+        if (Role::where('name', 'Super Admin')->exists()) {
+            $role = Role::findByName('Super Admin', 'web');
+            $role->syncPermissions(Permission::all());
+        }
     }
 
     public function down(): void

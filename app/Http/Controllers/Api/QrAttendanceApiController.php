@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Validator;
 
 class QrAttendanceApiController extends Controller
 {
-    public function login(Request $request): void
+    public function login(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'email' => 'required',
@@ -27,14 +27,14 @@ class QrAttendanceApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
 
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
             $auth = Auth::user();
 
             if (! $auth->hasRole('Attendee Teacher')) {
-                ResponseService::errorResponse('Invalid Login Credentials', null, 101);
+                return ResponseService::errorResponse('Invalid Login Credentials', null, 101);
             }
 
             $token = $auth->createToken($auth->first_name)->plainTextToken;
@@ -56,9 +56,9 @@ class QrAttendanceApiController extends Controller
                 'image' => $auth->image,
             ];
 
-            ResponseService::successResponse('User logged-in!', $user, ['token' => $token], 100);
+            return ResponseService::successResponse('User logged-in!', $user, ['token' => $token], 100);
         } else {
-            ResponseService::errorResponse('Invalid Login Credentials', null, 101);
+            return ResponseService::errorResponse('Invalid Login Credentials', null, 101);
         }
     }
 

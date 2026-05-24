@@ -71,6 +71,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 class StudentApiController extends Controller
@@ -78,12 +79,13 @@ class StudentApiController extends Controller
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'gr_number' => 'required',
+            'email' => 'required_without:gr_number',
+            'gr_number' => 'required_without:email',
             'password' => 'required',
         ]);
 
         if ($validator->fails()) {
-            ResponseService::errorResponse($validator->errors()->first(), null, 102);
+            return ResponseService::errorResponse($validator->errors()->first(), null, 102);
         }
 
         $session_year = getSettings('session_year');
@@ -100,10 +102,16 @@ class StudentApiController extends Controller
 
         $current_date = Carbon::now()->toDateString();
 
-        $loginEmail = $request->gr_number;
+        $loginEmail = $request->email ?? $request->gr_number;
         if (! Auth::attempt(['email' => $loginEmail, 'password' => $request->password])) {
-            // Fallback: try looking up student by admission_no to get the real email
-            $student = \App\Models\Students::where('admission_no', $request->gr_number)->first();
+            // Fallback: try looking up student by admission_no or gr_number to get the real email
+            $searchValue = $request->email ?? $request->gr_number;
+            $student = \App\Models\Students::where('admission_no', $searchValue)->first();
+            if (! $student) {
+                $student = \App\Models\Students::whereHas('user', function ($q) use ($searchValue) {
+                    $q->where('email', $searchValue);
+                })->first();
+            }
             if ($student) {
                 $fallbackUser = \App\Models\User::find($student->user_id);
                 if ($fallbackUser) {
@@ -116,7 +124,7 @@ class StudentApiController extends Controller
             // Here Email Field is referenced as a GR Number for Student
             $auth = Auth::user();
             if (! $auth->hasRole('Student')) {
-                ResponseService::errorResponse('Invalid Login Credentials', null, 101);
+                return ResponseService::errorResponse('Invalid Login Credentials', null, 101);
             }
             $token = $auth->createToken($auth->first_name)->plainTextToken;
             $user = $auth->load(['student.class_section', 'student.category']);
@@ -124,16 +132,17 @@ class StudentApiController extends Controller
             // if new session is not activated for student
             $studentSession = StudentSessions::where('session_year_id', $session_year_id)->where('student_id', $user->student->id)->first();
             if (! $studentSession) {
-                ResponseService::errorResponse('Your account is not active for the current academic year because promotion to the next class has not been completed. Please contact the administration.', null, null);
+                return ResponseService::errorResponse('Your account is not active for the current academic year because promotion to the next class has not been completed. Please contact the administration.', null, null);
             }
 
             if ($studentSession->status == 0) {
-                ResponseService::errorResponse('Your Account is Deactivate Please contact Admin for Further Help.', null, null);
+                return ResponseService::errorResponse('Your Account is Deactivate Please contact Admin for Further Help.', null, null);
             }
 
             if (! $user->student->registration_payment_status) {
                 Auth::logout();
-                ResponseService::errorResponse('Registration payment is pending. Login access is disabled until payment is completed.', null, null);
+
+                return ResponseService::errorResponse('Registration payment is pending. Login access is disabled until payment is completed.', null, null);
             }
             if ($request->fcm_id) {
                 $auth->fcm_id = $request->fcm_id;
@@ -307,9 +316,10 @@ class StudentApiController extends Controller
             }
 
             $data = array_merge($user, ['dynamic_fields' => $dynamicFields, 'qr_payload' => $qrPayload]);
-            ResponseService::successResponse('User logged-in!', $data, ['token' => $token]);
+
+            return ResponseService::successResponse('User logged-in!', $data, ['token' => $token]);
         } else {
-            ResponseService::errorResponse('Invalid Login Credentials', null, 101);
+            return ResponseService::errorResponse('Invalid Login Credentials', null, 101);
         }
     }
 
@@ -687,9 +697,9 @@ class StudentApiController extends Controller
                 'qr_payload' => $qrPayload,
             ];
 
-            ResponseService::successResponse('Data Fetched Successfully.', (object) $data);
+            return ResponseService::successResponse('Data Fetched Successfully.', (object) $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -702,7 +712,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $ip = $request->ip();
@@ -721,21 +731,24 @@ class StudentApiController extends Controller
                         'gr_no' => $request->gr_no,
                         'ip' => $ip,
                     ]);
-                    ResponseService::successResponse('Request Send Successfully');
+
+                    return ResponseService::successResponse('Request Send Successfully');
                 } else {
                     Log::warning('Failed password reset attempt: invalid credentials.', [
                         'ip' => $ip,
                     ]);
-                    ResponseService::errorResponse('Invalid user Details', null, 107);
+
+                    return ResponseService::errorResponse('Invalid user Details', null, 107);
                 }
             } else {
                 Log::warning('Failed password reset attempt: admission number not found.', [
                     'ip' => $ip,
                 ]);
-                ResponseService::errorResponse('Invalid user Details', null, 107);
+
+                return ResponseService::errorResponse('Invalid user Details', null, 107);
             }
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -749,9 +762,9 @@ class StudentApiController extends Controller
                 $subjects['elective_subject'] = null;
             }
 
-            ResponseService::successResponse('Student Subject Fetched Successfully.', $subjects);
+            return ResponseService::successResponse('Student Subject Fetched Successfully.', $subjects);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -760,9 +773,10 @@ class StudentApiController extends Controller
         try {
             $user = $request->user();
             $subjects = $user->student->classSubjects();
-            ResponseService::successResponse('Class Subject Fetched Successfully.', $subjects);
+
+            return ResponseService::successResponse('Class Subject Fetched Successfully.', $subjects);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -785,7 +799,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
 
@@ -812,14 +826,14 @@ class StudentApiController extends Controller
                 $group = $electiveGroups->get($subject_group['id']);
 
                 if (! $group) {
-                    ResponseService::errorResponse('Invalid elective subject group for your class.');
+                    return ResponseService::errorResponse('Invalid elective subject group for your class.');
 
                     return;
                 }
 
                 $selectedCount = count($subject_group['subject_id']);
                 if ($selectedCount > $group->total_selectable_subjects) {
-                    ResponseService::errorResponse(
+                    return ResponseService::errorResponse(
                         "You can select at most {$group->total_selectable_subjects} subject(s) from this group."
                     );
 
@@ -849,9 +863,9 @@ class StudentApiController extends Controller
             }
             StudentSubject::insert($student_subject);
 
-            ResponseService::successResponse('Subject Selected Successfully', $student_subject);
+            return ResponseService::successResponse('Subject Selected Successfully', $student_subject);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -932,9 +946,9 @@ class StudentApiController extends Controller
                 $data['guardian'] = $guardian;
             }
 
-            ResponseService::successResponse('Parent Details Fetched Successfully', $data);
+            return ResponseService::successResponse('Parent Details Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -965,9 +979,10 @@ class StudentApiController extends Controller
                     $new_timetable[] = $timetable;
                 }
             }
-            ResponseService::successResponse('Timetable Fetched Successfully', new TimetableCollection($new_timetable));
+
+            return ResponseService::successResponse('Timetable Fetched Successfully', new TimetableCollection($new_timetable));
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -984,7 +999,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $student = $request->user()->student;
@@ -997,7 +1012,7 @@ class StudentApiController extends Controller
             $enrolled_subject_ids = array_merge($core_subjects, $elective_subjects);
 
             if (! in_array((int) $request->subject_id, $enrolled_subject_ids)) {
-                ResponseService::errorResponse('Invalid Subject ID', null, 106);
+                return ResponseService::errorResponse('Invalid Subject ID', null, 106);
             }
 
             $data = Lesson::where('class_section_id', $student->class_section_id)->where('subject_id', $request->subject_id)->with('topic', 'file');
@@ -1006,9 +1021,9 @@ class StudentApiController extends Controller
             }
             $data = $data->get();
 
-            ResponseService::successResponse('Lessons Fetched Successfully', $data);
+            return ResponseService::successResponse('Lessons Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1025,7 +1040,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
 
         try {
@@ -1037,9 +1052,10 @@ class StudentApiController extends Controller
                 $data->where('id', $request->topic_id);
             }
             $data = $data->get();
-            ResponseService::successResponse('Topics Fetched Successfully', $data);
+
+            return ResponseService::successResponse('Topics Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1057,7 +1073,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
 
         try {
@@ -1098,9 +1114,10 @@ class StudentApiController extends Controller
                 }
             }
             $data = $data->orderBy('id', 'desc')->paginate();
-            ResponseService::successResponse('Assignments Fetched Successfully', $data);
+
+            return ResponseService::successResponse('Assignments Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1120,7 +1137,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
 
         try {
@@ -1152,7 +1169,7 @@ class StudentApiController extends Controller
                 }
                 $assignment_submission->file()->delete();
             } else {
-                ResponseService::errorResponse('You already have submitted your assignment.', null, 104);
+                return ResponseService::errorResponse('You already have submitted your assignment.', null, 104);
             }
 
             $subject_teacher_id = SubjectTeacher::where('class_section_id', $student->class_section_id)->where('subject_id', $assignment->subject_id)->pluck('teacher_id');
@@ -1194,9 +1211,10 @@ class StudentApiController extends Controller
             }
 
             $submitted_assignment = AssignmentSubmission::where('id', $assignment_submission->id)->with('file')->get();
-            ResponseService::successResponse('Assignments Submitted Successfully', $submitted_assignment);
+
+            return ResponseService::successResponse('Assignments Submitted Successfully', $submitted_assignment);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1214,7 +1232,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
 
         try {
@@ -1226,11 +1244,11 @@ class StudentApiController extends Controller
                 ->first();
 
             if (empty($assignment_submission)) {
-                ResponseService::errorResponse('Assignment submission not found.', null, 104);
+                return ResponseService::errorResponse('Assignment submission not found.', null, 104);
             }
 
             if ($assignment_submission->status != 0) {
-                ResponseService::errorResponse('You can not edit assignment', null, 110);
+                return ResponseService::errorResponse('You can not edit assignment', null, 110);
             }
 
             $hasNewText = ! empty($request->text_submission);
@@ -1238,7 +1256,7 @@ class StudentApiController extends Controller
             $hasExistingFiles = $assignment_submission->file->isNotEmpty();
 
             if (! $hasNewText && ! $hasNewFiles && ! $hasExistingFiles) {
-                ResponseService::validationError('The text submission field is required when files are not present.');
+                return ResponseService::validationError('The text submission field is required when files are not present.');
             }
 
             $assignment_submission->text_submission = $request->text_submission;
@@ -1265,9 +1283,10 @@ class StudentApiController extends Controller
             }
 
             $submitted_assignment = AssignmentSubmission::where('id', $assignment_submission->id)->with('file')->get();
-            ResponseService::successResponse('Assignments Edited Successfully', $submitted_assignment);
+
+            return ResponseService::successResponse('Assignments Edited Successfully', $submitted_assignment);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1283,7 +1302,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
 
         try {
@@ -1299,12 +1318,12 @@ class StudentApiController extends Controller
                 $assignment_submission->file()->delete();
                 $assignment_submission->delete();
 
-                ResponseService::successResponse('Assignments Deleted Successfully');
+                return ResponseService::successResponse('Assignments Deleted Successfully');
             } else {
-                ResponseService::errorResponse('You can not delete assignment', null, 110);
+                return ResponseService::errorResponse('You can not delete assignment', null, 110);
             }
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1321,7 +1340,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $student = $request->user()->student;
@@ -1348,9 +1367,9 @@ class StudentApiController extends Controller
             $holidaysWithBs = $nepaliDate->addBsFieldsToCollection($holidays, ['date']);
             $sessionYearArr = $nepaliDate->addBsFields($session_year_data->toArray(), ['start_date', 'end_date']);
 
-            ResponseService::successResponse('Attendance Details Fetched Successfully', ['attendance' => $attendanceWithBs, 'holidays' => $holidaysWithBs, 'session_year' => $sessionYearArr]);
+            return ResponseService::successResponse('Attendance Details Fetched Successfully', ['attendance' => $attendanceWithBs, 'holidays' => $holidaysWithBs, 'session_year' => $sessionYearArr]);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1362,7 +1381,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $student = $request->user()->student;
@@ -1373,7 +1392,7 @@ class StudentApiController extends Controller
             if (isset($request->type) && $request->type == 'subject') {
                 $table = SubjectTeacher::where('class_section_id', $student->class_section_id)->where('subject_id', $request->subject_id)->get()->pluck('id');
                 if (empty($table)) {
-                    ResponseService::errorResponse('Invalid Subject ID', null, 106);
+                    return ResponseService::errorResponse('Invalid Subject ID', null, 106);
                 }
             }
 
@@ -1406,9 +1425,10 @@ class StudentApiController extends Controller
             }
 
             $data = $data->orderBy('id', 'desc')->paginate();
-            ResponseService::successResponse('Announcement Details Fetched Successfully', $data);
+
+            return ResponseService::successResponse('Announcement Details Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1621,9 +1641,10 @@ class StudentApiController extends Controller
                     }
                 }
             }
-            ResponseService::successResponse('Exam List Fetched Successfully', $exam_data ?? []);
+
+            return ResponseService::successResponse('Exam List Fetched Successfully', $exam_data ?? []);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1633,7 +1654,7 @@ class StudentApiController extends Controller
             'exam_id' => 'required|nullable',
         ]);
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $student_id = Auth::user()->student->id;
@@ -1651,8 +1672,10 @@ class StudentApiController extends Controller
             }])->where('id', $request->exam_id)->first();
 
             if (! $exam_data_db) {
-                ResponseService::errorResponse('error_occurred', null, 103);
+                return ResponseService::errorResponse('error_occurred', null, 103);
             }
+
+            dd($exam_data_db);
 
             $exam_data = [];
             foreach ($exam_data_db->timetable as $data) {
@@ -1672,9 +1695,10 @@ class StudentApiController extends Controller
                     ],
                 ];
             }
-            ResponseService::successResponse('Exam Details Fetched Successfully', $exam_data ?? []);
+
+            return ResponseService::successResponse('Exam Details Fetched Successfully', $exam_data ?? []);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1736,12 +1760,13 @@ class StudentApiController extends Controller
                         'exam_marks' => $exam_marks,
                     ];
                 }
-                ResponseService::successResponse('Exam Result Fetched Successfully', $data);
+
+                return ResponseService::successResponse('Exam Result Fetched Successfully', $data);
             } else {
-                ResponseService::successResponse('Exam Result Fetched Successfully', []);
+                return ResponseService::successResponse('Exam Result Fetched Successfully', []);
             }
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1752,7 +1777,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $date = Carbon::now()->setTimezone('UTC');
@@ -1857,9 +1882,9 @@ class StudentApiController extends Controller
                 $exam_data = null;
             }
 
-            ResponseService::successResponse('Exam List Fetched Successfully', $exam_data);
+            return ResponseService::successResponse('Exam List Fetched Successfully', $exam_data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1871,7 +1896,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $student = $request->user()->student;
@@ -1879,13 +1904,13 @@ class StudentApiController extends Controller
             // checks Exam key
             $check_key = OnlineExam::where(['id' => $request->exam_id, 'exam_key' => $request->exam_key])->count();
             if ($check_key == 0) {
-                ResponseService::errorResponse('Invalid Exam Key', null, 103);
+                return ResponseService::errorResponse('Invalid Exam Key', null, 103);
             }
 
             // checks student exam status
             $check_student_status = StudentOnlineExamStatus::where(['online_exam_id' => $request->exam_id, 'student_id' => $student->id])->count();
             if ($check_student_status != 0) {
-                ResponseService::errorResponse('student_already_attempted_exam', null, 105);
+                return ResponseService::errorResponse('student_already_attempted_exam', null, 105);
             }
 
             // checks the exam started or not
@@ -1893,7 +1918,7 @@ class StudentApiController extends Controller
             $current_date_time = $time_data['formatted'];
             $check_start_date = OnlineExam::where('id', $request->exam_id)->where('start_date', '>', $current_date_time)->count();
             if ($check_start_date != 0) {
-                ResponseService::errorResponse('exam_not_started_yet', null, 106);
+                return ResponseService::errorResponse('exam_not_started_yet', null, 106);
             }
 
             // add the exam status
@@ -1944,9 +1969,10 @@ class StudentApiController extends Controller
                     'note' => $exam_questions->questions->note,
                 ];
             }
-            ResponseService::successResponse('Exam Questions Fetched Successfully', $questions_data ?? null, ['total_questions' => $total_questions, 'total_marks' => $total_marks]);
+
+            return ResponseService::successResponse('Exam Questions Fetched Successfully', $questions_data ?? null, ['total_questions' => $total_questions, 'total_marks' => $total_marks]);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -1961,24 +1987,24 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $student = $request->user()->student;
 
             $onlineExam = OnlineExam::find($request->online_exam_id);
             if (! $onlineExam) {
-                ResponseService::errorResponse('invalid_online_exam_id', null, 103);
+                return ResponseService::errorResponse('invalid_online_exam_id', null, 103);
             }
 
             $answers_exists = OnlineExamStudentAnswer::where(['student_id' => $student->id, 'online_exam_id' => $request->online_exam_id])->exists();
             if ($answers_exists) {
-                ResponseService::errorResponse('Answers already submitted', null, 103);
+                return ResponseService::errorResponse('Answers already submitted', null, 103);
             }
 
             $questionIds = collect($request->answers_data)->pluck('question_id');
             if ($questionIds->count() !== $questionIds->unique()->count()) {
-                ResponseService::errorResponse('Duplicate question answers are not allowed', null, 103);
+                return ResponseService::errorResponse('Duplicate question answers are not allowed', null, 103);
             }
 
             DB::transaction(function () use ($request, $student): void {
@@ -2020,12 +2046,13 @@ class StudentApiController extends Controller
                 );
             });
 
-            ResponseService::successResponse('data_store_successfully');
+            return ResponseService::successResponse('data_store_successfully');
         } catch (Throwable $e) {
             if ($e instanceof \RuntimeException && $e->getMessage() === 'invalid_question_id') {
-                ResponseService::errorResponse('invalid_question_id', null, 103);
+                return ResponseService::errorResponse('invalid_question_id', null, 103);
             }
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2036,7 +2063,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $student = $request->user()->student;
@@ -2186,9 +2213,10 @@ class StudentApiController extends Controller
                     ],
                 ];
             }
-            ResponseService::successResponse('Online Exam Report Fetched Successfully', $online_exam_report_data ?? []);
+
+            return ResponseService::successResponse('Online Exam Report Fetched Successfully', $online_exam_report_data ?? []);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2199,7 +2227,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
 
         try {
@@ -2362,9 +2390,10 @@ class StudentApiController extends Controller
                 'to' => $online_exam_db['to'],
                 'total' => $online_exam_db['total'],
             ];
-            ResponseService::successResponse('Exam List Fetched Successfully', $exam_list ?? '');
+
+            return ResponseService::successResponse('Exam List Fetched Successfully', $exam_list ?? '');
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2375,7 +2404,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $student = $request->user()->student;
@@ -2450,9 +2479,10 @@ class StudentApiController extends Controller
                 'total_obtained_marks' => (string) ($total_obtained_marks ?? 0),
                 'total_marks' => (string) $total_marks,
             ];
-            ResponseService::successResponse('Exam Result Fetched Successfully', $exam_result ?? '');
+
+            return ResponseService::successResponse('Exam Result Fetched Successfully', $exam_result ?? '');
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2656,9 +2686,9 @@ class StudentApiController extends Controller
                 }
             }
 
-            ResponseService::successResponse('Data Fetched Successfully', $data);
+            return ResponseService::successResponse('Data Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2672,9 +2702,10 @@ class StudentApiController extends Controller
             $notification = Notification::whereIn('id', $notification_id)
                 // ->orWhereIn('send_to', [1, 3]) // this also shows the notifications sent to other students
                 ->latest()->paginate();
-            ResponseService::successResponse('Data Fetched Successfully', $notification ?? '');
+
+            return ResponseService::successResponse('Data Fetched Successfully', $notification ?? '');
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2782,9 +2813,10 @@ class StudentApiController extends Controller
             $data = collect($data)->sortByDesc(function ($user) {
                 return optional($user['last_message'])->date ?? 0;
             })->values();
-            ResponseService::successResponse('Data Fetched Successfully', ['items' => $data, 'total_items' => $total_items, 'total_unread_users' => $totalunreadusers]);
+
+            return ResponseService::successResponse('Data Fetched Successfully', ['items' => $data, 'total_items' => $total_items, 'total_unread_users' => $totalunreadusers]);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2796,7 +2828,7 @@ class StudentApiController extends Controller
             'file.*' => 'nullable',
         ]);
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $sender_id = $request->user()->id;
@@ -2919,9 +2951,9 @@ class StudentApiController extends Controller
 
             sendSimpleNotification($user, $title, $body, $type, $image, $userinfo);
 
-            ResponseService::successResponse('message_sent_successfully', $data);
+            return ResponseService::successResponse('message_sent_successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2961,9 +2993,9 @@ class StudentApiController extends Controller
                 }
             }
 
-            ResponseService::successResponse('Data Fetched Successfully', ['items' => $messages ?? [], 'total_items' => $total_items]);
+            return ResponseService::successResponse('Data Fetched Successfully', ['items' => $messages ?? [], 'total_items' => $total_items]);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -2986,9 +3018,9 @@ class StudentApiController extends Controller
                 $readMessage->save();
             }
 
-            ResponseService::successResponse('Message Read');
+            return ResponseService::successResponse('Message Read');
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3101,7 +3133,7 @@ class StudentApiController extends Controller
             $due_date = date('Y-m-d', strtotime($session_year_data->fee_due_date));
             $due_charges = $session_year_data->fee_due_charges;
 
-            ResponseService::successResponse('Fees Details Fetched Successfully', null, [
+            return ResponseService::successResponse('Fees Details Fetched Successfully', null, [
                 'compulsory_fees_data' => $compulsory_fees_data ?? [''],
                 'optional_fees_data' => $optional_fees_data ?? [''],
                 'installment_data' => $installment_data ?? (object) null,
@@ -3113,7 +3145,7 @@ class StudentApiController extends Controller
                 'is_fee_pending' => (isset($payment_transaction_status) && $payment_transaction_status == 2) ? 1 : 0,
             ]);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3127,7 +3159,7 @@ class StudentApiController extends Controller
             'is_fully_paid' => 'required|in:0,1',
         ]);
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             DB::beginTransaction();
@@ -3233,12 +3265,14 @@ class StudentApiController extends Controller
                 'payment_transaction_id' => $payment_transaction_db->id,
             ];
             DB::commit();
-            ResponseService::successResponse('data_store_successfully', null, [
+
+            return ResponseService::successResponse('data_store_successfully', null, [
                 'payment_gateway_details' => $payment_gateway_details,
             ]);
         } catch (Throwable $e) {
             DB::rollBack();
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3251,7 +3285,7 @@ class StudentApiController extends Controller
             'payment_signature' => 'nullable',
         ]);
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             // Updating the Payment Transaction
@@ -3283,9 +3317,9 @@ class StudentApiController extends Controller
             $feesPaid->payment_transaction_id = $transaction_db->id;
             $feesPaid->save();
 
-            ResponseService::successResponse('data_update_successfully');
+            return ResponseService::successResponse('data_update_successfully');
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3296,9 +3330,10 @@ class StudentApiController extends Controller
             $student = $request->user()->student;
 
             $fees_paid = FeesPaid::where(['student_id' => $student->id])->with('session_year:id,name', 'class.medium', 'payment_transaction')->get();
-            ResponseService::successResponse('Fees Paid List Fetched Successfully', $fees_paid);
+
+            return ResponseService::successResponse('Fees Paid List Fetched Successfully', $fees_paid);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3326,7 +3361,7 @@ class StudentApiController extends Controller
 
             // Check That Fees Paid Data Exists Or Not
             if (! $fees_paid) {
-                ResponseService::errorResponse('No Fees Paid Found', null, 103);
+                return ResponseService::errorResponse('No Fees Paid Found', null, 103);
             }
 
             // Variables
@@ -3353,9 +3388,9 @@ class StudentApiController extends Controller
             // Get The Output Of PDF
             $output = $pdf->output();
 
-            ResponseService::successResponse('Fees Paid Receipt PDF Fetched Successfully', null, ['pdf' => base64_encode($output)]);
+            return ResponseService::successResponse('Fees Paid Receipt PDF Fetched Successfully', null, ['pdf' => base64_encode($output)]);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3390,7 +3425,7 @@ class StudentApiController extends Controller
             }
             $fees_payment_transactions = $fees_payment_transactions->toArray();
 
-            ResponseService::successResponse('Fees Payment Transactions Fetched Successfully',
+            return ResponseService::successResponse('Fees Payment Transactions Fetched Successfully',
                 ['feesTransactions' => $fees_payment_transactions['data']],
                 [],
                 null,
@@ -3404,7 +3439,7 @@ class StudentApiController extends Controller
                 ]
             );
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3442,9 +3477,10 @@ class StudentApiController extends Controller
             }
 
             sendSimpleNotification($user, 'Payment Failed', $body, $type, $image, $userinfo);
-            ResponseService::successResponse('Data Updated Successfully');
+
+            return ResponseService::successResponse('Data Updated Successfully');
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3454,7 +3490,7 @@ class StudentApiController extends Controller
             'payment_intent_id' => 'required',
         ]);
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
             $settings = getSettings();
@@ -3469,7 +3505,7 @@ class StudentApiController extends Controller
                 $secretkey = $settings['razorpay_secret_key'] ?? '';
                 $url = 'https://api.razorpay.com/v1/payments/'.$request->payment_intent_id;
             } else {
-                ResponseService::errorResponse('Payment gateway not configured', null, 103);
+                return ResponseService::errorResponse('Payment gateway not configured', null, 103);
             }
 
             $payment_status = Http::withHeaders([
@@ -3477,9 +3513,10 @@ class StudentApiController extends Controller
             ])->get($url);
 
             $data = $payment_status['status'];
-            ResponseService::successResponse('Payment Status Fetched Successfully', $data);
+
+            return ResponseService::successResponse('Payment Status Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3512,9 +3549,10 @@ class StudentApiController extends Controller
             $notification->save();
 
             sendSimpleNotification($user, $title, $body, $type, $image, $userinfo);
-            ResponseService::successResponse('Notification Send Successfully', null);
+
+            return ResponseService::successResponse('Notification Send Successfully', null);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3526,7 +3564,7 @@ class StudentApiController extends Controller
         $unknown = array_diff(array_keys($request->all()), $allowed);
 
         if (! empty($unknown)) {
-            ResponseService::validationError('Unknown fields: '.implode(', ', $unknown));
+            return ResponseService::validationError('Unknown fields: '.implode(', ', $unknown));
         }
 
         $validator = Validator::make($request->all(), [
@@ -3541,7 +3579,7 @@ class StudentApiController extends Controller
         ]);
 
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
 
@@ -3623,9 +3661,9 @@ class StudentApiController extends Controller
             } catch (\Exception $e) {
             }
 
-            ResponseService::successResponse('Data Stored Successfully', $leave ?? '');
+            return ResponseService::successResponse('Data Stored Successfully', $leave ?? '');
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3636,7 +3674,7 @@ class StudentApiController extends Controller
             'status' => 'in:0,1,2',
         ]);
         if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
+            return ResponseService::validationError($validator->errors()->first());
         }
         try {
 
@@ -3675,9 +3713,9 @@ class StudentApiController extends Controller
                 'leave_details' => $sql,
             ];
 
-            ResponseService::successResponse('Data Fetched Successfully', $data);
+            return ResponseService::successResponse('Data Fetched Successfully', $data);
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 
@@ -3687,9 +3725,9 @@ class StudentApiController extends Controller
             $leave = Leave::findOrFail($request->leave_id);
             $leave->delete();
 
-            ResponseService::successResponse('Data Deleted Successfully');
+            return ResponseService::successResponse('Data Deleted Successfully');
         } catch (Throwable $e) {
-            ResponseService::errorResponse('error_occurred', null, 103, $e);
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
         }
     }
 }
