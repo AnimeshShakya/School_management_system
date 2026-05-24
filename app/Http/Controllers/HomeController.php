@@ -121,7 +121,7 @@ class HomeController extends Controller
         }
 
         // Handle Teacher specific data
-        if ($user->hasRole('Teacher')) {
+        if ($user->hasRole('Teacher') && $user->teacher) {
             $data['class_sections'] = $this->getTeacherClassSections($user->teacher->id);
         }
 

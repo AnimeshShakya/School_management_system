@@ -70,33 +70,58 @@ class TeacherApiController extends Controller
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
             $auth = Auth::user();
 
-            if (! $auth->hasRole('Teacher')) {
+            $isTeacher = $auth->hasRole('Teacher');
+            $isAttendee = $auth->hasRole('Attendee Teacher');
+
+            if (! $isTeacher && ! $isAttendee) {
                 ResponseService::errorResponse('Invalid Login Credentials', null, 101);
             }
-            $token = $auth->createToken($auth->first_name)->plainTextToken;
-            $user = $auth->load(['teacher']);
 
-            $dynamicFields = null;
-            $dynamicField = $user->teacher->dynamic_fields;
-            $user = flattenMyModel($user);
-            if (! empty($dynamicField)) {
-                $data = json_decode($dynamicField, true);
-                if (is_array($data)) {
-                    foreach ($data as $item) {
-                        if ($item != null) {
-                            foreach ($item as $key => $value) {
-                                $dynamicFields[$key] = $value;
-                            }
-                        }
-                    }
-                } else {
-                    $dynamicFields = $data;
-                }
-            } else {
-                $dynamicFields = null;
+            $token = $auth->createToken($auth->first_name)->plainTextToken;
+
+            $userType = 'teacher';
+            if (! $isTeacher && $isAttendee) {
+                $userType = 'attendee';
             }
 
-            $user = array_merge($user, ['dynamic_fields' => $dynamicFields]);
+            $permissions = $auth->getAllPermissions()->pluck('name')->toArray();
+
+            $userData = [
+                'id' => $auth->id,
+                'first_name' => $auth->first_name,
+                'last_name' => $auth->last_name,
+                'email' => $auth->email,
+                'image' => $auth->image,
+                'mobile' => $auth->mobile,
+            ];
+
+            $teacherData = [];
+
+            if ($isTeacher) {
+                $auth->load(['teacher']);
+                $user = $auth;
+
+                $dynamicFields = null;
+                $dynamicField = $auth->teacher->dynamic_fields ?? null;
+                $user = flattenMyModel($user);
+                if (! empty($dynamicField)) {
+                    $data = json_decode($dynamicField, true);
+                    if (is_array($data)) {
+                        foreach ($data as $item) {
+                            if ($item != null) {
+                                foreach ($item as $key => $value) {
+                                    $dynamicFields[$key] = $value;
+                                }
+                            }
+                        }
+                    } else {
+                        $dynamicFields = $data;
+                    }
+                }
+
+                $userData = array_merge($user, ['dynamic_fields' => $dynamicFields]);
+                $teacherData = $user['teacher'] ?? [];
+            }
 
             if ($request->fcm_id) {
                 $auth->fcm_id = $request->fcm_id;
@@ -106,7 +131,14 @@ class TeacherApiController extends Controller
                 $auth->device_type = $request->device_type;
                 $auth->save();
             }
-            ResponseService::successResponse('User logged-in!', $user, ['token' => $token], 100);
+
+            $responseData = array_merge($userData, [
+                'user_type' => $userType,
+                'permissions' => $permissions,
+                'teacher' => $teacherData,
+            ]);
+
+            ResponseService::successResponse('User logged-in!', $responseData, ['token' => $token], 100);
         } else {
             ResponseService::errorResponse('Invalid Login Credentials', null, 101);
         }
