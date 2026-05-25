@@ -4,22 +4,23 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Models\Staff;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Spatie\Permission\Models\Role;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 use App\Services\MailService;
 use App\Services\ResponseService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
-class StaffController extends Controller {
+class StaffController extends Controller
+{
     private array $userColumns = [];
 
     /**
@@ -27,14 +28,17 @@ class StaffController extends Controller {
      *
      * @return \Illuminate\Http\Response
      */
-    public function index() {
-        if (!Auth::user()->can('staff-list')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+    public function index()
+    {
+        if (! Auth::user()->can('staff-list')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $roles = $this->getAssignableRoles();
+
         return view('staff.index', compact('roles'));
     }
 
@@ -69,21 +73,23 @@ class StaffController extends Controller {
      *
      * @return \Illuminate\Http\Response
      */
-    public function create() {
+    public function create()
+    {
         //
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request) {
-        if (!Auth::user()->can('staff-create')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+    public function store(Request $request)
+    {
+        if (! Auth::user()->can('staff-create')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
 
@@ -99,7 +105,7 @@ class StaffController extends Controller {
             'address' => 'nullable',
 
         ], [
-            'mobile.regex' => __('The mobile number must be a length of 7 to 15 digits.')
+            'mobile.regex' => __('The mobile number must be a length of 7 to 15 digits.'),
         ]);
 
         if ($validator->fails()) {
@@ -118,22 +124,26 @@ class StaffController extends Controller {
                 if ($request->hasFile('image')) {
                     $image = $request->file('image');
                     // made file name with combination of current time
-                    $file_name = time() . '-' . $image->getClientOriginalName();
-                    //made file path to store in database
-                    $file_path = 'staff/' . $file_name;
-                    //resized image
+                    $file_name = time().'-'.$image->getClientOriginalName();
+                    // made file path to store in database
+                    $file_path = 'staff/'.$file_name;
+                    // resized image
                     resizeImage($image);
-                    //stored image to storage/public/teachers folder
+                    // stored image to storage/public/teachers folder
                     $destinationPath = storage_path('app/public/staff');
                     $image->move($destinationPath, $file_name);
 
                     $user->image = $file_path;
                 } else {
-                    $user->image = "";
+                    $user->image = '';
                 }
 
                 $staff_plain_text_password = Str::random(12);
                 $this->fillUserFromRequest($user, $request, $staff_plain_text_password);
+                $user->created_by = Auth::id();
+                if (! Auth::user()->hasRole('Super Admin')) {
+                    $user->school_id = Auth::user()->school_id;
+                }
                 $user->save();
 
                 if ($this->hasStaffTable()) {
@@ -149,15 +159,14 @@ class StaffController extends Controller {
 
                 $user->assignRole($role);
 
-
                 $school_name = getSettings('school_name');
                 $data = [
-                    'subject' => 'Welcome to ' . $school_name['school_name'],
-                    'name' => $request->first_name . ' ' . $request->last_name,
+                    'subject' => 'Welcome to '.$school_name['school_name'],
+                    'name' => $request->first_name.' '.$request->last_name,
                     'email' => $request->email,
                     'password' => $staff_plain_text_password,
                     'school_name' => $school_name['school_name'],
-                    'role' => $role->name
+                    'role' => $role->name,
 
                 ];
 
@@ -170,22 +179,26 @@ class StaffController extends Controller {
                 if ($request->hasFile('image')) {
                     $image = $request->file('image');
                     // made file name with combination of current time
-                    $file_name = time() . '-' . $image->getClientOriginalName();
-                    //made file path to store in database
-                    $file_path = 'staff/' . $file_name;
-                    //resized image
+                    $file_name = time().'-'.$image->getClientOriginalName();
+                    // made file path to store in database
+                    $file_path = 'staff/'.$file_name;
+                    // resized image
                     resizeImage($image);
-                    //stored image to storage/public/teachers folder
+                    // stored image to storage/public/teachers folder
                     $destinationPath = storage_path('app/public/staff');
                     $image->move($destinationPath, $file_name);
 
                     $user->image = $file_path;
                 } else {
-                    $user->image = "";
+                    $user->image = '';
                 }
 
                 $staff_plain_text_password = Str::random(12);
                 $this->fillUserFromRequest($user, $request, $staff_plain_text_password);
+                $user->created_by = Auth::id();
+                if (! Auth::user()->hasRole('Super Admin')) {
+                    $user->school_id = Auth::user()->school_id;
+                }
                 $user->save();
 
                 $user->assignRole($role);
@@ -198,12 +211,12 @@ class StaffController extends Controller {
 
                 $school_name = getSettings('school_name');
                 $data = [
-                    'subject' => 'Welcome to ' . $school_name['school_name'],
-                    'name' => $request->first_name . ' ' . $request->last_name,
+                    'subject' => 'Welcome to '.$school_name['school_name'],
+                    'name' => $request->first_name.' '.$request->last_name,
                     'email' => $request->email,
                     'password' => $staff_plain_text_password,
                     'school_name' => $school_name['school_name'],
-                    'role' => $role->name
+                    'role' => $role->name,
 
                 ];
 
@@ -223,11 +236,13 @@ class StaffController extends Controller {
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id = null) {
-        if (!Auth::user()->can('staff-list')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+    public function show($id = null)
+    {
+        if (! Auth::user()->can('staff-list')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
 
@@ -237,18 +252,21 @@ class StaffController extends Controller {
         $order = request('order', 'ASC');
         $search = request('search');
 
-        if (isset($_GET['offset']))
+        if (isset($_GET['offset'])) {
             $offset = $_GET['offset'];
-        if (isset($_GET['limit']))
+        }
+        if (isset($_GET['limit'])) {
             $limit = $_GET['limit'];
+        }
 
-        if (isset($_GET['sort']))
+        if (isset($_GET['sort'])) {
             $sort = $_GET['sort'];
-        if (isset($_GET['order']))
+        }
+        if (isset($_GET['order'])) {
             $order = $_GET['order'];
+        }
 
-
-        if (!$this->hasStaffTable()) {
+        if (! $this->hasStaffTable()) {
             // If the staffs table doesn't exist, still return Super Admin users so the UI isn't empty.
             try {
                 $superAdmins = User::whereHas('roles', function ($q) {
@@ -270,7 +288,7 @@ class StaffController extends Controller {
                     $tempRow['gender'] = $sa->gender ?? '';
                     $tempRow['address'] = $sa->current_address ?? '';
                     $tempRow['email'] = $sa->email ?? '';
-                    $tempRow['dob'] = !empty($sa->dob) && !empty($data['date_formate']) ? date($data['date_formate'], strtotime($sa->dob)) : '';
+                    $tempRow['dob'] = ! empty($sa->dob) && ! empty($data['date_formate']) ? date($data['date_formate'], strtotime($sa->dob)) : '';
                     $tempRow['mobile'] = $sa->mobile ?? '';
                     $tempRow['image'] = $sa->image ?? '';
                     // For appended rows there's no operate buttons by default; leave operate empty or add conditional actions.
@@ -291,7 +309,14 @@ class StaffController extends Controller {
         }
 
         $sql = Staff::with('user', 'user.roles');
-        if (isset($_GET['search']) && !empty($_GET['search'])) {
+
+        if (! Auth::user()->hasRole('Super Admin')) {
+            $sql->whereHas('user', function ($q) {
+                $q->where('created_by', Auth::id());
+            });
+        }
+
+        if (isset($_GET['search']) && ! empty($_GET['search'])) {
             $search = $_GET['search'];
             $sql->where('id', 'LIKE', "%$search%")
                 ->orwhere('user_id', 'LIKE', "%$search%")
@@ -300,7 +325,7 @@ class StaffController extends Controller {
                     $first = true;
 
                     foreach ($searchColumns as $column) {
-                        if (!$this->hasUserColumn($column)) {
+                        if (! $this->hasUserColumn($column)) {
                             continue;
                         }
 
@@ -325,15 +350,15 @@ class StaffController extends Controller {
             $extraSuperAdmins = User::whereHas('roles', function ($q) {
                 $q->where('name', 'Super Admin');
             })->whereNull('deleted_at')
-              ->whereNotIn('id', $existingUserIds)
-              ->get();
+                ->whereNotIn('id', $existingUserIds)
+                ->get();
 
             foreach ($extraSuperAdmins as $sa) {
                 if ($this->hasStaffTable()) {
                     // Create a staff record for this super admin if one doesn't exist
                     $existing = Staff::where('user_id', $sa->id)->first();
-                    if (!$existing) {
-                        $staff = new Staff();
+                    if (! $existing) {
+                        $staff = new Staff;
                         $staff->user_id = $sa->id;
                         $staff->save();
                         // attach the user relation for consistency
@@ -346,7 +371,7 @@ class StaffController extends Controller {
                     }
                 } else {
                     // fallback: create a lightweight object if staff table doesn't exist
-                    $obj = new \stdClass();
+                    $obj = new \stdClass;
                     $obj->id = 0;
                     $obj->user_id = $sa->id;
                     $obj->user = $sa;
@@ -360,14 +385,14 @@ class StaffController extends Controller {
             // If anything goes wrong, silently continue with existing results.
         }
 
-        $bulkData = array();
+        $bulkData = [];
         $bulkData['total'] = $total;
-        $rows = array();
-        $tempRow = array();
+        $rows = [];
+        $tempRow = [];
         $no = 1;
         foreach ($res as $row) {
-            $operate = '<a class="btn btn-xs btn-gradient-primary btn-rounded btn-icon edit-data" data-id=' . $row->id . ' data-url=' . url('staff') . ' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
-            $operate .= '<a class="btn btn-xs btn-gradient-danger btn-rounded btn-icon deletedata" data-id=' . $row->id . ' data-user_id=' . $row->user_id . ' data-url=' . url('staff', $row->user_id) . ' title="Delete"><i class="fa fa-trash"></i></a>';
+            $operate = '<a class="btn btn-xs btn-gradient-primary btn-rounded btn-icon edit-data" data-id='.$row->id.' data-url='.url('staff').' title="Edit" data-toggle="modal" data-target="#editModal"><i class="fa fa-edit"></i></a>&nbsp;&nbsp;';
+            $operate .= '<a class="btn btn-xs btn-gradient-danger btn-rounded btn-icon deletedata" data-id='.$row->id.' data-user_id='.$row->user_id.' data-url='.url('staff', $row->user_id).' title="Delete"><i class="fa fa-trash"></i></a>';
 
             $data = getSettings('date_formate');
             $tempRow['id'] = $row->id;
@@ -380,14 +405,15 @@ class StaffController extends Controller {
             $tempRow['gender'] = $row->user->gender ?? '';
             $tempRow['address'] = $row->user->current_address ?? '';
             $tempRow['email'] = $row->user->email ?? '';
-            $tempRow['dob'] = !empty($row->user->dob) ? date($data['date_formate'], strtotime($row->user->dob)) : '';
+            $tempRow['dob'] = ! empty($row->user->dob) ? date($data['date_formate'], strtotime($row->user->dob)) : '';
             $tempRow['mobile'] = $row->user->mobile ?? '';
-            $tempRow['image'] =  $row->user->image;
+            $tempRow['image'] = $row->user->image;
             $tempRow['operate'] = $operate;
             $rows[] = $tempRow;
         }
 
         $bulkData['rows'] = $rows;
+
         return response()->json($bulkData);
     }
 
@@ -397,30 +423,32 @@ class StaffController extends Controller {
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function edit($id) {
+    public function edit($id)
+    {
         //
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request) {
+    public function update(Request $request)
+    {
         // dd($request->all());
-        if (!Auth::user()->can('staff-edit')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+        if (! Auth::user()->can('staff-edit')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         $validator = Validator::make($request->all(), [
             'role_id' => 'required|numeric',
             'first_name' => 'required',
             'last_name' => 'required',
-            'email' => 'required|email|unique:users,email,' . $request->user_id,
+            'email' => 'required|email|unique:users,email,'.$request->user_id,
             'gender' => 'required',
             'mobile' => 'required|numeric|regex:/^[0-9]{7,16}$/',
             'image' => 'mimes:jpeg,png,jpg|image|max:2048',
@@ -428,14 +456,15 @@ class StaffController extends Controller {
             'address' => 'nullable',
 
         ], [
-            'mobile.regex' => __('The mobile number must be a length of 7 to 15 digits.')
+            'mobile.regex' => __('The mobile number must be a length of 7 to 15 digits.'),
         ]);
 
         if ($validator->fails()) {
-            $response = array(
+            $response = [
                 'error' => true,
-                'message' => $validator->errors()->first()
-            );
+                'message' => $validator->errors()->first(),
+            ];
+
             return response()->json($response);
         }
         try {
@@ -451,12 +480,12 @@ class StaffController extends Controller {
 
                 $image = $request->file('image');
                 // made file name with combination of current time
-                $file_name = time() . '-' . $image->getClientOriginalName();
-                //made file path to store in database
-                $file_path = 'staff/' . $file_name;
-                //resized image
+                $file_name = time().'-'.$image->getClientOriginalName();
+                // made file path to store in database
+                $file_path = 'staff/'.$file_name;
+                // resized image
                 resizeImage($image);
-                //stored image to storage/public/teachers folder
+                // stored image to storage/public/teachers folder
                 $destinationPath = storage_path('app/public/staff');
                 $image->move($destinationPath, $file_name);
 
@@ -479,15 +508,21 @@ class StaffController extends Controller {
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id) {
-        if (!Auth::user()->can('staff-delete')) {
-            $response = array(
-                'message' => trans('no_permission_message')
-            );
+    public function destroy($id)
+    {
+        if (! Auth::user()->can('staff-delete')) {
+            $response = [
+                'message' => trans('no_permission_message'),
+            ];
+
             return redirect(route('home'))->withErrors($response);
         }
         try {
             $user = User::find($id);
+
+            if (! Auth::user()->hasRole('Super Admin') && $user->created_by !== Auth::id()) {
+                return ResponseService::errorResponse(trans('no_permission_message'));
+            }
             if (Storage::disk('public')->exists($user->image)) {
                 Storage::disk('public')->delete($user->image);
             }
@@ -505,7 +540,7 @@ class StaffController extends Controller {
 
     private function hasStaffTable(): bool
     {
-        return Schema::hasTable((new Staff())->getTable());
+        return Schema::hasTable((new Staff)->getTable());
     }
 
     private function hasUserColumn(string $column): bool
@@ -533,7 +568,7 @@ class StaffController extends Controller {
             $user->last_name = $lastName;
         }
         if ($this->hasUserColumn('name')) {
-            $user->name = trim($firstName . ' ' . $lastName);
+            $user->name = trim($firstName.' '.$lastName);
         }
 
         if ($this->hasUserColumn('email')) {
@@ -555,11 +590,11 @@ class StaffController extends Controller {
 
     private function resolveFirstName(User $user): string
     {
-        if (!empty($user->first_name)) {
+        if (! empty($user->first_name)) {
             return (string) $user->first_name;
         }
 
-        if (!empty($user->name)) {
+        if (! empty($user->name)) {
             return explode(' ', (string) $user->name)[0] ?? '';
         }
 
@@ -568,12 +603,13 @@ class StaffController extends Controller {
 
     private function resolveLastName(User $user): string
     {
-        if (!empty($user->last_name)) {
+        if (! empty($user->last_name)) {
             return (string) $user->last_name;
         }
 
-        if (!empty($user->name)) {
+        if (! empty($user->name)) {
             $nameParts = explode(' ', (string) $user->name, 2);
+
             return $nameParts[1] ?? '';
         }
 

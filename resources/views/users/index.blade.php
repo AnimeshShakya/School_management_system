@@ -37,6 +37,9 @@
                     <th>{{ __('name') }}</th>
                     <th>{{ __('email') }}</th>
                     <th>{{ __('role') }}</th>
+                    @hasrole('Super Admin')
+                      <th>{{ __('school') }}</th>
+                    @endhasrole
                     <th>{{ __('action') }}</th>
                   </tr>
                 </thead>
@@ -53,6 +56,9 @@
                           <span class="badge badge-secondary">N/A</span>
                         @endforelse
                       </td>
+                      @hasrole('Super Admin')
+                        <td>{{ $user->school->name ?? '—' }}</td>
+                      @endhasrole
                       <td>
                         <a class="btn btn-xs btn-gradient-info btn-rounded btn-icon"
                           href="{{ route('users.show', $user->id) }}">
@@ -80,7 +86,7 @@
                     </tr>
                   @empty
                     <tr>
-                      <td colspan="5" class="text-center">No users found.</td>
+                      <td colspan="@hasrole('Super Admin')6@else5@endhasrole" class="text-center">No users found.</td>
                     </tr>
                   @endforelse
                 </tbody>

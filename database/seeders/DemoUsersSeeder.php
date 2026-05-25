@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Category;
 use App\Models\ClassSection;
 use App\Models\Parents;
+use App\Models\School;
 use App\Models\SessionYear;
 use App\Models\Students;
 use App\Models\StudentSessions;
@@ -35,6 +36,20 @@ class DemoUsersSeeder extends Seeder
         $parentRole = $this->getRole('Parent');
         $studentRole = $this->getRole('Student');
         $attendeeRole = $this->getRole('Attendee Teacher');
+
+        $defaultSchoolId = null;
+        if (Schema::hasTable('schools')) {
+            $defaultSchool = School::firstOrCreate(
+                ['name' => 'Default School'],
+                [
+                    'email' => 'school@example.com',
+                    'phone' => '0000000000',
+                    'address' => '123 School Street',
+                    'status' => 1,
+                ]
+            );
+            $defaultSchoolId = $defaultSchool->id;
+        }
 
         $allPermissionNames = Permission::query()->pluck('name')->all();
 
@@ -172,15 +187,21 @@ class DemoUsersSeeder extends Seeder
             'gender' => 'Male',
             'image' => 'logo.svg',
             'mobile' => '',
+            'school_id' => null,
+            'created_by' => null,
         ]);
 
-        $this->seedUser($adminRole, 'admin@gmail.com', [
+        $superAdminUser = User::where('email', 'superadmin@gmail.com')->first();
+
+        $adminUser = $this->seedUser($adminRole, 'admin@gmail.com', [
             'first_name' => 'school',
             'last_name' => 'admin',
             'password' => Hash::make('admin123'),
             'gender' => 'Male',
             'image' => 'logo.svg',
             'mobile' => '',
+            'school_id' => $defaultSchoolId,
+            'created_by' => $superAdminUser?->id,
         ]);
 
         $teacherUser = $this->seedUser($teacherRole, 'teacher@gmail.com', [
@@ -190,6 +211,8 @@ class DemoUsersSeeder extends Seeder
             'gender' => 'Male',
             'image' => 'logo.svg',
             'mobile' => '',
+            'school_id' => $defaultSchoolId,
+            'created_by' => $adminUser?->id,
         ]);
 
         if (Schema::hasTable('teachers')) {
@@ -205,6 +228,8 @@ class DemoUsersSeeder extends Seeder
             'gender' => 'Male',
             'image' => 'logo.svg',
             'mobile' => '',
+            'school_id' => $defaultSchoolId,
+            'created_by' => $adminUser?->id,
         ]);
 
         $parentUser = $this->seedUser($parentRole, 'parent@gmail.com', [
@@ -214,6 +239,8 @@ class DemoUsersSeeder extends Seeder
             'gender' => 'Male',
             'image' => 'parents/user.png',
             'mobile' => '1234567890',
+            'school_id' => $defaultSchoolId,
+            'created_by' => $adminUser?->id,
         ]);
 
         $parentProfile = null;
@@ -240,6 +267,8 @@ class DemoUsersSeeder extends Seeder
             'gender' => 'Male',
             'image' => 'students/user.png',
             'mobile' => '1234567890',
+            'school_id' => $defaultSchoolId,
+            'created_by' => $adminUser?->id,
         ]);
 
         $classSectionId = (Schema::hasTable('class_sections') && Schema::hasColumn('class_sections', 'id'))

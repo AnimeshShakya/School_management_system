@@ -50,6 +50,19 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                @if(Auth::user()->hasRole('Super Admin'))
+                                <div class="form-group col-md-6">
+                                    <label>{{ __('school') }}</label>
+                                    <select name="school_id" class="form-control">
+                                        <option value="">{{ __('select') . ' ' . __('school') }}</option>
+                                        @foreach (\App\Models\School::where('status', 1)->orderBy('name')->get() as $school)
+                                            <option value="{{ $school->id }}" {{ old('school_id') == $school->id ? 'selected' : '' }}>
+                                                {{ $school->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                @endif
                                 <div class="form-group col-md-6">
                                     <label>{{ __('password') }} <span class="text-danger">*</span></label>
                                     <input type="password" name="password" class="form-control" required>

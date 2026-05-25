@@ -78,7 +78,24 @@
             </a>
         </li>
 
+        @if(!Auth::user()->hasRole('Super Admin') && Auth::user()->school)
+        <li class="nav-item">
+            <a class="nav-link text-muted small" href="#">
+                <i class="fa fa-building menu-icon"></i>
+                <span class="menu-title">{{ Auth::user()->school->name }}</span>
+            </a>
+        </li>
+        @endif
+
         @hasrole('Super Admin')
+            {{-- schools --}}
+            <li class="nav-item {{ request()->routeIs('schools.*') ? 'active' : '' }}">
+                <a class="nav-link {{ request()->routeIs('schools.*') ? 'active' : '' }}" href="{{ route('schools.index') }}">
+                    <i class="fa fa-building menu-icon" style="margin: 0 1px 0 1px"></i>
+                    <span class="menu-title">{{ __('schools') }}</span>
+                </a>
+            </li>
+
             {{-- academics --}}
             @canany(['medium-create', 'section-create', 'subject-create', 'class-create', 'subject-create',
                 'class-teacher-create', 'subject-teacher-list', 'subject-teachers-create', 'assign-class-to-new-student',

@@ -24,6 +24,12 @@
                                 <label class="font-weight-bold">{{ __('email') }}</label>
                                 <div>{{ $user->email }}</div>
                             </div>
+                            @if($user->school)
+                            <div class="col-md-6 mb-3">
+                                <label class="font-weight-bold">{{ __('school') }}</label>
+                                <div>{{ $user->school->name }}</div>
+                            </div>
+                            @endif
                             <div class="col-md-12">
                                 <label class="font-weight-bold">{{ __('role') }}</label>
                                 <div>

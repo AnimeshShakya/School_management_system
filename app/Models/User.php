@@ -4,26 +4,23 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Models\Staff;
-use App\Models\Notification;
-use App\Models\UserNotification;
-use App\Models\Leave;
-use Spatie\Permission\Models\Role;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
+
     protected string $guard_name = 'web';
+
     protected function getDefaultGuardName(): string
     {
         return $this->guard_name;
@@ -36,6 +33,8 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'id',
+        'school_id',
+        'created_by',
         'first_name',
         'last_name',
         'gender',
@@ -49,7 +48,7 @@ class User extends Authenticatable
         'current_address',
         'permanent_address',
         'status',
-        'reset_request'
+        'reset_request',
     ];
 
     /**
@@ -62,7 +61,7 @@ class User extends Authenticatable
         'remember_token',
         'deleted_at',
         'created_at',
-        'updated_at'
+        'updated_at',
     ];
 
     /**
@@ -105,6 +104,21 @@ class User extends Authenticatable
         return $this->hasOne(Staff::class, 'user_id', 'id');
     }
 
+    public function school(): BelongsTo
+    {
+        return $this->belongsTo(School::class, 'school_id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function createdUsers(): HasMany
+    {
+        return $this->hasMany(User::class, 'created_by');
+    }
+
     public function leaves(): HasMany
     {
         return $this->hasMany(Leave::class, 'user_id')->with('leave_detail');
@@ -120,7 +134,7 @@ class User extends Authenticatable
         return $this->morphMany(ChatMessage::class, 'modal');
     }
 
-    //Getter Attributes
+    // Getter Attributes
     public function getImageAttribute($value): string
     {
         return url(Storage::url($value));
@@ -128,6 +142,6 @@ class User extends Authenticatable
 
     public function getFullNameAttribute(): string
     {
-        return $this->first_name . ' ' . $this->last_name;
+        return $this->first_name.' '.$this->last_name;
     }
 }

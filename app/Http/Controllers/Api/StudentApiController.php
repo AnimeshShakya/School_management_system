@@ -1675,8 +1675,6 @@ class StudentApiController extends Controller
                 return ResponseService::errorResponse('error_occurred', null, 103);
             }
 
-            dd($exam_data_db);
-
             $exam_data = [];
             foreach ($exam_data_db->timetable as $data) {
                 $exam_data[] = [
@@ -2645,6 +2643,13 @@ class StudentApiController extends Controller
 
             $dynamicFields = null;
             $dynamicField = $user->student->dynamic_fields;
+
+            $studentModel = $user->student;
+            $qrPayload = null;
+            if (! empty($studentModel->qr_token)) {
+                $qrPayload = base64_encode(json_encode(['s' => $studentModel->id, 't' => $studentModel->qr_token]));
+            }
+
             $user = flattenMyModel($user);
 
             $data = json_decode($dynamicField, true);
@@ -2658,12 +2663,6 @@ class StudentApiController extends Controller
                 }
             } else {
                 $dynamicFields = $data;
-            }
-
-            // Ensure proper data types for API response
-            $qrPayload = null;
-            if (! empty($user->student->qr_token)) {
-                $qrPayload = base64_encode(json_encode(['s' => $user->student->id, 't' => $user->student->qr_token]));
             }
 
             $data = array_merge($user, ['dynamic_fields' => $dynamicFields ?? null, 'qr_payload' => $qrPayload]);

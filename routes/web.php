@@ -33,6 +33,7 @@ use App\Http\Controllers\ParentsController;
 use App\Http\Controllers\QrAttendanceController;
 use App\Http\Controllers\RevenueAnalysisController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SchoolController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\SemesterController;
 use App\Http\Controllers\SessionYearController;
@@ -121,6 +122,7 @@ Route::group(['middleware' => ['Role', 'auth']], function () {
         Route::get('roles-data', [RoleController::class, 'show'])->name('roles.data');
         Route::resource('roles', RoleController::class);
         Route::resource('users', UserController::class);
+        Route::resource('schools', SchoolController::class);
 
         Route::get('settings', [SettingController::class, 'index']);
         Route::post('settings', [SettingController::class, 'update']);

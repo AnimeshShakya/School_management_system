@@ -2,13 +2,14 @@
 
 namespace Database\Seeders;
 
+use App\Models\School;
 use App\Models\SessionYear;
 use App\Models\Settings;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\Models\Role;
 
 class AddSuperAdminSeeder extends Seeder
 {
@@ -17,8 +18,23 @@ class AddSuperAdminSeeder extends Seeder
      *
      * @return void
      */
-    public function run() {
-        //Add Super Admin User
+    public function run()
+    {
+        $defaultSchoolId = null;
+        if (Schema::hasTable('schools')) {
+            $defaultSchool = School::firstOrCreate(
+                ['name' => 'Default School'],
+                [
+                    'email' => 'school@example.com',
+                    'phone' => '0000000000',
+                    'address' => '123 School Street',
+                    'status' => 1,
+                ]
+            );
+            $defaultSchoolId = $defaultSchool->id;
+        }
+
+        // Add Super Admin User
         $super_admin_role = Role::firstOrCreate([
             'name' => 'Super Admin',
             'guard_name' => config('auth.defaults.guard', 'web'),
@@ -26,8 +42,8 @@ class AddSuperAdminSeeder extends Seeder
 
         $user = User::withTrashed()->where('email', 'superadmin@gmail.com')->first();
 
-        if (!$user) {
-            $user = new User();
+        if (! $user) {
+            $user = new User;
         }
 
         $attributes = [
@@ -36,11 +52,12 @@ class AddSuperAdminSeeder extends Seeder
             'image' => 'logo.svg',
             'mobile' => '',
             'status' => 1,
-            // Compatible with both user schemas
             'name' => 'super admin',
             'first_name' => 'super',
             'last_name' => 'admin',
             'gender' => 'Male',
+            'school_id' => null,
+            'created_by' => null,
         ];
 
         $userColumns = Schema::getColumnListing('users');

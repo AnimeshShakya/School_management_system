@@ -25,7 +25,13 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $data = User::with('roles')->orderBy('id', 'DESC')->paginate(10);
+        $query = User::with('roles', 'school');
+
+        if (! Auth::user()->hasRole('Super Admin')) {
+            $query->where('created_by', Auth::id());
+        }
+
+        $data = $query->orderBy('id', 'DESC')->paginate(10);
 
         return view('users.index', compact('data'))
             ->with('i', ($request->input('page', 1) - 1) * 5);
@@ -36,7 +42,13 @@ class UserController extends Controller
      */
     public function create()
     {
-        $roles = Role::query()->pluck('name', 'name')->all();
+        $rolesQuery = Role::query();
+
+        if (! Auth::user()->hasRole('Super Admin')) {
+            $rolesQuery->where('name', '!=', 'Super Admin');
+        }
+
+        $roles = $rolesQuery->pluck('name', 'name')->all();
 
         return view('users.create', compact('roles'));
     }
@@ -55,8 +67,19 @@ class UserController extends Controller
             'roles.*' => 'required|exists:roles,name',
         ]);
 
+        if (! Auth::user()->hasRole('Super Admin') && in_array('Super Admin', $request->input('roles', []))) {
+            abort(403);
+        }
+
         $input = $request->only(['first_name', 'last_name', 'email']);
         $input['password'] = Hash::make((string) $request->input('password'));
+        $input['created_by'] = Auth::id();
+
+        if (! Auth::user()->hasRole('Super Admin')) {
+            $input['school_id'] = Auth::user()->school_id;
+        } else {
+            $input['school_id'] = $request->input('school_id');
+        }
 
         $user = User::create($input);
         $user->syncRoles($request->input('roles', []));
@@ -72,20 +95,21 @@ class UserController extends Controller
      */
     public function show($id)
     {
-        $user = User::with('roles')->findOrFail($id);
+        $query = User::with('roles');
 
-        return view('users.show', compact('user'));
-    }
+        if (! Auth::user()->hasRole('Super Admin')) {
+            $query->where('created_by', Auth::id());
+        }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     */
-    public function edit($id)
-    {
-        $user = User::with('roles')->findOrFail($id);
-        $roles = Role::query()->pluck('name', 'name')->all();
+        $user = $query->with('roles', 'school')->findOrFail($id);
+
+        $rolesQuery = Role::query();
+
+        if (! Auth::user()->hasRole('Super Admin')) {
+            $rolesQuery->where('name', '!=', 'Super Admin');
+        }
+
+        $roles = $rolesQuery->pluck('name', 'name')->all();
         $userRole = $user->roles->pluck('name', 'name')->all();
 
         return view('users.edit', compact('user', 'roles', 'userRole'));
@@ -108,6 +132,10 @@ class UserController extends Controller
             'roles.*' => 'required|exists:roles,name',
         ]);
 
+        if (! Auth::user()->hasRole('Super Admin') && in_array('Super Admin', $request->input('roles', []))) {
+            abort(403);
+        }
+
         $input = $request->only(['first_name', 'last_name', 'email']);
         if (! empty($request->input('password'))) {
             if (! Hash::check((string) $request->input('current_password'), auth()->user()->password)) {
@@ -117,6 +145,11 @@ class UserController extends Controller
         }
 
         $user = User::findOrFail($id);
+
+        if (! Auth::user()->hasRole('Super Admin') && $user->created_by !== Auth::id()) {
+            abort(403);
+        }
+
         $user->update($input);
         $user->syncRoles($request->input('roles', []));
 
@@ -132,6 +165,10 @@ class UserController extends Controller
     public function destroy($id)
     {
         $user = User::findOrFail($id);
+
+        if (! Auth::user()->hasRole('Super Admin') && $user->created_by !== Auth::id()) {
+            abort(403);
+        }
 
         if ($user->email === 'superadmin@gmail.com' || $user->hasRole('Super Admin')) {
             return redirect()->route('users.index')

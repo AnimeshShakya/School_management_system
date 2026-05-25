@@ -309,6 +309,7 @@ class ParentApiController extends Controller
             }
 
             $data = array_merge($user, ['dynamic_fields' => $parentDynamicFields ?? null, 'children' => $children->toArray()]);
+
             return ResponseService::successResponse('User logged-in!', $data, ['token' => $token], 100);
         } else {
             return ResponseService::errorResponse('Invalid Login Credentials', null, 101);
@@ -509,6 +510,7 @@ class ParentApiController extends Controller
             $user = $request->user();
             $children = $user->parent->children()->first()->where('id', $request->child_id)->first();
             $subjects = $children->subjects();
+
             return ResponseService::successResponse('Student Subject Fetched Successfully.', $subjects, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -528,6 +530,7 @@ class ParentApiController extends Controller
             $user = $request->user();
             $children = $user->parent->children()->first()->where('id', $request->child_id)->first();
             $subjects = $children->classSubjects();
+
             return ResponseService::successResponse('Class Subject Fetched Successfully.', $subjects, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -568,6 +571,7 @@ class ParentApiController extends Controller
                     $new_timetable[] = $timetable;
                 }
             }
+
             return ResponseService::successResponse('Timetable Fetched Successfully', new TimetableCollection($new_timetable), [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -599,6 +603,7 @@ class ParentApiController extends Controller
                 $data->where('id', $request->lesson_id);
             }
             $data = $data->get();
+
             return ResponseService::successResponse('Lessons Fetched Successfully', $data, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -635,6 +640,7 @@ class ParentApiController extends Controller
                 $data->where('id', $request->topic_id);
             }
             $data = $data->get();
+
             return ResponseService::successResponse('Topics Fetched Successfully', $data, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -699,6 +705,7 @@ class ParentApiController extends Controller
             }
 
             $data = $data->orderBy('id', 'desc')->paginate();
+
             return ResponseService::successResponse('Assignments Fetched Successfully', $data, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -797,6 +804,7 @@ class ParentApiController extends Controller
             }
 
             $data = $data->orderBy('id', 'desc')->paginate();
+
             return ResponseService::successResponse('Announcement Details Fetched Successfully', $data, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -853,6 +861,7 @@ class ParentApiController extends Controller
                     'subjects' => $subjects,
                 ];
             }
+
             return ResponseService::successResponse('Teacher Details Fetched Successfully', $data, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1045,6 +1054,7 @@ class ParentApiController extends Controller
                     }
                 }
             }
+
             return ResponseService::successResponse('Exam List Fetched Successfully', $exam_data ?? [], [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1074,6 +1084,7 @@ class ParentApiController extends Controller
                 $q->where(['exam_id' => $request->exam_id, 'class_id' => $class_id])->whereIn('subject_id', $subject_id)->with(['subject'])->orderby('date');
             }])->where('id', $request->exam_id)->first();
             $data = isset($exam_data) ? $exam_data->timetable : [];
+
             return ResponseService::successResponse('Exam Details Fetched Successfully', $data, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1137,6 +1148,7 @@ class ParentApiController extends Controller
                         'exam_marks' => $exam_marks,
                     ];
                 }
+
                 return ResponseService::successResponse('Exam Result Fetched Successfully', $data, [], 200);
             } else {
                 return ResponseService::successResponse('Exam Result Fetched Successfully', [], [], 200);
@@ -1252,6 +1264,7 @@ class ParentApiController extends Controller
             $session_year_data = SessionYear::where('id', $session_year_id)->first();
             $due_date = date('Y-m-d', strtotime($session_year_data->fee_due_date));
             $due_charges = $session_year_data->fee_due_charges;
+
             return ResponseService::successResponse('Fees Details Fetched Successfully', null, [
                 'compulsory_fees_data' => $compulsory_fees_data ?? [''],
                 'optional_fees_data' => $optional_fees_data ?? [''],
@@ -1379,6 +1392,7 @@ class ParentApiController extends Controller
                 ...$paymentIntent,
                 'payment_transaction_id' => $payment_transaction_db->id,
             ];
+
             return ResponseService::successResponse('Fees Transaction Stored Successfully', [], ['payment_gateway_details' => $payment_gateway_details], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1443,6 +1457,7 @@ class ParentApiController extends Controller
         }
         try {
             $fees_paid = FeesPaid::where(['student_id' => $request->child_id])->with('session_year:id,name', 'class.medium', 'payment_transaction')->get();
+
             return ResponseService::successResponse('Fees Paid List Fetched Successfully', $fees_paid, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1499,6 +1514,7 @@ class ParentApiController extends Controller
 
             // Get The Output Of PDF
             $output = $pdf->output();
+
             return ResponseService::successResponse('Fees Paid Receipt PDF Fetched Successfully', null, ['pdf' => base64_encode($output)], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1609,6 +1625,7 @@ class ParentApiController extends Controller
                 // if no data found
                 $exam_data = null;
             }
+
             return ResponseService::successResponse('Exam List Fetched Successfully', $exam_data, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1699,6 +1716,7 @@ class ParentApiController extends Controller
                 'to' => $online_exam_db['to'],
                 'total' => $online_exam_db['total'],
             ];
+
             return ResponseService::successResponse('Exam List Fetched Successfully', $exam_list, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1708,7 +1726,7 @@ class ParentApiController extends Controller
     public function getOnlineExamResult(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'child_id' => 'required_|numeric',
+            'child_id' => 'required|numeric',
             'online_exam_id' => 'required|numeric',
         ]);
 
@@ -1798,6 +1816,7 @@ class ParentApiController extends Controller
                 'total_obtained_marks' => $total_obtained_marks ?? '0',
                 'total_marks' => $total_marks,
             ];
+
             return ResponseService::successResponse('Exam Result Fetched Successfully', $exam_result ?? '', [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1938,6 +1957,7 @@ class ParentApiController extends Controller
                     ],
                 ];
             }
+
             return ResponseService::successResponse('Online Exam Report Fetched Successfully', $online_exam_report_data ?? [], [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2008,6 +2028,7 @@ class ParentApiController extends Controller
                     'total' => $submitted_assignment_data_with_points['total'],
                 ],
             ];
+
             return ResponseService::successResponse('Assignment Report Fetched Successfully', $assingment_report, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2123,6 +2144,7 @@ class ParentApiController extends Controller
                 }
             }
             $fees_payment_transactions = $fees_payment_transactions->toArray();
+
             return ResponseService::successResponse('Fees Payment Transactions Fetched Successfully',
                 ['feesTransactions' => $fees_payment_transactions['data']],
                 [],
@@ -2356,6 +2378,7 @@ class ParentApiController extends Controller
             }
 
             $data = array_merge($user, ['dynamic_fields' => $parentDynamicFields ?? null, 'children' => $childrenArray]);
+
             return ResponseService::successResponse('Data Fetched Successfully', $data, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2395,6 +2418,7 @@ class ParentApiController extends Controller
             }
 
             sendSimpleNotification($user, 'Payment Failed', $body, $type, $image, $userinfo);
+
             return ResponseService::successResponse('Data Updated Successfully', null, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2408,6 +2432,7 @@ class ParentApiController extends Controller
             $notification_id = UserNotification::where('user_id', $user)->pluck('notification_id');
             // Send To All Users(1) and Parents(4)
             $notification = Notification::whereIn('id', $notification_id)->orWhereIn('send_to', [1, 4])->latest()->paginate();
+
             return ResponseService::successResponse('Data Fetched Successfully', $notification ?? '', [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2444,6 +2469,7 @@ class ParentApiController extends Controller
             ])->get($url);
 
             $data = $payment_status['status'];
+
             return ResponseService::successResponse('Data Fetched Successfully', $data, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2586,6 +2612,7 @@ class ParentApiController extends Controller
             $data = collect($data)->sortByDesc(function ($user) {
                 return optional($user['last_message'])->date ?? 0;
             })->values();
+
             return ResponseService::successResponse('Data Fetched Successfully', [
                 'items' => $data,
                 'total_items' => $total_items,
@@ -2735,6 +2762,7 @@ class ParentApiController extends Controller
 
             $userinfo = (object) $userinfo;
             sendSimpleNotification($user, $title, $body, $type, $image, $userinfo);
+
             return ResponseService::successResponse('Message Sent Successfully', $data, [], 200);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2777,6 +2805,7 @@ class ParentApiController extends Controller
                     $message['files'] = []; // or handle the case where 'file' is not set
                 }
             }
+
             return ResponseService::successResponse('Data Fetched Successfully', [
                 'items' => $messages ?? [],
                 'total_items' => $total_items,
@@ -2804,6 +2833,7 @@ class ParentApiController extends Controller
                 $readMessage->last_read_message_id = $message_id;
                 $readMessage->save();
             }
+
             return ResponseService::successResponse('Message Read');
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2911,6 +2941,7 @@ class ParentApiController extends Controller
                 $user_notification->save();
             }
             sendSimpleNotification($user, $title, $body, $type, $image, $userinfo);
+
             return ResponseService::successResponse('Data Stored Successfully', $leave ?? '', [], 200);
         } catch (\Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2960,6 +2991,7 @@ class ParentApiController extends Controller
                 'taken_leaves' => $sql->where('status', 1)->sum('days'),
                 'leave_details' => $sql,
             ];
+
             return ResponseService::successResponse('Data Fetched Successfully', $data, [], 200);
         } catch (\Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2971,6 +3003,7 @@ class ParentApiController extends Controller
         try {
             $leave = Leave::findOrFail($request->leave_id);
             $leave->delete();
+
             return ResponseService::successResponse('Data Deleted Successfully');
         } catch (\Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
