@@ -177,12 +177,12 @@ class StudentApiController extends Controller
             }
 
             // $user->dynamic_field = $dynamicFields;
+            $class_id = $user->student->class_section->class_id;
             unset($user->student->class_section);
 
             // Set Category name
             $user->category_name = $user->student->category->name;
             unset($user->student->category);
-            $class_id = $user->student->class_section->class_id;
 
             if ($compulsory_fees_mode == 1) {
                 if (isset($free_app_use_date)) {
@@ -208,6 +208,7 @@ class StudentApiController extends Controller
                                 $installment_db = InstallmentFee::where('session_year_id', $session_year_id);
                                 if ($installment_db->count()) {
                                     $installment_db_data = $installment_db->get();
+                                    $installment_data = [];
                                     foreach ($installment_db_data as $data) {
                                         $paid_installment_data = PaidInstallmentFee::where(['student_id' => $user->student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'installment_fee_id' => $data['id'], 'status' => 1])->first();
                                         $installment_data[] = [
@@ -257,6 +258,7 @@ class StudentApiController extends Controller
                             $installment_db = InstallmentFee::where('session_year_id', $session_year_id);
                             if ($installment_db->count()) {
                                 $installment_db_data = $installment_db->get();
+                                $installment_data = [];
                                 foreach ($installment_db_data as $data) {
                                     $paid_installment_data = PaidInstallmentFee::where(['student_id' => $user->student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'installment_fee_id' => $data['id'], 'status' => 1])->first();
                                     $installment_data[] = [
@@ -2610,6 +2612,7 @@ class StudentApiController extends Controller
                             $installment_db = InstallmentFee::where('session_year_id', $session_year_id);
                             if ($installment_db->count()) {
                                 $installment_db_data = $installment_db->get();
+                                $installment_data = [];
                                 foreach ($installment_db_data as $data) {
                                     $paid_installment_data = PaidInstallmentFee::where(['student_id' => $user->student->id, 'class_id' => $class_id, 'session_year_id' => $session_year_id, 'installment_fee_id' => $data['id'], 'status' => 1])->first();
                                     $installment_data[] = [

@@ -203,7 +203,10 @@ function changeEnv($data = [])
 }
 function findExamGrade($percentage)
 {
-    $grades = Grade::get();
+    static $grades = null;
+    if ($grades === null) {
+        $grades = Grade::get();
+    }
     if (count($grades)) {
         foreach ($grades as $row) {
             if (floor($percentage) >= $row['starting_range'] && floor($percentage) <= $row['ending_range']) {

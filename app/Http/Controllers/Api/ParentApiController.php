@@ -51,6 +51,7 @@ use App\Models\SubjectTeacher;
 use App\Models\Teacher;
 use App\Models\Timetable;
 use App\Models\UserNotification;
+use App\Services\NepaliDateService;
 use App\Services\Payment\PaymentService;
 use App\Services\ResponseService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -175,6 +176,7 @@ class ParentApiController extends Controller
                                     $installment_db = InstallmentFee::where('session_year_id', $session_year_id);
                                     if ($installment_db->count()) {
                                         $installment_db_data = $installment_db->get();
+                                        $installment_data = [];
                                         foreach ($installment_db_data as $data) {
                                             $paid_installment_data = PaidInstallmentFee::where(['student_id' => $child->id, 'class_id' => $child->class_section->class_id, 'session_year_id' => $session_year_id, 'installment_fee_id' => $data['id'], 'status' => 1])->first();
                                             $installment_data[] = [
@@ -880,6 +882,11 @@ class ParentApiController extends Controller
         }
         try {
             $student = Students::with('class_section')->where('id', $request->child_id)->first();
+
+            if (! $student) {
+                return ResponseService::errorResponse('Student not found', null, 404);
+            }
+
             $class_id = $student->class_section->class_id;
 
             $child_subject = $student->subjects();
@@ -900,13 +907,23 @@ class ParentApiController extends Controller
                     $query->whereIn('subject_id', $subject_id);
                 })->get();
 
+            $exam_ids = $exam_data_db->pluck('exam.id')->unique()->toArray();
+
+            $min_dates = ExamTimetable::select(DB::raw('exam_id, min(date) as min_date'))
+                ->whereIn('exam_id', $exam_ids)
+                ->where('class_id', $class_id)
+                ->groupBy('exam_id')
+                ->pluck('min_date', 'exam_id');
+            $max_dates = ExamTimetable::select(DB::raw('exam_id, max(date) as max_date'))
+                ->whereIn('exam_id', $exam_ids)
+                ->where('class_id', $class_id)
+                ->groupBy('exam_id')
+                ->pluck('max_date', 'exam_id');
+
             foreach ($exam_data_db as $data) {
 
-                // date status
-                $starting_date_db = ExamTimetable::select(DB::raw('min(date)'))->where(['exam_id' => $data->exam->id, 'class_id' => $class_id])->first();
-                $starting_date = $starting_date_db['min(date)'];
-                $ending_date_db = ExamTimetable::select(DB::raw('max(date)'))->where(['exam_id' => $data->exam->id, 'class_id' => $class_id])->first();
-                $ending_date = $ending_date_db['max(date)'];
+                $starting_date = $min_dates[$data->exam->id] ?? null;
+                $ending_date = $max_dates[$data->exam->id] ?? null;
                 $currentTime = Carbon::now();
                 $current_date = date($currentTime->toDateString());
                 if ($current_date >= $starting_date && $current_date <= $ending_date) {
@@ -2231,6 +2248,7 @@ class ParentApiController extends Controller
                                     $installment_db = InstallmentFee::where('session_year_id', $session_year_id);
                                     if ($installment_db->count()) {
                                         $installment_db_data = $installment_db->get();
+                                        $installment_data = [];
                                         foreach ($installment_db_data as $data) {
                                             $paid_installment_data = PaidInstallmentFee::where(['student_id' => $child->id, 'class_id' => $child->class_section->class_id, 'session_year_id' => $session_year_id, 'installment_fee_id' => $data['id'], 'status' => 1])->first();
                                             $installment_data[] = [

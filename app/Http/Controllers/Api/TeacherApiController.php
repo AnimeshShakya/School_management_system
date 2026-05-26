@@ -324,6 +324,7 @@ class TeacherApiController extends Controller
 
             $class_sections = ClassSection::whereIn('id', $class_section_ids)->with('class.medium', 'section', 'class.streams', 'class.shifts')->get();
             $class_section = $class_sections->diff($class_teacher);
+
             return ResponseService::successResponse('Teacher Classes Fetched Successfully.', ['class_teacher' => $class_teacher ?? (object) null, 'other' => $class_section]);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -354,6 +355,7 @@ class TeacherApiController extends Controller
             $subjects = $subjects->with('subject', 'class_section')->get()
                 ->filter(fn ($teacherSubject) => $teacherSubject->subject !== null)
                 ->values();
+
             return ResponseService::successResponse('Teacher Subject Fetched Successfully.', $subjects);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -385,6 +387,7 @@ class TeacherApiController extends Controller
                 $sql = $sql->where('subject_id', $request->subject_id);
             }
             $data = $sql->orderBy('id', 'DESC')->paginate();
+
             return ResponseService::successResponse('Assignment Fetched Successfully.', $data);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -530,6 +533,7 @@ class TeacherApiController extends Controller
                     $file->save();
                 }
             }
+
             return ResponseService::successResponse('Assignment Created Successfully.');
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -617,6 +621,7 @@ class TeacherApiController extends Controller
                     $file->save();
                 }
             }
+
             return ResponseService::successResponse('data_store_successfully');
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -630,6 +635,7 @@ class TeacherApiController extends Controller
         try {
             $assignment = Assignment::find($request->assignment_id);
             $assignment->delete();
+
             return ResponseService::successResponse('data_delete_successfully');
         } catch (\Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -649,6 +655,7 @@ class TeacherApiController extends Controller
         try {
             $sql = AssignmentSubmission::assignmentsubmissionteachers()->with('assignment.subject:id,name', 'student:id,user_id', 'student.user:first_name,last_name,id,image', 'file');
             $data = $sql->where('assignment_id', $request->assignment_id)->get();
+
             return ResponseService::successResponse('Assignment Fetched Successfully.', $data);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -715,6 +722,7 @@ class TeacherApiController extends Controller
             }
 
             sendSimpleNotification($user, $title, $body, $type, $image, $userinfo);
+
             return ResponseService::successResponse('data_update_successfully');
         } catch (\Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -749,6 +757,7 @@ class TeacherApiController extends Controller
                 $sql = $sql->where('subject_id', $request->subject_id);
             }
             $data = $sql->orderBy('id', 'DESC')->get();
+
             return ResponseService::successResponse('Lesson Fetched Successfully.', $data);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -833,6 +842,7 @@ class TeacherApiController extends Controller
                     }
                 }
             }
+
             return ResponseService::successResponse('data_store_successfully');
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -991,6 +1001,7 @@ class TeacherApiController extends Controller
                     }
                 }
             }
+
             return ResponseService::successResponse('data_store_successfully');
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1011,6 +1022,7 @@ class TeacherApiController extends Controller
         try {
             $lesson = Lesson::lessonteachers()->where('id', $request->lesson_id)->firstOrFail();
             $lesson->delete();
+
             return ResponseService::successResponse('data_delete_successfully');
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1031,6 +1043,7 @@ class TeacherApiController extends Controller
         try {
             $sql = LessonTopic::lessontopicteachers()->with('lesson.class_section', 'lesson.subject', 'file');
             $data = $sql->where('lesson_id', $request->lesson_id)->orderBy('id', 'DESC')->get();
+
             return ResponseService::successResponse('Topic Fetched Successfully.', $data);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1116,6 +1129,7 @@ class TeacherApiController extends Controller
                     }
                 }
             }
+
             return ResponseService::successResponse('data_store_successfully');
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1262,6 +1276,7 @@ class TeacherApiController extends Controller
                     $topic_file->save();
                 }
             }
+
             return ResponseService::successResponse('data_store_successfully');
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1275,6 +1290,7 @@ class TeacherApiController extends Controller
         try {
             $topic = LessonTopic::LessonTopicTeachers()->findOrFail($request->topic_id);
             $topic->delete();
+
             return ResponseService::successResponse('data_delete_successfully');
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1370,6 +1386,7 @@ class TeacherApiController extends Controller
                 }
             }
             $file->save();
+
             return ResponseService::successResponse('data_store_successfully', $file);
         } catch (\Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1388,6 +1405,7 @@ class TeacherApiController extends Controller
         try {
             $file = File::findOrFail($request->file_id);
             $file->delete();
+
             return ResponseService::successResponse('data_delete_successfully');
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1418,6 +1436,7 @@ class TeacherApiController extends Controller
             $sql = Announcement::with('table.subject', 'file')->where('table_type', 'App\Models\SubjectTeacher')->whereIn('table_id', $subject_teacher_ids);
 
             $data = $sql->orderBy('id', 'DESC')->paginate();
+
             return ResponseService::successResponse('Announcement Fetched Successfully.', $data);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1519,6 +1538,7 @@ class TeacherApiController extends Controller
                     $file->save();
                 }
             }
+
             return ResponseService::successResponse('data_store_successfully');
         } catch (\Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1569,6 +1589,7 @@ class TeacherApiController extends Controller
                     $file->save();
                 }
             }
+
             return ResponseService::successResponse('data_update_successfully');
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1588,6 +1609,7 @@ class TeacherApiController extends Controller
         try {
             $announcement = Announcement::findorFail($request->announcement_id);
             $announcement->delete();
+
             return ResponseService::successResponse('data_delete_successfully');
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1750,6 +1772,7 @@ class TeacherApiController extends Controller
                     UserNotification::insert($userNotificationData);
                 }
             }
+
             return ResponseService::successResponse('data_store_successfully');
         } catch (Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1803,6 +1826,7 @@ class TeacherApiController extends Controller
                     $data = $sql->orderBy('id')->get();
                 }
             }
+
             return ResponseService::successResponse('Student Details Fetched Successfully', $data);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1876,6 +1900,7 @@ class TeacherApiController extends Controller
             $teacher = $request->user()->teacher;
             $subject_id = SubjectTeacher::where('teacher_id', $teacher->id)->pluck('id');
             $timetable = Timetable::whereIn('subject_teacher_id', $subject_id)->with('class_section', 'subject')->get();
+
             return ResponseService::successResponse('Timetable Fetched Successfully', $timetable);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -1942,6 +1967,7 @@ class TeacherApiController extends Controller
                         $exam_marks_db->passing_status = $status;
                         $exam_marks_db->grade = $exam_grade;
                         $exam_marks_db->save();
+
                         return ResponseService::successResponse('data_update_successfully');
                     } else {
                         $exam_result_marks[] = [
@@ -1957,6 +1983,7 @@ class TeacherApiController extends Controller
                 }
                 if (isset($exam_result_marks)) {
                     ExamMarks::insert($exam_result_marks);
+
                     return ResponseService::successResponse('data_store_successfully');
                 }
             }
@@ -2027,6 +2054,7 @@ class TeacherApiController extends Controller
                         $exam_marks_db->passing_status = $status;
                         $exam_marks_db->grade = $exam_grade;
                         $exam_marks_db->save();
+
                         return ResponseService::successResponse('data_update_successfully');
                     } else {
                         $exam_result_marks[] = [
@@ -2042,6 +2070,7 @@ class TeacherApiController extends Controller
                 }
                 if (isset($exam_result_marks)) {
                     ExamMarks::insert($exam_result_marks);
+
                     return ResponseService::successResponse('data_store_successfully');
                 }
             }
@@ -2158,6 +2187,7 @@ class TeacherApiController extends Controller
                         }
                     }
                 }
+
                 return ResponseService::successResponse('Exam Marks Fetched Successfully', $data ?? []);
             } else {
                 return ResponseService::successResponse('Exam Marks Fetched Successfully', []);
@@ -2220,6 +2250,7 @@ class TeacherApiController extends Controller
                         'marks_data' => $marks_array,
                     ];
                 }
+
                 return ResponseService::successResponse('Exam Marks Fetched Successfully', $data);
             } else {
                 return ResponseService::successResponse('Exam Marks Fetched Successfully', []);
@@ -2265,15 +2296,23 @@ class TeacherApiController extends Controller
             }
             $exam_data_db = $sql->get();
 
-            // dd($exam_data_db->toArray());
+            $exam_ids = $exam_data_db->pluck('exam_id')->unique()->toArray();
+
+            $min_dates = ExamTimetable::select(DB::raw('exam_id, min(date) as min_date'))
+                ->whereIn('exam_id', $exam_ids)
+                ->whereIn('class_id', $class_ids)
+                ->groupBy('exam_id')
+                ->pluck('min_date', 'exam_id');
+            $max_dates = ExamTimetable::select(DB::raw('exam_id, max(date) as max_date'))
+                ->whereIn('exam_id', $exam_ids)
+                ->whereIn('class_id', $class_ids)
+                ->groupBy('exam_id')
+                ->pluck('max_date', 'exam_id');
+
             foreach ($exam_data_db as $data) {
 
-                // date status
-                $starting_date_db = ExamTimetable::select(DB::raw('min(date)'))->where('exam_id', $data->exam_id)->whereIn('class_id', $class_ids)->first();
-                $starting_date = $starting_date_db['min(date)'];
-
-                $ending_date_db = ExamTimetable::select(DB::raw('max(date)'))->where('exam_id', $data->exam_id)->whereIn('class_id', $class_ids)->first();
-                $ending_date = $ending_date_db['max(date)'];
+                $starting_date = $min_dates[$data->exam_id] ?? null;
+                $ending_date = $max_dates[$data->exam_id] ?? null;
 
                 $currentTime = Carbon::now();
                 $current_date = date($currentTime->toDateString());
@@ -2452,6 +2491,7 @@ class TeacherApiController extends Controller
                     }
                 }
             }
+
             return ResponseService::successResponse('Exam Marks Fetched Successfully', $exam_data ?? []);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2472,9 +2512,14 @@ class TeacherApiController extends Controller
             $class_id = $request->class_id;
             $class_section = ClassSection::with('class', 'section', 'class.medium', 'class.streams')->where('class_id', $class_id)->first();
 
+            if (! $class_section) {
+                return ResponseService::errorResponse('Class section not found', null, 404);
+            }
+
             $exam_data = Exam::with(['timetable' => function ($q) use ($request, $class_id) {
                 $q->where(['exam_id' => $request->exam_id, 'class_id' => $class_id])->with('subject');
             }])->where('id', $request->exam_id)->get();
+
             return ResponseService::successResponse('Data Fetched Successfully', $exam_data, [
                 'class_id' => $class_id,
                 'class_section_id' => $class_section->id,
@@ -2510,6 +2555,7 @@ class TeacherApiController extends Controller
             }
 
             $user = array_merge($user, ['dynamic_fields' => $dynamicFields ?? null]);
+
             return ResponseService::successResponse('Data Fetched Successfully', $user);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2524,6 +2570,7 @@ class TeacherApiController extends Controller
             $notification_id = UserNotification::where('user_id', $user)->pluck('notification_id');
             // Send To All Users(1) and Teachers(5)
             $notification = Notification::whereIn('id', $notification_id)->orWhereIn('send_to', [1, 5])->latest()->paginate();
+
             return ResponseService::successResponse('Data Fetched Successfully', $notification ?? '');
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -2927,6 +2974,7 @@ class TeacherApiController extends Controller
                     ->splice($offset, $limit)
                     ->values();
             }
+
             return ResponseService::successResponse('Data Fetched Successfully', ['items' => $data, 'total_items' => $total_items, 'total_unread_users' => $totalunreadusers], [], 100);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -3050,6 +3098,7 @@ class TeacherApiController extends Controller
 
             $userinfo = (object) $userinfo;
             sendSimpleNotification($user, $title, $body, $type, $image, $userinfo);
+
             return ResponseService::successResponse('message_sent_successfully', $data);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -3088,6 +3137,7 @@ class TeacherApiController extends Controller
 
                 unset($message['file']);
             }
+
             return ResponseService::successResponse('Data Fetched Successfully', ['items' => $messages ?? [], 'total_items' => $total_items], [], 100);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -3112,6 +3162,7 @@ class TeacherApiController extends Controller
                 $readMessage->last_read_message_id = $message_id;
                 $readMessage->save();
             }
+
             return ResponseService::successResponse('Message Read');
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -3295,6 +3346,7 @@ class TeacherApiController extends Controller
 
             // Get The Output Of PDF
             $output = $pdf->output();
+
             return ResponseService::successResponse('Data Fetched Successfully', null, ['pdf' => base64_encode($output)]);
         } catch (Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -3378,6 +3430,7 @@ class TeacherApiController extends Controller
                     $file->save();
                 }
             }
+
             return ResponseService::successResponse('data_store_successfully', $leave ?? '');
         } catch (\Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -3423,6 +3476,7 @@ class TeacherApiController extends Controller
                 'taken_leaves' => $sql->where('status', 1)->sum('days'),
                 'leave_details' => $sql,
             ];
+
             return ResponseService::successResponse('Data Fetched Successfully', $data);
         } catch (\Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -3435,6 +3489,7 @@ class TeacherApiController extends Controller
 
             $leave = Leave::findOrFail($request->leave_id);
             $leave->delete();
+
             return ResponseService::successResponse('Data Deleted Successfully', null, [], 100);
         } catch (\Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -3505,6 +3560,7 @@ class TeacherApiController extends Controller
                 'total_leave_requests' => $sql->count(),
                 'leave_details' => $sql,
             ];
+
             return ResponseService::successResponse('Data Fetched Successfully', $data);
         } catch (\Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -3813,6 +3869,7 @@ class TeacherApiController extends Controller
                 'staff_leaves' => $staff_leave_data ?? [],
                 'events' => $eventsList ?? [],
             ];
+
             return ResponseService::successResponse('Data Fetched Successfully', $data ?? []);
         } catch (\Exception $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
@@ -3836,6 +3893,7 @@ class TeacherApiController extends Controller
             $timetable->live_class_url = $request->live_class_link;
             $timetable->link_name = $request->link_name;
             $timetable->save();
+
             return ResponseService::successResponse('data_update_successfully');
         } catch (\Throwable $e) {
             return ResponseService::errorResponse('error_occurred', null, 103, $e);
