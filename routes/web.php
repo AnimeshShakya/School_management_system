@@ -92,7 +92,7 @@ Route::post('password/email', [ForgotPasswordController::class, 'sendResetLinkEm
 Route::get('password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
 Route::post('password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
 Route::get('/', static function () {
-    return redirect('login');
+    return redirect('landing-page');
 });
 Route::get('landing-page', [WebController::class, 'index'])->name('landing-page');
 Route::get('about', [WebController::class, 'about'])->name('about.us');
@@ -110,7 +110,7 @@ Route::get('error-page', [WebController::class, 'errorPage'])->name('error-page'
 
 Route::group(['middleware' => ['Role', 'auth']], function () {
     Route::group(['middleware' => 'language'], function () {
-        // Route::get('/home', [HomeController::class, 'index']);
+        Route::get('/home', [HomeController::class, 'index']);
         Route::get('home', [HomeController::class, 'index'])->name('home');
         Route::get('/logout', [HomeController::class, 'logout'])->name('home.logout');
         Route::get('subject-by-class-section', [HomeController::class, 'getSubjectByClassSection'])->name('class-section.by.subject');
