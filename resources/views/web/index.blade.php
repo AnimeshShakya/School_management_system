@@ -274,7 +274,7 @@
             <!-- events ends here  -->
         @endif
 
-        @if ($photo)
+        {{-- @if ($photo)
             <section class="ourPhotos commonMT">
                 <div class="container">
                     <div class="row">
@@ -340,9 +340,9 @@
             </section>
         @endif
 
-        <!-- ourPhotos ends here  -->
+        <!-- ourPhotos ends here  --> --}}
 
-        @if ($video)
+        {{-- @if ($video)
             <section class="ourPhotos ourVideos commonMT">
                 <div class="container">
                     <div class="row">
@@ -410,7 +410,7 @@
                 </div>
             </section>
             <!-- ourVideos ends here  -->
-        @endif
+        @endif --}}
 
 
         @if ($faq)

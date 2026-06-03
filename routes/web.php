@@ -537,10 +537,7 @@ Route::post('webhook/flutterwave', [WebhookController::class, 'flutterwave']);
 Route::get('response/paystack/success', [WebhookController::class, 'paystackSuccessCallback'])->name('paystack.success');
 Route::get('response/flutterwave/success', [WebhookController::class, 'flutterwaveSuccessCallback'])->name('flutterwave.success');
 
-Route::get('/privacy-policy', function () {
-    $settings = getSettings('privacy_policy');
-    echo $settings['privacy_policy'];
-});
+Route::get('/privacy-policy', [WebController::class, 'privacyPolicy'])->name('privacy-policy');
 
 Route::get('/terms-conditions', function () {
     $settings = getSettings('terms_condition');

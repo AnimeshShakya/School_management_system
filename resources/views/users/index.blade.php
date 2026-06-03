@@ -86,7 +86,7 @@
                     </tr>
                   @empty
                     <tr>
-                      <td colspan="@hasrole('Super Admin')6@else5@endhasrole" class="text-center">No users found.</td>
+                      <td colspan="@hasrole('Super Admin')6 @else 5 @endhasrole" class="text-center">No users found.</td>
                     </tr>
                   @endforelse
                 </tbody>
