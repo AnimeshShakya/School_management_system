@@ -68,7 +68,7 @@
                     <div class="navLogo">
                         <a href="{{ url('/') }}">
                             <img src="{{ env('LOGO1') ? url(Storage::url(env('LOGO1'))) : url('assets/logo.svg') }}"
-                                height="50px" width="150px" alt="logo">
+                                height="auto" width="150px" alt="logo">
                         </a>
                     </div>
                 </div>
@@ -137,7 +137,7 @@
                     <div class="navLogoWrapper">
                         <div class="navLogo">
                             <img src="{{ env('LOGO1') ? url(Storage::url(env('LOGO1'))) : url('assets/logo.svg') }}"
-                                height="50px" width="150px" alt="logo">
+                                height="auto" width="150px" alt="logo">
                         </div>
                     </div>
                     <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"

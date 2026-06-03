@@ -7,7 +7,7 @@
             <div>
               <a href="index.html">
                 <a href="{{url('/')}}">
-                    <img src="{{ env('LOGO1') ? url(Storage::url(env('LOGO1'))) : url('assets/logo.svg') }}" height="50px" width="150px" alt="logo">
+                    <img src="{{ env('LOGO1') ? url(Storage::url(env('LOGO1'))) : url('assets/logo.svg') }}" height="auto" width="150px" alt="logo">
                 </a>
               </a>
             </div>
@@ -325,8 +325,8 @@
 @endphp
 <style>
     :root {
-        --primary-color: <?=$theme_color ?>;
-        /* --primary-hover-color:<?=$secondary_color ?>; */
-        --secondary-color1:<?=$secondary_color ?>;
+        --primary-color: <?= $theme_color ?>;
+        /* --primary-hover-color:<?= $secondary_color ?>; */
+        --secondary-color1:<?= $secondary_color ?>;
     }
 </style>

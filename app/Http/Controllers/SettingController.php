@@ -106,18 +106,18 @@ class SettingController extends Controller
                     // removing the double unnecessary double quotes in school name
                     if ($row == 'school_name') {
                         $data = [
-                            'message' => str_replace('"', '', $request->$row),
+                            'message' => str_replace('"', '', $request->$row ?? ''),
                         ];
                     } else {
                         $data = [
-                            'message' => $request->$row,
+                            'message' => $request->$row ?? '',
                         ];
                     }
                     Settings::where('type', $row)->update($data);
                 } else {
                     $setting = new Settings;
                     $setting->type = $row;
-                    $setting->message = $row == 'school_name' ? str_replace('"', '', $request->$row) : $request->$row;
+                    $setting->message = $row == 'school_name' ? str_replace('"', '', $request->$row ?? '') : ($request->$row ?? '');
                     $setting->save();
                 }
             }
@@ -212,7 +212,7 @@ class SettingController extends Controller
             $timezone = Settings::select('message')->where('type', 'time_zone')->pluck('message')->first();
             $login_image = Settings::select('message')->where('type', 'login_image')->pluck('message')->first();
             $recaptcha_site_key = Settings::select('message')->where('type', 'recaptcha_site_key')->pluck('message')->first();
-            $recaptcha_secret_key = Settings::select('message')->where('type', 'recaptcha_secret_ke')->pluck('message')->first();
+            $recaptcha_secret_key = Settings::select('message')->where('type', 'recaptcha_secret_key')->pluck('message')->first();
 
             $env_update = changeEnv([
                 'LOGO1' => $logo1,
@@ -313,13 +313,13 @@ class SettingController extends Controller
                 if (Settings::where('type', $row)->exists()) {
 
                     $data = [
-                        'message' => $row === 'mail_password' ? $mailPassword : $request->$row,
+                        'message' => $row === 'mail_password' ? $mailPassword : ($request->$row ?? ''),
                     ];
                     Settings::where('type', $row)->update($data);
                 } else {
                     $setting = new Settings;
                     $setting->type = $row;
-                    $setting->message = $row === 'mail_password' ? $mailPassword : $request->$row;
+                    $setting->message = $row === 'mail_password' ? $mailPassword : ($request->$row ?? '');
                     $setting->save();
                 }
             }
@@ -610,13 +610,13 @@ class SettingController extends Controller
                 if (Settings::where('type', $row)->exists()) {
 
                     $data = [
-                        'message' => $request->$row,
+                        'message' => $request->$row ?? '',
                     ];
                     Settings::where('type', $row)->update($data);
                 } else {
                     $setting = new Settings;
                     $setting->type = $row;
-                    $setting->message = $request->$row;
+                    $setting->message = $request->$row ?? '';
                     $setting->save();
                 }
             }
@@ -655,13 +655,13 @@ class SettingController extends Controller
             foreach ($settings as $row) {
                 if (Settings::where('type', $row)->exists()) {
                     $data = [
-                        'message' => $request->$row,
+                        'message' => $request->$row ?? '',
                     ];
                     Settings::where('type', $row)->update($data);
                 } else {
                     $setting = new Settings;
                     $setting->type = $row;
-                    $setting->message = $request->$row;
+                    $setting->message = $request->$row ?? '';
                     $setting->save();
                 }
             }
@@ -747,13 +747,13 @@ class SettingController extends Controller
             foreach ($settings as $row) {
                 if (Settings::where('type', $row)->exists()) {
                     $data = [
-                        'message' => $request->$row,
+                        'message' => $request->$row ?? '',
                     ];
                     Settings::where('type', $row)->update($data);
                 } else {
                     $setting = new Settings;
                     $setting->type = $row;
-                    $setting->message = $request->$row;
+                    $setting->message = $request->$row ?? '';
                     $setting->save();
                 }
             }
