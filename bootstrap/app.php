@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\DemoMiddleware::class,
+            \App\Http\Middleware\SetSchoolContext::class,
         ]);
 
         // API middleware group

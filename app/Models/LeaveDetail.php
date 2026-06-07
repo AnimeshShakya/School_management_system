@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Leave;
+use App\Models\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class LeaveDetail extends Model
 {
+    use BelongsToSchool;
     use HasFactory;
 
     protected $fillable = ['id', 'leave_id', 'date', 'type'];

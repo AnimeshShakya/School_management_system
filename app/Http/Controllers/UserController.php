@@ -28,7 +28,7 @@ class UserController extends Controller
         $query = User::with('roles', 'school');
 
         if (! Auth::user()->hasRole('Super Admin')) {
-            $query->where('created_by', Auth::id());
+            $query->where('school_id', Auth::user()->school_id);
         }
 
         $data = $query->orderBy('id', 'DESC')->paginate(10);
@@ -98,7 +98,7 @@ class UserController extends Controller
         $query = User::with('roles');
 
         if (! Auth::user()->hasRole('Super Admin')) {
-            $query->where('created_by', Auth::id());
+            $query->where('school_id', Auth::user()->school_id);
         }
 
         $user = $query->with('roles', 'school')->findOrFail($id);
@@ -146,7 +146,7 @@ class UserController extends Controller
 
         $user = User::findOrFail($id);
 
-        if (! Auth::user()->hasRole('Super Admin') && $user->created_by !== Auth::id()) {
+        if (! Auth::user()->hasRole('Super Admin') && (int) $user->school_id !== (int) Auth::user()->school_id) {
             abort(403);
         }
 
@@ -166,7 +166,7 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        if (! Auth::user()->hasRole('Super Admin') && $user->created_by !== Auth::id()) {
+        if (! Auth::user()->hasRole('Super Admin') && (int) $user->school_id !== (int) Auth::user()->school_id) {
             abort(403);
         }
 

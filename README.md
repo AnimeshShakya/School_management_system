@@ -1,6 +1,30 @@
 # 🏫 eSchool Management System
 
-A comprehensive School Management System built with Laravel 12, designed to streamline educational institution operations and enhance communication between administrators, teachers, students, and parents.
+A comprehensive **multi-school** School Management System built with Laravel 12, designed to streamline educational institution operations and enhance communication between administrators, teachers, students, and parents. The platform supports running **multiple schools from a single installation**, with strict data isolation between schools.
+
+## 🌟 Multi-School Support
+
+This system is built as a **true multi-tenant platform** from a single Laravel installation:
+
+- **Schools** are first-class entities in the `schools` table
+- Every major data table (45+ tables including students, teachers, classes, exams, fees, attendance, etc.) carries a `school_id` foreign key
+- The `BelongsToSchool` global scope trait (`app/Models/Traits/BelongsToSchool.php`) automatically filters all queries by the authenticated user's school
+- On record creation, `school_id` is auto-assigned from the authenticated user
+- A **Super Admin** (with `school_id = NULL`) can manage all schools; school-level admins (principals) can only see and edit data within their own school
+- Uploaded files are organized per-school (`storage/app/public/<school_id>/...`)
+- The `created_by` column on `users` tracks which admin created each user account
+
+### Built-in Demo Schools
+
+After running `php artisan db:seed`, two demo schools are created with complete data:
+
+| School | Admin Login | Admin Password |
+|--------|-------------|----------------|
+| Greenwood International School | `admin@greenwood.edu` | `admin123` |
+| Bluebell Academy | `admin@bluebell.edu` | `admin123` |
+| Super Admin (cross-school) | `superadmin@gmail.com` | `superadmin` |
+
+Each school has its own teachers, parents, students, classes, subjects, exams, fees, etc. — all properly isolated by `school_id`.
 
 ## 📚 Features
 
@@ -46,9 +70,10 @@ A comprehensive School Management System built with Laravel 12, designed to stre
 - **Database**: MySQL
 - **Frontend**: Blade Templates, Bootstrap, jQuery
 - **Authentication**: Laravel Sanctum
-- **File Storage**: Laravel Storage
+- **File Storage**: Laravel Storage (per-school folders)
 - **Email**: SMTP Support
 - **Permissions**: Spatie Laravel Permission
+- **Multi-Tenancy**: Custom single-database shared-schema isolation via `school_id` + `BelongsToSchool` global scope trait
 - **Calendar**: Bikram Sambat (BS / Nepali) calendar support via `NepaliDateService`
 
 ## 📋 Requirements
@@ -151,22 +176,39 @@ Use the included deployment scripts for easy production setup:
 ### Default Login Credentials
 After seeding the database, you can use these default credentials:
 
-Super Admin: `superadmin@gmail.com` / `superadmin`
-Admin: `admin@gmail.com` / `admin123`
-Teacher: `teacher@gmail.com` / `teacher123`
-Student: `student@gmail.com` / `student123`
-Parent: `parent@gmail.com` / `parent123`
-Attendee: `attendee@gmail.com` / `attendee123`
+#### Super Admin (cross-school access)
+- `superadmin@gmail.com` / `superadmin`
+
+#### Default School (single-school demo seeder)
+- Admin: `admin@gmail.com` / `admin123`
+- Teacher: `teacher@gmail.com` / `teacher123`
+- Student: `student@gmail.com` / `student123`
+- Parent: `parent@gmail.com` / `parent123`
+- Attendee: `attendee@gmail.com` / `attendee123`
+
+#### Multi-School Demo (MultiSchoolDataSeeder)
+| School | Admin | Teacher | Student | Parent |
+|--------|-------|---------|---------|--------|
+| Greenwood International School | `admin@greenwood.edu` / `admin123` | `math.teacher.2@school.com` / `teacher123` | `hari.student.2@school.com` / `student123` | `parent1.2@school.com` / `parent123` |
+| Bluebell Academy | `admin@bluebell.edu` / `admin123` | `math.teacher.3@school.com` / `teacher123` | `hari.student.3@school.com` / `student123` | `parent1.3@school.com` / `parent123` |
 
 If installer shows **"Invalid code supplied!"** on the purchase-code step, complete the install purchase verification first. Until installation is completed, admin login may not proceed to the dashboard.
 
 ### User Roles
 The system supports multiple user roles:
-- **Super Admin** - Full system access
-- **Admin** - School administration
-- **Teacher** - Teaching staff
-- **Student** - Students
-- **Parent** - Student guardians
+- **Super Admin** - Full system access across all schools; can create/manage schools
+- **Admin** (Principal) - School administration; scoped to their own school only
+- **Teacher** - Teaching staff; scoped to their own school
+- **Student** - Students; scoped to their own school
+- **Parent** - Student guardians; scoped to their own school
+- **Attendee Teacher** - QR attendance scanner; scoped to their own school
+
+### Multi-School Seeding
+To populate the database with two fully-populated demo schools, run:
+```bash
+php artisan db:seed --class=MultiSchoolDataSeeder
+```
+This creates 2 schools with ≥2 records in every table (classes, subjects, students, teachers, exams, fees, attendance, online exams, assignments, leaves, announcements, etc.), all properly tagged with `school_id`.
 
 ## 🔧 Configuration
 

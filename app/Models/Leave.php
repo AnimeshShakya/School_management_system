@@ -9,11 +9,13 @@ use App\Models\File;
 use App\Models\User;
 use App\Models\LeaveDetail;
 use App\Models\LeaveMaster;
+use App\Models\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Leave extends Model
 {
+    use BelongsToSchool;
     use HasFactory;
 
     protected $fillable = [

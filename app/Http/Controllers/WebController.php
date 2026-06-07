@@ -249,6 +249,8 @@ class WebController extends Controller
             return response()->json($response);
         }
         try {
+            $defaultSchoolId = School::value('id');
+
             $parentRole = Role::where('name', 'Parent')->first();
             $studentRole = Role::where('name', 'Student')->first();
 
@@ -287,6 +289,7 @@ class WebController extends Controller
                     $father_image->move($destinationPath, $file_name);
 
                     $father_user_array = [
+                        'school_id' => $defaultSchoolId,
                         'image' => $file_path,
                         'password' => Hash::make($father_plaintext_password),
                         'first_name' => $request->father_first_name,
@@ -302,6 +305,7 @@ class WebController extends Controller
                     $father_user->assignRole($parentRole);
 
                     $father_parent_array = [
+                        'school_id' => $defaultSchoolId,
                         'user_id' => $father_user->id,
                         'first_name' => $request->father_first_name,
                         'last_name' => $request->father_last_name,
@@ -336,6 +340,7 @@ class WebController extends Controller
                     $mother_image->move($destinationPath, $file_name);
 
                     $mother_user_array = [
+                        'school_id' => $defaultSchoolId,
                         'image' => $file_path,
                         'password' => Hash::make($mother_plaintext_password),
                         'first_name' => $request->mother_first_name,
@@ -351,6 +356,7 @@ class WebController extends Controller
                     $mother_user->assignRole($parentRole);
 
                     $mother_parent_array = [
+                        'school_id' => $defaultSchoolId,
                         'user_id' => $mother_user->id,
                         'first_name' => $request->mother_first_name,
                         'last_name' => $request->mother_last_name,
@@ -391,6 +397,7 @@ class WebController extends Controller
                     $guardian_image->move($destinationPath, $file_name);
 
                     $guardian_user_array = [
+                        'school_id' => $defaultSchoolId,
                         'image' => $file_path,
                         'password' => Hash::make($guardian_plaintext_password),
                         'first_name' => $request->guardian_first_name,
@@ -406,6 +413,7 @@ class WebController extends Controller
                     $guardian_user->assignRole($parentRole);
 
                     $guardian_parent_array = [
+                        'school_id' => $defaultSchoolId,
                         'user_id' => $guardian_user->id,
                         'first_name' => $request->guardian_first_name,
                         'last_name' => $request->guardian_last_name,
@@ -439,6 +447,7 @@ class WebController extends Controller
             $student_image->move($destinationPath, $file_name);
 
             $user_data = [
+                'school_id' => $defaultSchoolId,
                 'image' => $file_path,
                 'password' => Hash::make($child_plaintext_password),
                 'first_name' => $request->first_name,
@@ -498,6 +507,7 @@ class WebController extends Controller
             }
 
             $student_data_array = [
+                'school_id' => $defaultSchoolId,
                 'user_id' => $user->id,
                 'class_id' => $request->class_id,
                 'application_type' => 'online',

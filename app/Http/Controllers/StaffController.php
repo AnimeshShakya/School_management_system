@@ -312,7 +312,7 @@ class StaffController extends Controller
 
         if (! Auth::user()->hasRole('Super Admin')) {
             $sql->whereHas('user', function ($q) {
-                $q->where('created_by', Auth::id());
+                $q->where('school_id', Auth::user()->school_id);
             });
         }
 
@@ -520,7 +520,7 @@ class StaffController extends Controller
         try {
             $user = User::find($id);
 
-            if (! Auth::user()->hasRole('Super Admin') && $user->created_by !== Auth::id()) {
+            if (! Auth::user()->hasRole('Super Admin') && (int) $user->school_id !== (int) Auth::user()->school_id) {
                 return ResponseService::errorResponse(trans('no_permission_message'));
             }
             if (Storage::disk('public')->exists($user->image)) {

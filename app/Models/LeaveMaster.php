@@ -6,11 +6,13 @@ namespace App\Models;
 
 use App\Models\Leave;
 use App\Models\SessionYear;
+use App\Models\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class LeaveMaster extends Model
 {
+    use BelongsToSchool;
     use HasFactory;
 
     public function session_year()

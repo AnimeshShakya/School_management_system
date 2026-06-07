@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\MultipleEvent;
+use App\Models\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Event extends Model
 {
+    use BelongsToSchool;
     use HasFactory;
 
     public function multipleEvent()

@@ -6,11 +6,13 @@ namespace App\Models;
 
 use App\Models\Teacher;
 use App\Models\ClassSection;
+use App\Models\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class ClassTeacher extends Model
 {
+    use BelongsToSchool;
     use HasFactory;
 
 

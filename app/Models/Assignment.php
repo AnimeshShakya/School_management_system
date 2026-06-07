@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 
 class Assignment extends Model
 {
+    use BelongsToSchool;
     use HasFactory;
 
     protected $hidden = ["deleted_at", "updated_at"];

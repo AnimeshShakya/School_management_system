@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Carbon\Carbon;
+use App\Models\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Semester extends Model
 {
+    use BelongsToSchool;
     use HasFactory, SoftDeletes;
 
     protected $fillable = [

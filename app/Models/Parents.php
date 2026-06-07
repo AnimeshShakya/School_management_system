@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -11,11 +12,12 @@ use Illuminate\Support\Facades\Storage;
 
 class Parents extends Model
 {
+    use BelongsToSchool, HasFactory, SoftDeletes;
     use SoftDeletes;
-    use HasFactory;
 
     protected $fillable = [
         'id',
+        'school_id',
         'user_id',
         'first_name',
         'last_name',
@@ -26,11 +28,12 @@ class Parents extends Model
         'dob',
         'occupation',
         'dynamic_fields',
-
     ];
-    protected $hidden = ["deleted_at", "created_at", "updated_at"];
+
+    protected $hidden = ['deleted_at', 'created_at', 'updated_at'];
 
     protected $appends = ['full_name'];
+
     public function announcement()
     {
         return $this->morphMany(Announcement::class, 'table');
@@ -61,13 +64,14 @@ class Parents extends Model
         return $this->fatherRelationChild()->union($this->motherRelationChild())->union($this->guardianRelationChild());
     }
 
-    //Getter Attributes
+    // Getter Attributes
     public function getImageAttribute($value)
     {
         return url(Storage::url($value));
     }
 
-    public function getFullNameAttribute() {
-        return $this->first_name . ' ' . $this->last_name;
+    public function getFullNameAttribute()
+    {
+        return $this->first_name.' '.$this->last_name;
     }
 }

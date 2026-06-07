@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b8a5c7d2-3e4f-5a6b-7c8d-9e0f1a2b3c4d",
     "name": "School Management System API",
-    "description": "API collection for the School Management System mobile apps (Student, Parent, Teacher, QR Attendance).\n\nBase URL: https://floralwhite-ant-272403.hostingersite.com\n\nAuth: Sanctum Bearer token.",
+    "description": "API collection for the School Management System mobile apps (Student, Parent, Teacher, QR Attendance) and Super Admin web panel.\n\nBase URL: https://floralwhite-ant-272403.hostingersite.com\n\nAuth: Sanctum Bearer token.\n\nMulti-School Support: This platform supports multiple schools in a single installation. All data is scoped by `school_id`. A Super Admin (school_id = null) can manage all schools; school-level admins/principals can only access their own school's data. The '7. School Management (Super Admin)' section provides CRUD endpoints for managing schools.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -5268,6 +5268,208 @@
                 "api",
                 "qr-attendance",
                 "class-sections"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. School Management (Super Admin)",
+      "description": "School CRUD endpoints — restricted to Super Admin role. Use these to create and manage the schools running on this installation. All other data in the system is scoped per-school via `school_id`.",
+      "item": [
+        {
+          "name": "SC1 - List Schools",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/schools",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "schools"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "SC2 - Show School (with user count)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/schools/2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "schools",
+                "2"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "SC3 - Create School",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Springfield Elementary\",\n  \"email\": \"info@springfield.edu\",\n  \"phone\": \"9800000099\",\n  \"address\": \"Springfield, USA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/schools",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "schools"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "SC4 - Update School",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Springfield Elementary (Updated)\",\n  \"email\": \"info@springfield.edu\",\n  \"phone\": \"9800000099\",\n  \"address\": \"Springfield, USA\",\n  \"status\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/schools/4",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "schools",
+                "4"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "SC5 - Delete School",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/schools/4",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "schools",
+                "4"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "SC6 - Login as Super Admin (get token for school management)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@gmail.com\",\n  \"password\": \"superadmin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "login"
               ]
             }
           },

@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class InstallmentFee extends Model
 {
+    use BelongsToSchool;
     use HasFactory;
     protected $hidden = ["created_at", "updated_at"];
 

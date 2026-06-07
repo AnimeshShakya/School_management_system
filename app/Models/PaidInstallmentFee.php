@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PaidInstallmentFee extends Model {
+    use BelongsToSchool;
     use HasFactory;
     protected $fillable = [
         'id',
