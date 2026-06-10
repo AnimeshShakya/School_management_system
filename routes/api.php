@@ -263,6 +263,7 @@ Route::group(['prefix' => 'teacher'], function () {
 /**
  * GENERAL APIs
  **/
+Route::get('schools', [ApiController::class, 'getSchools']);
 Route::get('holidays', [ApiController::class, 'getHolidays']);
 Route::get('sliders', [ApiController::class, 'getSliders']);
 Route::get('current-session-year', [ApiController::class, 'getCurrentSessionYear']);

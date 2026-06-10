@@ -182,7 +182,7 @@ $(".subject-create-form").validate({
         'name': "required",
         'bg_color': "required",
         image: {
-            required: true,
+            required: false,
             extension: "png|jpg|jpeg|svg"
         },
         'type': "required",

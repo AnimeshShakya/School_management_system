@@ -220,6 +220,30 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "G9 - Get Schools",
+          "description": "Returns list of active schools for the login school selector.",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/schools",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "schools"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -323,7 +347,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"student@gmail.com\",\n  \"password\": \"student123\",\n  \"gr_number\": \"\",\n  \"fcm_id\": \"\",\n  \"device_type\": \"android\"\n}",
+                  "raw": "{\n  \"email\": \"student@gmail.com\",\n  \"password\": \"student123\",\n  \"school_id\": 1,\n  \"gr_number\": \"\",\n  \"fcm_id\": \"\",\n  \"device_type\": \"android\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1902,7 +1926,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"parent@gmail.com\",\n  \"password\": \"parent123\"\n}",
+                  "raw": "{\n  \"email\": \"parent@gmail.com\",\n  \"password\": \"parent123\",\n  \"school_id\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -3297,7 +3321,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"teacher@gmail.com\",\n  \"password\": \"teacher123\"\n}",
+                  "raw": "{\n  \"email\": \"teacher@gmail.com\",\n  \"password\": \"teacher123\",\n  \"school_id\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5183,7 +5207,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"attendee@gmail.com\",\n  \"password\": \"attendee123\"\n}",
+              "raw": "{\n  \"email\": \"attendee@gmail.com\",\n  \"password\": \"attendee123\",\n  \"school_id\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"

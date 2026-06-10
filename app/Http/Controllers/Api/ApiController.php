@@ -59,6 +59,35 @@ class ApiController extends Controller
     /**
      * Get sliders for mobile app.
      */
+    /**
+     * Get all active schools for login selector.
+     */
+    public function getSchools()
+    {
+        try {
+            $schools = School::where('status', 1)
+                ->select('id', 'name', 'email', 'phone', 'address', 'logo')
+                ->orderBy('name')
+                ->get()
+                ->map(function ($school) {
+                    return [
+                        'id' => $school->id,
+                        'name' => $school->name,
+                        'email' => $school->email,
+                        'phone' => $school->phone,
+                        'address' => $school->address,
+                        'logo' => $school->logo
+                            ? asset('storage/school_logos/'.$school->logo)
+                            : null,
+                    ];
+                });
+
+            return ResponseService::successResponse('Schools fetched successfully', $schools);
+        } catch (Throwable $e) {
+            return ResponseService::errorResponse('error_occurred', null, 103, $e);
+        }
+    }
+
     public function getSliders()
     {
         try {
@@ -175,8 +204,20 @@ class ApiController extends Controller
                     ? app(NepaliDateService::class)->addBsFields($calender->toArray(), ['start_date', 'end_date'])
                     : null;
                 $data['calendar_type'] = 'nepali';
-                $data['school_name'] = $settings['school_name'] ?? '';
-                $data['school_tagline'] = $settings['school_tagline'] ?? '';
+
+                if ($request->user()) {
+                    $school = $request->user()->school;
+                    $data['school_name'] = $school->name ?? $settings['school_name'] ?? '';
+                    $data['school_tagline'] = $school->tagline ?? $settings['school_tagline'] ?? '';
+                    $data['school_logo'] = $school->logo
+                        ? asset('storage/school_logos/'.$school->logo)
+                        : null;
+                } else {
+                    $data['school_name'] = $settings['school_name'] ?? '';
+                    $data['school_tagline'] = $settings['school_tagline'] ?? '';
+                    $data['school_logo'] = null;
+                }
+
                 $data['teacher_app_link'] = $settings['teacher_app_link'] ?? '';
                 $data['teacher_ios_app_link'] = $settings['teacher_ios_app_link'] ?? '';
                 $data['teacher_app_version'] = $settings['teacher_app_version'] ?? '';

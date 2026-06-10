@@ -61,6 +61,7 @@ class TeacherApiController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required',
             'password' => 'required',
+            'school_id' => 'required|exists:schools,id',
         ]);
 
         if ($validator->fails()) {
@@ -69,6 +70,11 @@ class TeacherApiController extends Controller
 
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
             $auth = Auth::user();
+
+            // Verify user belongs to selected school
+            if ((int) $auth->school_id !== (int) $request->school_id) {
+                return ResponseService::errorResponse('User does not belong to the selected school', null, 101);
+            }
 
             $isTeacher = $auth->hasRole('Teacher');
             $isAttendee = $auth->hasRole('Attendee Teacher');
@@ -86,6 +92,8 @@ class TeacherApiController extends Controller
 
             $permissions = $auth->getAllPermissions()->pluck('name')->toArray();
 
+            $school = $auth->school;
+
             $userData = [
                 'id' => $auth->id,
                 'first_name' => $auth->first_name,
@@ -93,6 +101,11 @@ class TeacherApiController extends Controller
                 'email' => $auth->email,
                 'image' => $auth->image,
                 'mobile' => $auth->mobile,
+                'school_id' => $school?->id,
+                'school_name' => $school?->name,
+                'school_logo' => $school?->logo
+                    ? asset('storage/school_logos/'.$school->logo)
+                    : null,
             ];
 
             $teacherData = [];

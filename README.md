@@ -189,8 +189,16 @@ After seeding the database, you can use these default credentials:
 #### Multi-School Demo (MultiSchoolDataSeeder)
 | School | Admin | Teacher | Student | Parent |
 |--------|-------|---------|---------|--------|
-| Greenwood International School | `admin@greenwood.edu` / `admin123` | `math.teacher.2@school.com` / `teacher123` | `hari.student.2@school.com` / `student123` | `parent1.2@school.com` / `parent123` |
-| Bluebell Academy | `admin@bluebell.edu` / `admin123` | `math.teacher.3@school.com` / `teacher123` | `hari.student.3@school.com` / `student123` | `parent1.3@school.com` / `parent123` |
+| Greenwood International School |
+| `admin@greenwood.edu` / `admin123` |
+| `math.teacher.2@school.com` / `teacher123` |
+| `hari.student.2@school.com` / `student123` |
+| `parent1.2@school.com` / `parent123` |
+| Bluebell Academy |
+| `admin@bluebell.edu` / `admin123` |
+| `math.teacher.3@school.com` / `teacher123` |
+| `hari.student.3@school.com` / `student123` |
+| `parent1.3@school.com` / `parent123` |
 
 If installer shows **"Invalid code supplied!"** on the purchase-code step, complete the install purchase verification first. Until installation is completed, admin login may not proceed to the dashboard.
 

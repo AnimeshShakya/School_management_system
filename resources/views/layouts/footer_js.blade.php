@@ -1,7 +1,9 @@
 <script src="{{ asset('/assets/js/vendor.bundle.base.js') }}"></script>
 <script src="{{ asset('/assets/js/Chart.min.js') }}"></script>
 <script src="{{ asset('/assets/js/jquery.validate.min.js') }}"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.21.0/localization/messages_{{ Session::get('language')->code ?? 'en' }}.min.js"></script>
+@if(Session::has('language') && Session::get('language')->code != 'en')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.21.0/localization/messages_{{ Session::get('language')->code }}.min.js"></script>
+@endif
 <script src="{{ asset('/assets/jquery-toast-plugin/jquery.toast.min.js') }}"></script>
 <script src="{{ asset('/assets/select2/select2.min.js') }}"></script>
 

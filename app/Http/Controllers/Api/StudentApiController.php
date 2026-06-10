@@ -82,6 +82,7 @@ class StudentApiController extends Controller
             'email' => 'required_without:gr_number',
             'gr_number' => 'required_without:email',
             'password' => 'required',
+            'school_id' => 'required|exists:schools,id',
         ]);
 
         if ($validator->fails()) {
@@ -125,6 +126,11 @@ class StudentApiController extends Controller
             $auth = Auth::user();
             if (! $auth->hasRole('Student')) {
                 return ResponseService::errorResponse('Invalid Login Credentials', null, 101);
+            }
+
+            // Verify user belongs to selected school
+            if ((int) $auth->school_id !== (int) $request->school_id) {
+                return ResponseService::errorResponse('User does not belong to the selected school', null, 101);
             }
             $token = $auth->createToken($auth->first_name)->plainTextToken;
             $user = $auth->load(['student.class_section', 'student.category']);
@@ -317,7 +323,23 @@ class StudentApiController extends Controller
                 $dynamicFields = null;
             }
 
+            // Add school info to response
+            $schoolData = null;
+            if ($auth->school) {
+                $schoolData = [
+                    'school_id' => $auth->school->id,
+                    'school_name' => $auth->school->name,
+                    'school_logo' => $auth->school->logo
+                        ? asset('storage/school_logos/'.$auth->school->logo)
+                        : null,
+                ];
+            }
+
             $data = array_merge($user, ['dynamic_fields' => $dynamicFields, 'qr_payload' => $qrPayload]);
+
+            if ($schoolData) {
+                $data = array_merge($data, $schoolData);
+            }
 
             return ResponseService::successResponse('User logged-in!', $data, ['token' => $token]);
         } else {

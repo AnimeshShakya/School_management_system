@@ -65,7 +65,7 @@
                                     <input type="file" name="image" class="file-upload-default" accept="image/*" />
                                     <div class="input-group col-xs-12">
                                         <input type="text" class="form-control file-upload-info" disabled=""
-                                            placeholder="{{ __('image') }}" required="required" />
+                                            placeholder="{{ __('image') }}" />
                                         <span class="input-group-append">
                                             <button class="file-upload-browse btn btn-theme"
                                                 type="button">{{ __('upload') }}</button>
@@ -179,7 +179,7 @@
                                     @if ($row->type === 'text' || $row->type === 'number')
                                         <div class="form-group col-sm-12 col-md-4">
                                             <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                             <input type="{{ $row->type }}" name="{{ $row->name }}"
                                                 placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}"
                                                 class="form-control" {{ $row->is_required === 1 ? 'required' : '' }}>
@@ -188,7 +188,7 @@
                                     @if ($row->type === 'dropdown')
                                         <div class="form-group col-sm-12 col-md-4">
                                             <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                             <select name="{{ $row->name }}" class="form-control"
                                                 {{ $row->is_required === 1 ? 'required' : '' }}>
                                                 <option value="">Please Select</option>
@@ -204,7 +204,7 @@
                                     @if ($row->type === 'radio')
                                         <div class="form-group col-sm-12 col-md-4">
                                             <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                             <br>
                                             <div class="d-flex">
                                                 @foreach (json_decode($row->default_values) as $options)
@@ -225,7 +225,7 @@
                                     @if ($row->type === 'checkbox')
                                         <div class="form-group col-sm-12 col-md-4">
                                             <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label>
+                                                {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                             <br>
                                             <div class="col-md-10" id="{{ $row->name }}">
                                                 @foreach (json_decode($row->default_values) as $options)
@@ -247,7 +247,7 @@
                                     @if ($row->type === 'textarea')
                                         <div class="form-group col-sm-12 col-md-4">
                                             <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                             <textarea name="{{ $row->name }}" cols="10" rows="3"
                                                 placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}" class="form-control"
                                                 {{ $row->is_required === 1 ? 'required' : '' }}></textarea>
@@ -256,14 +256,14 @@
                                     @if ($row->type === 'file')
                                         <div class="form-group col-sm-12 col-md-4">
                                             <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label>
+                                                {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                             <input type="file" name="{{ $row->name }}" class="file-upload-default"
                                                 {{ $row->is_required === 1 ? 'required' : '' }} />
                                             <div class="input-group col-xs-12">
                                                 <input type="text" class="form-control file-upload-info"
                                                     disabled=""
                                                     placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}"
-                                                    required />
+                                                    {{ $row->is_required === 1 ? 'required' : '' }} />
                                                 <span class="input-group-append">
                                                     <button class="file-upload-browse btn btn-theme"
                                                         type="button">{{ __('upload') }}</button>
@@ -355,8 +355,7 @@
                                     ]) !!}
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
-                                    <label>{{ __('father') . ' ' . __('image') }} <span
-                                            class="text-danger">*</span></label>
+                                    <label>{{ __('father') . ' ' . __('image') }}</label>
                                     <input type="file" name="father_image" class="father_image file-upload-default"
                                         accept="image/*" />
                                     <div class="input-group col-xs-12">
@@ -377,7 +376,7 @@
                                             @if ($row->type === 'text' || $row->type === 'number')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <input type="{{ $row->type }}" name="father_{{ $row->name }}"
                                                         placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}"
                                                         class="form-control"
@@ -387,7 +386,7 @@
                                             @if ($row->type === 'dropdown')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <select name="father_{{ $row->name }}" class="form-control"
                                                         {{ $row->is_required === 1 ? 'required' : '' }}>
                                                         <option value="">Please Select</option>
@@ -403,7 +402,7 @@
                                             @if ($row->type === 'radio')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <br>
                                                     <div class="d-flex">
                                                         @foreach (json_decode($row->default_values) as $options)
@@ -425,7 +424,7 @@
                                             @if ($row->type === 'checkbox')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <br>
                                                     <div class="col-md-10" id="{{ $row->name }}">
                                                         @foreach (json_decode($row->default_values) as $options)
@@ -448,7 +447,7 @@
                                             @if ($row->type === 'textarea')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <textarea name="father_{{ $row->name }}" cols="10" rows="3"
                                                         placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}" class="form-control"
                                                         {{ $row->is_required === 1 ? 'required' : '' }}></textarea>
@@ -457,16 +456,16 @@
                                             @if ($row->type === 'file')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <input type="file" name="father_{{ $row->name }}"
                                                         class="file-upload-default"
                                                         {{ $row->is_required === 1 ? 'required' : '' }} />
                                                     <div class="input-group col-xs-12">
-                                                        <input type="text" class="form-control file-upload-info"
-                                                            disabled=""
-                                                            placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}"
-                                                            required />
-                                                        <span class="input-group-append">
+                                                            <input type="text" class="form-control file-upload-info"
+                                                                disabled=""
+                                                                placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}"
+                                                                {{ $row->is_required === 1 ? 'required' : '' }} />
+                                                            <span class="input-group-append">
                                                             <button class="file-upload-browse btn btn-theme"
                                                                 type="button">{{ __('upload') }}</button>
                                                         </span>
@@ -540,8 +539,7 @@
                                     ]) !!}
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
-                                    <label>{{ __('mother') . ' ' . __('image') }} <span
-                                            class="text-danger">*</span></label>
+                                    <label>{{ __('mother') . ' ' . __('image') }}</label>
                                     <input type="file" name="mother_image" class="mother_image file-upload-default"
                                         accept="image/*" />
                                     <div class="input-group col-xs-12">
@@ -563,7 +561,7 @@
                                             @if ($row->type === 'text' || $row->type === 'number')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <input type="{{ $row->type }}"
                                                         name="mother_{{ $row->name }}"
                                                         placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}"
@@ -574,7 +572,7 @@
                                             @if ($row->type === 'dropdown')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <select name="mother_{{ $row->name }}" class="form-control"
                                                         {{ $row->is_required === 1 ? 'required' : '' }}>
                                                         <option value="">Please Select</option>
@@ -591,7 +589,7 @@
                                             @if ($row->type === 'radio')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <br>
                                                     <div class="d-flex">
                                                         @foreach (json_decode($row->default_values) as $options)
@@ -613,7 +611,7 @@
                                             @if ($row->type === 'checkbox')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <br>
                                                     <div class="col-md-10" id="{{ $row->name }}">
                                                         @foreach (json_decode($row->default_values) as $options)
@@ -636,7 +634,7 @@
                                             @if ($row->type === 'textarea')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <textarea name="mother_{{ $row->name }}" cols="10" rows="3"
                                                         placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}" class="form-control"
                                                         {{ $row->is_required === 1 ? 'required' : '' }}></textarea>
@@ -645,16 +643,16 @@
                                             @if ($row->type === 'file')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <input type="file" name="mother_{{ $row->name }}"
                                                         class="file-upload-default"
                                                         {{ $row->is_required === 1 ? 'required' : '' }} />
                                                     <div class="input-group col-xs-12">
-                                                        <input type="text" class="form-control file-upload-info"
-                                                            disabled=""
-                                                            placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}"
-                                                            required />
-                                                        <span class="input-group-append">
+                                                            <input type="text" class="form-control file-upload-info"
+                                                                disabled=""
+                                                                placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}"
+                                                                {{ $row->is_required === 1 ? 'required' : '' }} />
+                                                            <span class="input-group-append">
                                                             <button class="file-upload-browse btn btn-theme"
                                                                 type="button">{{ __('upload') }}</button>
                                                         </span>
@@ -749,8 +747,7 @@
                                     ]) !!}
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
-                                    <label>{{ __('guardian') . ' ' . __('image') }} <span
-                                            class="text-danger">*</span></label>
+                                    <label>{{ __('guardian') . ' ' . __('image') }}</label>
                                     <input type="file" name="guardian_image"
                                         class="guardian_image file-upload-default" accept="image/*" />
                                     <div class="input-group col-xs-12">
@@ -773,7 +770,7 @@
                                             @if ($row->type === 'text' || $row->type === 'number')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <input type="{{ $row->type }}"
                                                         name="guardian_{{ $row->name }}"
                                                         id="guardian_{{ $row->name }}"
@@ -785,7 +782,7 @@
                                             @if ($row->type === 'dropdown')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <select name="guardian_{{ $row->name }}"
                                                         id="guardian_{{ $row->name }}" class="form-control"
                                                         {{ $row->is_required === 1 ? 'required' : '' }}>
@@ -803,7 +800,7 @@
                                             @if ($row->type === 'radio')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <br>
                                                     <div class="d-flex">
                                                         @foreach (json_decode($row->default_values) as $options)
@@ -826,7 +823,7 @@
                                             @if ($row->type === 'checkbox')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <br>
                                                     <div class="col-md-10" id="{{ $row->name }}">
                                                         @foreach (json_decode($row->default_values) as $options)
@@ -850,7 +847,7 @@
                                             @if ($row->type === 'textarea')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label></label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <textarea name="guardian_{{ $row->name }}" id="guardian_{{ $row->name }}" cols="10" rows="3"
                                                         placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}" class="form-control"
                                                         {{ $row->is_required === 1 ? 'required' : '' }}></textarea>
@@ -859,16 +856,16 @@
                                             @if ($row->type === 'file')
                                                 <div class="form-group col-sm-12 col-md-4">
                                                     <label>{{ ucwords(str_replace('_', ' ', $row->name)) }}
-                                                        {!! $row->is_required ? ' <span class="text-danger">*</span></label>' : '' !!}</label>
+                                                        {!! $row->is_required ? ' <span class="text-danger">*</span>' : '' !!}</label>
                                                     <input type="file" name="guardian_{{ $row->name }}"
                                                         class="file-upload-default"
                                                         {{ $row->is_required === 1 ? 'required' : '' }} />
                                                     <div class="input-group col-xs-12">
-                                                        <input type="text" class="form-control file-upload-info"
-                                                            disabled=""
-                                                            placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}"
-                                                            required />
-                                                        <span class="input-group-append">
+                                                            <input type="text" class="form-control file-upload-info"
+                                                                disabled=""
+                                                                placeholder="{{ ucwords(str_replace('_', ' ', $row->name)) }}"
+                                                                {{ $row->is_required === 1 ? 'required' : '' }} />
+                                                            <span class="input-group-append">
                                                             <button class="file-upload-browse btn btn-theme"
                                                                 type="button">{{ __('upload') }}</button>
                                                         </span>

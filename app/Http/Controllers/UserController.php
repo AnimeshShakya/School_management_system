@@ -89,11 +89,11 @@ class UserController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Show the form for editing the specified resource.
      *
      * @param  int  $id
      */
-    public function show($id)
+    public function edit($id)
     {
         $query = User::with('roles');
 
@@ -113,6 +113,16 @@ class UserController extends Controller
         $userRole = $user->roles->pluck('name', 'name')->all();
 
         return view('users.edit', compact('user', 'roles', 'userRole'));
+    }
+
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     */
+    public function show($id)
+    {
+        return $this->edit($id);
     }
 
     /**
